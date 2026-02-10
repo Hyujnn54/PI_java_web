@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.InterviewManagementController">
+    <top>
+        <Label text="Interview Management">
+            <font>
+                <Font name="System Bold" size="24.0" />
+            </font>
+            <BorderPane.margin>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+            </BorderPane.margin>
+        </Label>
+    </top>
+
+    <center>
+        <TableView fx:id="tableInterviews" BorderPane.alignment="CENTER">
+            <columns>
+                <TableColumn fx:id="colId" prefWidth="50.0" text="ID" />
+                <TableColumn fx:id="colApplicationId" prefWidth="100.0" text="Application ID" />
+                <TableColumn fx:id="colRecruiterId" prefWidth="100.0" text="Recruiter ID" />
+                <TableColumn fx:id="colScheduledAt" prefWidth="150.0" text="Scheduled At" />
+                <TableColumn fx:id="colDuration" prefWidth="100.0" text="Duration (min)" />
+                <TableColumn fx:id="colMode" prefWidth="100.0" text="Mode" />
+                <TableColumn fx:id="colStatus" prefWidth="100.0" text="Status" />
+            </columns>
+            <BorderPane.margin>
+                <Insets left="20.0" right="20.0" />
+            </BorderPane.margin>
+        </TableView>
+    </center>
+
+    <right>
+        <VBox spacing="15.0" prefWidth="300.0">
+            <padding>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+            </padding>
+
+            <Label text="Interview Details">
+                <font>
+                    <Font name="System Bold" size="16.0" />
+                </font>
+            </Label>
+
+            <Label text="Application ID:" />
+            <TextField fx:id="txtApplicationId" promptText="Enter application ID" />
+
+            <Label text="Recruiter ID:" />
+            <TextField fx:id="txtRecruiterId" promptText="Enter recruiter ID" />
+
+            <Label text="Scheduled At (yyyy-MM-dd HH:mm):" />
+            <TextField fx:id="txtScheduledAt" promptText="2024-12-31 14:30" />
+
+            <Label text="Duration (minutes):" />
+            <TextField fx:id="txtDuration" promptText="Enter duration" />
+
+            <Label text="Mode:" />
+            <ComboBox fx:id="comboMode" prefWidth="260.0" promptText="Select mode" />
+
+            <Label text="Status:" />
+            <ComboBox fx:id="comboStatus" prefWidth="260.0" promptText="Select status" />
+
+            <HBox spacing="10.0">
+                <VBox.margin>
+                    <Insets top="20.0" />
+                </VBox.margin>
+                <Button fx:id="btnAdd" onAction="#handleAddInterview" text="Add" prefWidth="120.0">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                </Button>
+                <Button fx:id="btnUpdate" onAction="#handleUpdateInterview" text="Update" prefWidth="120.0">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                </Button>
+            </HBox>
+
+            <HBox spacing="10.0">
+                <Button fx:id="btnDelete" onAction="#handleDeleteInterview" text="Delete" prefWidth="120.0">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                </Button>
+                <Button fx:id="btnRefresh" onAction="#handleRefresh" text="Refresh" prefWidth="120.0">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                </Button>
+            </HBox>
+        </VBox>
+    </right>
+</BorderPane>
+

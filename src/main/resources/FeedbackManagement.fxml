@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.FeedbackManagementController">
+    <top>
+        <Label text="Interview Feedback Management">
+            <font>
+                <Font name="System Bold" size="24.0" />
+            </font>
+            <BorderPane.margin>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+            </BorderPane.margin>
+        </Label>
+    </top>
+
+    <center>
+        <TableView fx:id="tableFeedback" BorderPane.alignment="CENTER">
+            <columns>
+                <TableColumn fx:id="colId" prefWidth="50.0" text="ID" />
+                <TableColumn fx:id="colInterviewId" prefWidth="100.0" text="Interview ID" />
+                <TableColumn fx:id="colRecruiterId" prefWidth="100.0" text="Recruiter ID" />
+                <TableColumn fx:id="colTechnicalScore" prefWidth="110.0" text="Technical Score" />
+                <TableColumn fx:id="colCommunicationScore" prefWidth="140.0" text="Communication" />
+                <TableColumn fx:id="colCultureFitScore" prefWidth="100.0" text="Culture Fit" />
+                <TableColumn fx:id="colOverallScore" prefWidth="100.0" text="Overall" />
+                <TableColumn fx:id="colDecision" prefWidth="100.0" text="Decision" />
+            </columns>
+            <BorderPane.margin>
+                <Insets left="20.0" right="20.0" />
+            </BorderPane.margin>
+        </TableView>
+    </center>
+
+    <right>
+        <VBox spacing="15.0" prefWidth="300.0">
+            <padding>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+            </padding>
+
+            <Label text="Feedback Details">
+                <font>
+                    <Font name="System Bold" size="16.0" />
+                </font>
+            </Label>
+
+            <Label text="Interview ID:" />
+            <TextField fx:id="txtInterviewId" promptText="Enter interview ID" />
+
+            <Label text="Recruiter ID:" />
+            <TextField fx:id="txtRecruiterId" promptText="Enter recruiter ID" />
+
+            <Label text="Technical Score (0-100):" />
+            <TextField fx:id="txtTechnicalScore" promptText="Enter score" />
+
+            <Label text="Communication Score (0-100):" />
+            <TextField fx:id="txtCommunicationScore" promptText="Enter score" />
+
+            <Label text="Culture Fit Score (0-100):" />
+            <TextField fx:id="txtCultureFitScore" promptText="Enter score" />
+
+            <Label text="Decision:" />
+            <ComboBox fx:id="comboDecision" prefWidth="260.0" promptText="Select decision" />
+
+            <Label text="Comment:" />
+            <TextArea fx:id="txtComment" prefHeight="80.0" promptText="Enter comments" />
+
+            <HBox spacing="10.0">
+                <VBox.margin>
+                    <Insets top="10.0" />
+                </VBox.margin>
+                <Button fx:id="btnAdd" onAction="#handleAddFeedback" text="Add" prefWidth="120.0">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                </Button>
+                <Button fx:id="btnUpdate" onAction="#handleUpdateFeedback" text="Update" prefWidth="120.0">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                </Button>
+            </HBox>
+
+            <HBox spacing="10.0">
+                <Button fx:id="btnDelete" onAction="#handleDeleteFeedback" text="Delete" prefWidth="120.0">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                </Button>
+                <Button fx:id="btnRefresh" onAction="#handleRefresh" text="Refresh" prefWidth="120.0">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                </Button>
+            </HBox>
+        </VBox>
+    </right>
+</BorderPane>
+
