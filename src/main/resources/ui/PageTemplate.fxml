@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!--
+  Reusable page layout template.
+  Usage: Put your page content inside <center>.
+  For consistency, use styleClass:
+   - page: outer container
+   - page-header: top header bar inside content
+   - page-title: large title
+   - page-subtitle: smaller subtitle
+   - page-body: main body area
+-->
+
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" styleClass="page">
+
+    <top>
+        <VBox spacing="6" styleClass="page-header">
+            <Label fx:id="lblTitle" text="Page Title" styleClass="page-title" />
+            <Label fx:id="lblSubtitle" text="Optional subtitle" styleClass="page-subtitle" />
+        </VBox>
+    </top>
+
+    <center>
+        <StackPane fx:id="body" styleClass="page-body">
+            <!-- Page content goes here -->
+        </StackPane>
+    </center>
+
+</BorderPane>
+

@@ -1,10 +1,10 @@
 package org.example;
 
+import Utils.SceneManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
@@ -22,17 +22,39 @@ public class MainFX extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         primaryStage = stage;
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/MainMenu.fxml"));
-        Parent root = fxmlLoader.load();
-        Scene scene = new Scene(root, WINDOWED_WIDTH, WINDOWED_HEIGHT);
 
-        // Add global CSS styling
-        scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
+        try {
+            System.out.println("Loading MainShell.fxml...");
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));
+            Parent root = fxmlLoader.load();
+            System.out.println("FXML loaded successfully");
 
-        stage.setTitle("Talent Bridge - Interview Management System");
-        stage.setScene(scene);
-        stage.setResizable(false);
-        stage.show();
+            Scene scene = new Scene(root, WINDOWED_WIDTH, WINDOWED_HEIGHT);
+
+            // Add global CSS styling with error handling
+            try {
+                String cssPath = getClass().getResource("/styles.css").toExternalForm();
+                scene.getStylesheets().add(cssPath);
+                System.out.println("CSS loaded successfully: " + cssPath);
+            } catch (Exception e) {
+                System.err.println("Warning: Could not load styles.css: " + e.getMessage());
+            }
+
+            // Initialize centralized navigation
+            Utils.SceneManager.init(stage, scene);
+
+            stage.setTitle("Talent Bridge");
+            stage.setScene(scene);
+            stage.setResizable(false);
+            stage.show();
+
+            System.out.println("Application started successfully");
+
+        } catch (Exception e) {
+            System.err.println("Error loading application: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     /**
@@ -70,8 +92,3 @@ public class MainFX extends Application {
         launch(args);
     }
 }
-
-
-
-
-

@@ -3,98 +3,75 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.text.Font?>
 
-<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.InterviewManagementController" spacing="15" style="-fx-background-color: #ecf0f1;">
-    <padding>
-        <Insets top="20.0" left="20.0" right="20.0" bottom="20.0" />
-    </padding>
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.InterviewManagementController"
+      spacing="25" style="-fx-background-color: #f8f9fa; -fx-padding: 25;">
 
-    <Label text="Interview Management">
-        <font>
-            <Font name="System Bold" size="20.0" />
-        </font>
-    </Label>
-
-    <HBox spacing="15" VBox.vgrow="ALWAYS">
-        <!-- Left side: VBox List -->
-        <VBox HBox.hgrow="ALWAYS" spacing="10" style="-fx-border-color: #bdc3c7; -fx-border-width: 1; -fx-padding: 10;">
-            <Label text="Interviews List">
-                <font>
-                    <Font name="System Bold" size="14.0" />
-                </font>
-            </Label>
-
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
-                <content>
-                    <VBox fx:id="interviewsListContainer" spacing="8" style="-fx-padding: 5;">
-                        <!-- Interview items will be generated dynamically -->
-                        <VBox spacing="5" style="-fx-border-color: #d5d8dc; -fx-border-width: 1; -fx-padding: 10; -fx-background-color: white;">
-                            <HBox spacing="10">
-                                <Label text="ID: 1" style="-fx-font-weight: bold;" prefWidth="40" />
-                                <Label text="App: 101" prefWidth="80" />
-                                <Label text="Recruiter: R1" prefWidth="100" />
-                                <Label text="2024-12-31 14:30" prefWidth="120" />
-                            </HBox>
-                            <HBox spacing="10">
-                                <Label text="Duration: 60min" style="-fx-font-size: 11;" />
-                                <Label text="Mode: Online" style="-fx-font-size: 11;" />
-                                <Label text="Status: Scheduled" style="-fx-font-size: 11; -fx-text-fill: green;" />
-                            </HBox>
-                        </VBox>
-                    </VBox>
-                </content>
-            </ScrollPane>
-        </VBox>
-
-        <!-- Right side: Form -->
-        <VBox spacing="12" prefWidth="250" style="-fx-border-left: 1 solid #bdc3c7; -fx-padding: 0 0 0 15;">
-            <Label text="Interview Details">
-                <font>
-                    <Font name="System Bold" size="14.0" />
-                </font>
-            </Label>
-
-            <VBox spacing="5">
-                <Label text="Application ID:" style="-fx-font-size: 11;" />
-                <TextField fx:id="txtApplicationId" promptText="Enter app ID" />
-            </VBox>
-
-            <VBox spacing="5">
-                <Label text="Recruiter ID:" style="-fx-font-size: 11;" />
-                <TextField fx:id="txtRecruiterId" promptText="Enter recruiter ID" />
-            </VBox>
-
-            <VBox spacing="5">
-                <Label text="Scheduled At (yyyy-MM-dd HH:mm):" style="-fx-font-size: 11;" />
-                <TextField fx:id="txtScheduledAt" promptText="2024-12-31 14:30" />
-            </VBox>
-
-            <VBox spacing="5">
-                <Label text="Duration (minutes):" style="-fx-font-size: 11;" />
-                <TextField fx:id="txtDuration" promptText="Enter duration" />
-            </VBox>
-
-            <VBox spacing="5">
-                <Label text="Mode:" style="-fx-font-size: 11;" />
-                <ComboBox fx:id="comboMode" prefWidth="260.0" promptText="Select mode" />
-            </VBox>
-
-            <VBox spacing="5">
-                <Label text="Status:" style="-fx-font-size: 11;" />
-                <ComboBox fx:id="comboStatus" prefWidth="260.0" promptText="Select status" />
-            </VBox>
-
-            <HBox spacing="8" style="-fx-padding: 15 0 0 0;">
-                <Button fx:id="btnAdd" onAction="#handleAddInterview" text="Add" prefWidth="100.0" />
-                <Button fx:id="btnUpdate" onAction="#handleUpdateInterview" text="Update" prefWidth="100.0" />
-            </HBox>
-
-            <HBox spacing="8">
-                <Button fx:id="btnDelete" onAction="#handleDeleteInterview" text="Delete" prefWidth="100.0" />
-                <Button fx:id="btnRefresh" onAction="#handleRefresh" text="Refresh" prefWidth="100.0" />
-            </HBox>
-        </VBox>
+    <!-- Header Section -->
+    <HBox alignment="CENTER_LEFT" spacing="15">
+        <Label text="📋 My Interviews" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <!-- Only visible for recruiter -->
+        <Button fx:id="btnScheduleNew" text="+ Schedule Interview" visible="false" managed="false"
+                styleClass="btn-primary" onAction="#handleScheduleNew"/>
     </HBox>
-</VBox>
 
+    <!-- Interview Cards Container -->
+    <ScrollPane fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;">
+        <VBox fx:id="interviewsListContainer" spacing="20">
+            <!-- Cards will be dynamically added here -->
+        </VBox>
+    </ScrollPane>
+
+    <!-- Bottom Action Buttons (appear when interview is selected) -->
+    <HBox fx:id="bottomActionButtons" spacing="15" alignment="CENTER_RIGHT"
+          visible="false" managed="false"
+          style="-fx-padding: 20 0 0 0;">
+        <Button fx:id="btnUpdate" text="✏️ Update Interview" styleClass="btn-primary"
+                onAction="#handleUpdateInterview"/>
+        <Button fx:id="btnDelete" text="🗑️ Delete Interview" styleClass="btn-danger"
+                onAction="#handleDeleteInterview"/>
+    </HBox>
+
+    <!-- Modern Add/Edit Dialog (Hidden by default) -->
+    <VBox fx:id="editDialog" visible="false" managed="false" spacing="15"
+          style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 25; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 5);">
+
+        <Label text="Interview Details" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+        <GridPane hgap="15" vgap="15">
+            <columnConstraints>
+                <ColumnConstraints minWidth="120" prefWidth="120"/>
+                <ColumnConstraints/>
+            </columnConstraints>
+
+            <!-- Date and Time -->
+            <Label text="Date and Time:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="info-label"/>
+            <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                <DatePicker fx:id="datePicker" prefWidth="150" styleClass="dialog-input"/>
+                <TextField fx:id="txtTime" promptText="HH:mm" prefWidth="80" styleClass="dialog-input"/>
+            </HBox>
+
+            <!-- Duration -->
+            <Label text="Duration:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="info-label"/>
+            <TextField fx:id="txtDuration" promptText="Minutes" prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="dialog-input"/>
+
+            <!-- Mode -->
+            <Label text="Mode:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="info-label"/>
+            <ComboBox fx:id="comboMode" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="dialog-input"/>
+
+            <!-- Application ID (Hidden from user, for internal use) -->
+            <TextField fx:id="txtApplicationId" visible="false" managed="false"/>
+            <TextField fx:id="txtRecruiterId" visible="false" managed="false"/>
+            <ComboBox fx:id="comboStatus" visible="false" managed="false"/>
+        </GridPane>
+
+        <!-- Action Buttons -->
+        <HBox spacing="10" alignment="CENTER_RIGHT">
+            <Button text="Cancel" onAction="#handleCancelEdit" styleClass="btn-secondary"/>
+            <Button fx:id="btnSave" text="Save" onAction="#handleSaveInterview" styleClass="btn-primary"/>
+        </HBox>
+    </VBox>
+
+</VBox>

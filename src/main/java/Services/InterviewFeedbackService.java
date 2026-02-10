@@ -92,4 +92,79 @@ public class InterviewFeedbackService {
             System.out.println(e.getMessage());
         }
     }
+
+    public static List<InterviewFeedback> getByInterviewId(int interviewId) {
+        List<InterviewFeedback> list = new ArrayList<>();
+        String sql = "SELECT * FROM interview_feedback WHERE interview_id = ? ORDER BY created_at DESC";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setInt(1, interviewId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    InterviewFeedback f = new InterviewFeedback();
+                    f.setId(rs.getInt("id"));
+                    f.setInterviewId(rs.getInt("interview_id"));
+                    f.setRecruiterId(rs.getInt("recruiter_id"));
+                    f.setTechnicalScore(rs.getInt("technical_score"));
+                    f.setCommunicationScore(rs.getInt("communication_score"));
+                    f.setCultureFitScore(rs.getInt("culture_fit_score"));
+                    f.setOverallScore(rs.getInt("overall_score"));
+                    f.setDecision(rs.getString("decision"));
+                    f.setComment(rs.getString("comment"));
+                    list.add(f);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching feedback by interview_id: " + e.getMessage());
+        }
+
+        return list;
+    }
+
+    public static boolean existsForInterview(int interviewId) {
+        String sql = "SELECT 1 FROM interview_feedback WHERE interview_id = ? LIMIT 1";
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setInt(1, interviewId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            System.err.println("Error checking feedback existence: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static InterviewFeedback getById(int id) {
+        String sql = "SELECT * FROM interview_feedback WHERE id = ?";
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    InterviewFeedback f = new InterviewFeedback();
+                    f.setId(rs.getInt("id"));
+                    f.setInterviewId(rs.getInt("interview_id"));
+                    f.setRecruiterId(rs.getInt("recruiter_id"));
+                    f.setTechnicalScore(rs.getInt("technical_score"));
+                    f.setCommunicationScore(rs.getInt("communication_score"));
+                    f.setCultureFitScore(rs.getInt("culture_fit_score"));
+                    f.setOverallScore(rs.getInt("overall_score"));
+                    f.setDecision(rs.getString("decision"));
+                    f.setComment(rs.getString("comment"));
+                    return f;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching feedback by id: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // Optional convenience for dialogs: create or update depending on id.
+    public static void save(InterviewFeedback f) {
+        if (f.getId() > 0) {
+            updateFeedback(f.getId(), f);
+        } else {
+            addFeedback(f);
+        }
+    }
 }

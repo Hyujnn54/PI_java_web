@@ -11,6 +11,9 @@ public class Interview {
     private int durationMinutes;
     private String mode;
     private String status;
+    private String meetingLink;
+    private String location;
+    private String notes;
 
     public Interview() {}
 
@@ -45,4 +48,28 @@ public class Interview {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getMeetingLink() {
+        return meetingLink;
+    }
+
+    public void setMeetingLink(String meetingLink) {
+        this.meetingLink = meetingLink;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
 }

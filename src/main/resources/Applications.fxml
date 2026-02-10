@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.ApplicationsController" spacing="18" styleClass="page">
+
+    <padding>
+        <Insets top="20" left="20" right="20" bottom="20"/>
+    </padding>
+
+    <VBox spacing="6" styleClass="page-header">
+        <Label text="Applications" styleClass="page-title"/>
+        <Label fx:id="lblSubtitle" text="" styleClass="page-subtitle"/>
+    </VBox>
+
+    <HBox spacing="20" VBox.vgrow="ALWAYS">
+
+        <VBox spacing="12" HBox.hgrow="ALWAYS" styleClass="section-card">
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="List" styleClass="section-title"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Refresh" styleClass="btn-secondary" onAction="#handleRefresh"/>
+            </HBox>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+                <VBox fx:id="applicationsList" spacing="12" style="-fx-padding: 10;"/>
+            </ScrollPane>
+        </VBox>
+
+        <VBox spacing="12" prefWidth="360" styleClass="section-card">
+            <Label text="Actions" styleClass="section-title"/>
+
+            <Label fx:id="lblRoleHint" text="" styleClass="page-subtitle" wrapText="true"/>
+
+            <Button fx:id="btnReject" text="❌ Reject Applicant" styleClass="btn-danger" onAction="#handleReject"/>
+
+            <Button fx:id="btnAcceptAndSchedule" text="✅ Accept &amp; Schedule Interview" styleClass="btn-primary" onAction="#handleAcceptAndSchedule"/>
+            <Button fx:id="btnScheduleForSelected" text="📅 Schedule Interview" styleClass="btn-primary" onAction="#handleAcceptAndSchedule"/>
+
+            <Separator/>
+
+            <Label text="This page is UI-first. It retrieves applications from the database and lets a recruiter schedule interviews from applications." wrapText="true" styleClass="info-label"/>
+        </VBox>
+
+    </HBox>
+</VBox>
+

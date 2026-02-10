@@ -3,85 +3,60 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.text.Font?>
 
-<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" spacing="15" style="-fx-background-color: #ecf0f1;">
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" spacing="18" styleClass="page">
     <padding>
         <Insets top="20.0" left="20.0" right="20.0" bottom="20.0" />
     </padding>
 
-    <Label text="Job Offers Management">
-        <font>
-            <Font name="System Bold" size="20.0" />
-        </font>
-    </Label>
+    <!-- Page Header -->
+    <VBox spacing="6" styleClass="page-header">
+        <Label text="Job Offers" styleClass="page-title" />
+        <Label text="Manage job offers (UI template)" styleClass="page-subtitle" />
+    </VBox>
 
-    <HBox spacing="15" VBox.vgrow="ALWAYS">
-        <!-- Left side: VBox List -->
-        <VBox HBox.hgrow="ALWAYS" spacing="10" style="-fx-border-color: #bdc3c7; -fx-border-width: 1; -fx-padding: 10;">
-            <Label text="Job Offers List">
-                <font>
-                    <Font name="System Bold" size="14.0" />
-                </font>
-            </Label>
-
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
-                <content>
-                    <VBox spacing="8" style="-fx-padding: 5;">
-                        <!-- Job offer items will be generated dynamically -->
-                        <VBox spacing="5" style="-fx-border-color: #d5d8dc; -fx-border-width: 1; -fx-padding: 10; -fx-background-color: white;">
-                            <HBox spacing="10">
-                                <Label text="ID: 1" style="-fx-font-weight: bold;" prefWidth="40" />
-                                <Label text="Position: Senior Developer" prefWidth="150" />
-                            </HBox>
-                            <HBox spacing="10">
-                                <Label text="Company: Tech Corp" style="-fx-font-size: 11;" prefWidth="120" />
-                                <Label text="Salary: $150k" style="-fx-font-size: 11;" prefWidth="120" />
-                            </HBox>
-                            <Label text="Status: Active" style="-fx-font-size: 11; -fx-text-fill: green; -fx-font-weight: bold;" />
-                        </VBox>
+    <!-- Main Body -->
+    <HBox spacing="20" VBox.vgrow="ALWAYS">
+        <!-- Left: Modern list area (cards) -->
+        <VBox spacing="12" HBox.hgrow="ALWAYS" styleClass="section-card">
+            <Label text="Offers" styleClass="section-title" />
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+                <VBox spacing="12" style="-fx-padding: 10;">
+                    <!-- Placeholder card -->
+                    <VBox spacing="10" styleClass="interview-card">
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Senior Developer" styleClass="card-title" />
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Label text="ACTIVE" styleClass="tag tag-success" />
+                        </HBox>
+                        <HBox spacing="30">
+                            <VBox spacing="4">
+                                <Label text="Company" styleClass="info-label" />
+                                <Label text="Tech Corp" styleClass="info-value" />
+                            </VBox>
+                            <VBox spacing="4">
+                                <Label text="Salary" styleClass="info-label" />
+                                <Label text="\$150k" styleClass="info-value" />
+                            </VBox>
+                        </HBox>
                     </VBox>
-                </content>
+                </VBox>
             </ScrollPane>
         </VBox>
 
-        <!-- Right side: Form -->
-        <VBox spacing="12" prefWidth="250" style="-fx-border-left: 1 solid #bdc3c7; -fx-padding: 0 0 0 15;">
-            <Label text="Offer Details">
-                <font>
-                    <Font name="System Bold" size="14.0" />
-                </font>
-            </Label>
+        <!-- Right: Modern actions panel placeholder -->
+        <VBox spacing="12" prefWidth="340" styleClass="section-card">
+            <Label text="Actions" styleClass="section-title" />
+            <Label text="This module will be wired later. For now it uses the shared template." styleClass="page-subtitle" wrapText="true" />
 
-            <VBox spacing="5">
-                <Label text="Position:" style="-fx-font-size: 11;" />
-                <TextField promptText="Enter position" />
-            </VBox>
-
-            <VBox spacing="5">
-                <Label text="Company:" style="-fx-font-size: 11;" />
-                <TextField promptText="Enter company" />
-            </VBox>
-
-            <VBox spacing="5">
-                <Label text="Salary:" style="-fx-font-size: 11;" />
-                <TextField promptText="Enter salary" />
-            </VBox>
-
-            <VBox spacing="5">
-                <Label text="Status:" style="-fx-font-size: 11;" />
-                <ComboBox prefWidth="260.0" promptText="Select status" />
-            </VBox>
-
-            <HBox spacing="8" style="-fx-padding: 15 0 0 0;">
-                <Button text="Add" prefWidth="100.0" />
-                <Button text="Update" prefWidth="100.0" />
+            <HBox spacing="10">
+                <Button text="+ Add Offer" styleClass="btn-primary" />
+                <Button text="Refresh" styleClass="btn-secondary" />
             </HBox>
 
-            <HBox spacing="8">
-                <Button text="Delete" prefWidth="100.0" />
-                <Button text="Refresh" prefWidth="100.0" />
-            </HBox>
+            <Separator />
+
+            <Label text="Tip: Use cards (VBox) like Interview screen for items." styleClass="info-label" wrapText="true" />
         </VBox>
     </HBox>
 </VBox>
