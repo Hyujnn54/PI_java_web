@@ -61,6 +61,18 @@
             <Label text="Mode:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="info-label"/>
             <ComboBox fx:id="comboMode" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="dialog-input"/>
 
+            <!-- Meeting Link (for ONLINE interviews) -->
+            <Label fx:id="lblMeetingLink" text="Meeting Link:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="info-label"/>
+            <TextField fx:id="txtMeetingLink" promptText="https://meet.example.com/..." GridPane.columnIndex="1" GridPane.rowIndex="3" styleClass="dialog-input"/>
+
+            <!-- Location (for ON_SITE interviews) -->
+            <Label fx:id="lblLocation" text="Location:" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="info-label"/>
+            <TextField fx:id="txtLocation" promptText="Office address or room number" GridPane.columnIndex="1" GridPane.rowIndex="4" styleClass="dialog-input"/>
+
+            <!-- Notes -->
+            <Label text="Notes:" GridPane.columnIndex="0" GridPane.rowIndex="5" styleClass="info-label"/>
+            <TextArea fx:id="txtNotes" promptText="Additional notes..." GridPane.columnIndex="1" GridPane.rowIndex="5" styleClass="dialog-input" prefRowCount="3"/>
+
             <!-- Application ID (Hidden from user, for internal use) -->
             <TextField fx:id="txtApplicationId" visible="false" managed="false"/>
             <TextField fx:id="txtRecruiterId" visible="false" managed="false"/>

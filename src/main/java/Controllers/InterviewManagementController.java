@@ -36,6 +36,11 @@ public class InterviewManagementController {
     @FXML private TextField txtTime;
     @FXML private TextField txtDuration;
     @FXML private ComboBox<String> comboMode;
+    @FXML private TextField txtMeetingLink;
+    @FXML private TextField txtLocation;
+    @FXML private TextArea txtNotes;
+    @FXML private Label lblMeetingLink;
+    @FXML private Label lblLocation;
     @FXML private Button btnSave;
 
     // Hidden fields for service compatibility
@@ -68,9 +73,40 @@ public class InterviewManagementController {
         if (comboMode != null) {
             // Use exact database enum values: ONLINE and ON_SITE
             comboMode.setItems(FXCollections.observableArrayList("ONLINE", "ON_SITE"));
+
+            // Add listener to toggle meeting link/location visibility based on mode
+            comboMode.valueProperty().addListener((obs, oldVal, newVal) -> {
+                toggleModeFields(newVal);
+            });
         }
         if (comboStatus != null) {
             comboStatus.setItems(FXCollections.observableArrayList("SCHEDULED", "COMPLETED", "CANCELLED", "RESCHEDULED"));
+        }
+    }
+
+    private void toggleModeFields(String mode) {
+        if (mode == null) return;
+
+        boolean isOnline = "ONLINE".equals(mode);
+
+        // Show meeting link for ONLINE, hide location
+        if (txtMeetingLink != null) {
+            txtMeetingLink.setVisible(isOnline);
+            txtMeetingLink.setManaged(isOnline);
+        }
+        if (lblMeetingLink != null) {
+            lblMeetingLink.setVisible(isOnline);
+            lblMeetingLink.setManaged(isOnline);
+        }
+
+        // Show location for ON_SITE, hide meeting link
+        if (txtLocation != null) {
+            txtLocation.setVisible(!isOnline);
+            txtLocation.setManaged(!isOnline);
+        }
+        if (lblLocation != null) {
+            lblLocation.setVisible(!isOnline);
+            lblLocation.setManaged(!isOnline);
         }
     }
 
@@ -122,6 +158,18 @@ public class InterviewManagementController {
                 selectedInterview.setScheduledAt(scheduledAt);
                 selectedInterview.setDurationMinutes(duration);
                 selectedInterview.setMode(mode);
+
+                // Update meeting link or location based on mode
+                if ("ONLINE".equals(mode)) {
+                    selectedInterview.setMeetingLink(txtMeetingLink.getText() != null ? txtMeetingLink.getText().trim() : "");
+                    selectedInterview.setLocation(null);
+                } else {
+                    selectedInterview.setLocation(txtLocation.getText() != null ? txtLocation.getText().trim() : "");
+                    selectedInterview.setMeetingLink(null);
+                }
+
+                // Update notes
+                selectedInterview.setNotes(txtNotes.getText() != null ? txtNotes.getText().trim() : "");
 
                 try {
                     InterviewService.updateInterview(selectedInterview.getId(), selectedInterview);
@@ -457,7 +505,11 @@ public class InterviewManagementController {
                 txtTime.setText(interview.getScheduledAt().format(DateTimeFormatter.ofPattern("HH:mm")));
                 txtDuration.setText(String.valueOf(interview.getDurationMinutes()));
                 comboMode.setValue(interview.getMode());
+                txtMeetingLink.setText(interview.getMeetingLink());
+                txtLocation.setText(interview.getLocation());
+                txtNotes.setText(interview.getNotes());
                 btnSave.setText("Update Interview");
+                toggleModeFields(interview.getMode()); // Set visibility based on mode
                 System.out.println("Edit dialog opened for update - Interview ID: " + interview.getId());
             } else {
                 // Clear form for new interview with some default values
@@ -465,7 +517,11 @@ public class InterviewManagementController {
                 txtTime.setText("14:00"); // Default to 2 PM
                 txtDuration.setText("60"); // Default to 60 minutes
                 comboMode.setValue("ON_SITE"); // Default to ON_SITE (matches database enum)
+                txtMeetingLink.setText("");
+                txtLocation.setText("");
+                txtNotes.setText("");
                 btnSave.setText("Create Interview");
+                toggleModeFields("ON_SITE"); // Set visibility for default mode
                 System.out.println("Edit dialog opened for new interview");
             }
 
