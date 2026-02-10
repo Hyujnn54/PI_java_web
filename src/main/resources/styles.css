@@ -1,0 +1,309 @@
+/* Talent Bridge - Main Stylesheet */
+/* Colors: White (#FFFFFF), Blue (#0066CC), Light Gray (#F5F5F5) */
+
+* {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Root styling */
+.root {
+    -fx-background-color: #FFFFFF;
+    -fx-font-size: 12px;
+}
+
+/* Sidebar styling */
+.sidebar {
+    -fx-background-color: #0052A3;
+}
+
+.sidebar-title {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.sidebar-button {
+    -fx-padding: 12px 15px;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 13px;
+    -fx-background-color: transparent;
+    -fx-alignment: CENTER_LEFT;
+    -fx-cursor: hand;
+}
+
+.sidebar-button:hover {
+    -fx-background-color: #0066CC;
+}
+
+.sidebar-button:pressed {
+    -fx-background-color: #004499;
+}
+
+/* Main content area */
+.content-area {
+    -fx-background-color: #F5F5F5;
+}
+
+/* Label styling */
+.label {
+    -fx-text-fill: #333333;
+}
+
+.label-title {
+    -fx-text-fill: #0066CC;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.label-header {
+    -fx-text-fill: #0052A3;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.label-small {
+    -fx-text-fill: #666666;
+    -fx-font-size: 11px;
+}
+
+/* TextField styling */
+.text-field {
+    -fx-border-color: #CCCCCC;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-padding: 8px;
+    -fx-font-size: 12px;
+    -fx-text-fill: #333333;
+}
+
+.text-field:focused {
+    -fx-border-color: #0066CC;
+    -fx-border-width: 2;
+    -fx-padding: 7px;
+}
+
+.text-field::placeholder-text {
+    -fx-text-fill: #AAAAAA;
+}
+
+/* TextArea styling */
+.text-area {
+    -fx-border-color: #CCCCCC;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-control-inner-background: #FFFFFF;
+    -fx-font-size: 12px;
+    -fx-text-fill: #333333;
+    -fx-padding: 5px;
+}
+
+.text-area:focused {
+    -fx-border-color: #0066CC;
+    -fx-border-width: 2;
+}
+
+.text-area .content {
+    -fx-padding: 5px;
+}
+
+/* ComboBox styling */
+.combo-box {
+    -fx-border-color: #CCCCCC;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-padding: 8px;
+}
+
+.combo-box:focused {
+    -fx-border-color: #0066CC;
+    -fx-border-width: 2;
+    -fx-padding: 7px;
+}
+
+.combo-box-popup .list-view {
+    -fx-border-color: #CCCCCC;
+}
+
+.combo-box-popup .list-cell:filled:selected {
+    -fx-background-color: #0066CC;
+    -fx-text-fill: #FFFFFF;
+}
+
+/* Button styling */
+.button {
+    -fx-padding: 8px 16px;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-border-radius: 3;
+    -fx-cursor: hand;
+}
+
+.button-primary {
+    -fx-background-color: #0066CC;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #0052A3;
+    -fx-border-width: 1;
+}
+
+.button-primary:hover {
+    -fx-background-color: #0052A3;
+}
+
+.button-primary:pressed {
+    -fx-background-color: #003D7A;
+}
+
+.button-success {
+    -fx-background-color: #28A745;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #1E7E34;
+    -fx-border-width: 1;
+}
+
+.button-success:hover {
+    -fx-background-color: #1E7E34;
+}
+
+.button-danger {
+    -fx-background-color: #DC3545;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #BD2130;
+    -fx-border-width: 1;
+}
+
+.button-danger:hover {
+    -fx-background-color: #BD2130;
+}
+
+.button-secondary {
+    -fx-background-color: #F5F5F5;
+    -fx-text-fill: #333333;
+    -fx-border-color: #CCCCCC;
+    -fx-border-width: 1;
+}
+
+.button-secondary:hover {
+    -fx-background-color: #EEEEEE;
+}
+
+/* List/Card styling */
+.card {
+    -fx-border-color: #CCCCCC;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 12px;
+}
+
+.card:hover {
+    -fx-border-color: #0066CC;
+    -fx-effect: dropshadow(gaussian, rgba(0, 102, 204, 0.15), 5, 0, 0, 2);
+}
+
+.card-selected {
+    -fx-border-color: #0066CC;
+    -fx-border-width: 2;
+    -fx-background-color: #F0F8FF;
+}
+
+/* VBox and HBox containers */
+.container {
+    -fx-spacing: 12;
+}
+
+.form-section {
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-padding: 15;
+    -fx-background-color: #FFFFFF;
+}
+
+/* ScrollPane styling */
+.scroll-pane {
+    -fx-control-inner-background: #F5F5F5;
+}
+
+.scroll-pane .scroll-bar:vertical {
+    -fx-padding: 0;
+}
+
+.scroll-bar:vertical .thumb {
+    -fx-background-color: #CCCCCC;
+    -fx-background-radius: 5;
+}
+
+.scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #0066CC;
+}
+
+/* Separator styling */
+.separator {
+    -fx-border-color: #E0E0E0;
+}
+
+/* Alert styling */
+.alert {
+    -fx-font-size: 12px;
+}
+
+.alert .header-panel {
+    -fx-background-color: #0066CC;
+}
+
+.alert .label {
+    -fx-text-fill: #333333;
+}
+
+/* Status colors */
+.status-active {
+    -fx-text-fill: #28A745;
+}
+
+.status-pending {
+    -fx-text-fill: #FFC107;
+}
+
+.status-completed {
+    -fx-text-fill: #28A745;
+}
+
+.status-rejected {
+    -fx-text-fill: #DC3545;
+}
+
+.status-cancelled {
+    -fx-text-fill: #6C757D;
+}
+
+/* Input validation */
+.text-field.error {
+    -fx-border-color: #DC3545;
+    -fx-border-width: 2;
+}
+
+.text-field.success {
+    -fx-border-color: #28A745;
+    -fx-border-width: 2;
+}
+
+.validation-message {
+    -fx-text-fill: #DC3545;
+    -fx-font-size: 10px;
+}
+
+/* Titled Pane */
+.titled-pane {
+    -fx-text-fill: #0066CC;
+}
+
+.titled-pane .title {
+    -fx-background-color: #F5F5F5;
+    -fx-text-fill: #0052A3;
+    -fx-font-weight: bold;
+}
+
+.titled-pane:expanded .title {
+    -fx-background-color: #E8F4FF;
+}
+

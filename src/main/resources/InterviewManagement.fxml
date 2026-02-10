@@ -5,94 +5,96 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.InterviewManagementController">
-    <top>
-        <Label text="Interview Management">
-            <font>
-                <Font name="System Bold" size="24.0" />
-            </font>
-            <BorderPane.margin>
-                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-            </BorderPane.margin>
-        </Label>
-    </top>
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.InterviewManagementController" spacing="15" style="-fx-background-color: #ecf0f1;">
+    <padding>
+        <Insets top="20.0" left="20.0" right="20.0" bottom="20.0" />
+    </padding>
 
-    <center>
-        <TableView fx:id="tableInterviews" BorderPane.alignment="CENTER">
-            <columns>
-                <TableColumn fx:id="colId" prefWidth="50.0" text="ID" />
-                <TableColumn fx:id="colApplicationId" prefWidth="100.0" text="Application ID" />
-                <TableColumn fx:id="colRecruiterId" prefWidth="100.0" text="Recruiter ID" />
-                <TableColumn fx:id="colScheduledAt" prefWidth="150.0" text="Scheduled At" />
-                <TableColumn fx:id="colDuration" prefWidth="100.0" text="Duration (min)" />
-                <TableColumn fx:id="colMode" prefWidth="100.0" text="Mode" />
-                <TableColumn fx:id="colStatus" prefWidth="100.0" text="Status" />
-            </columns>
-            <BorderPane.margin>
-                <Insets left="20.0" right="20.0" />
-            </BorderPane.margin>
-        </TableView>
-    </center>
+    <Label text="Interview Management">
+        <font>
+            <Font name="System Bold" size="20.0" />
+        </font>
+    </Label>
 
-    <right>
-        <VBox spacing="15.0" prefWidth="300.0">
-            <padding>
-                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-            </padding>
-
-            <Label text="Interview Details">
+    <HBox spacing="15" VBox.vgrow="ALWAYS">
+        <!-- Left side: VBox List -->
+        <VBox HBox.hgrow="ALWAYS" spacing="10" style="-fx-border-color: #bdc3c7; -fx-border-width: 1; -fx-padding: 10;">
+            <Label text="Interviews List">
                 <font>
-                    <Font name="System Bold" size="16.0" />
+                    <Font name="System Bold" size="14.0" />
                 </font>
             </Label>
 
-            <Label text="Application ID:" />
-            <TextField fx:id="txtApplicationId" promptText="Enter application ID" />
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <content>
+                    <VBox fx:id="interviewsListContainer" spacing="8" style="-fx-padding: 5;">
+                        <!-- Interview items will be generated dynamically -->
+                        <VBox spacing="5" style="-fx-border-color: #d5d8dc; -fx-border-width: 1; -fx-padding: 10; -fx-background-color: white;">
+                            <HBox spacing="10">
+                                <Label text="ID: 1" style="-fx-font-weight: bold;" prefWidth="40" />
+                                <Label text="App: 101" prefWidth="80" />
+                                <Label text="Recruiter: R1" prefWidth="100" />
+                                <Label text="2024-12-31 14:30" prefWidth="120" />
+                            </HBox>
+                            <HBox spacing="10">
+                                <Label text="Duration: 60min" style="-fx-font-size: 11;" />
+                                <Label text="Mode: Online" style="-fx-font-size: 11;" />
+                                <Label text="Status: Scheduled" style="-fx-font-size: 11; -fx-text-fill: green;" />
+                            </HBox>
+                        </VBox>
+                    </VBox>
+                </content>
+            </ScrollPane>
+        </VBox>
 
-            <Label text="Recruiter ID:" />
-            <TextField fx:id="txtRecruiterId" promptText="Enter recruiter ID" />
+        <!-- Right side: Form -->
+        <VBox spacing="12" prefWidth="250" style="-fx-border-left: 1 solid #bdc3c7; -fx-padding: 0 0 0 15;">
+            <Label text="Interview Details">
+                <font>
+                    <Font name="System Bold" size="14.0" />
+                </font>
+            </Label>
 
-            <Label text="Scheduled At (yyyy-MM-dd HH:mm):" />
-            <TextField fx:id="txtScheduledAt" promptText="2024-12-31 14:30" />
+            <VBox spacing="5">
+                <Label text="Application ID:" style="-fx-font-size: 11;" />
+                <TextField fx:id="txtApplicationId" promptText="Enter app ID" />
+            </VBox>
 
-            <Label text="Duration (minutes):" />
-            <TextField fx:id="txtDuration" promptText="Enter duration" />
+            <VBox spacing="5">
+                <Label text="Recruiter ID:" style="-fx-font-size: 11;" />
+                <TextField fx:id="txtRecruiterId" promptText="Enter recruiter ID" />
+            </VBox>
 
-            <Label text="Mode:" />
-            <ComboBox fx:id="comboMode" prefWidth="260.0" promptText="Select mode" />
+            <VBox spacing="5">
+                <Label text="Scheduled At (yyyy-MM-dd HH:mm):" style="-fx-font-size: 11;" />
+                <TextField fx:id="txtScheduledAt" promptText="2024-12-31 14:30" />
+            </VBox>
 
-            <Label text="Status:" />
-            <ComboBox fx:id="comboStatus" prefWidth="260.0" promptText="Select status" />
+            <VBox spacing="5">
+                <Label text="Duration (minutes):" style="-fx-font-size: 11;" />
+                <TextField fx:id="txtDuration" promptText="Enter duration" />
+            </VBox>
 
-            <HBox spacing="10.0">
-                <VBox.margin>
-                    <Insets top="20.0" />
-                </VBox.margin>
-                <Button fx:id="btnAdd" onAction="#handleAddInterview" text="Add" prefWidth="120.0">
-                    <font>
-                        <Font size="14.0" />
-                    </font>
-                </Button>
-                <Button fx:id="btnUpdate" onAction="#handleUpdateInterview" text="Update" prefWidth="120.0">
-                    <font>
-                        <Font size="14.0" />
-                    </font>
-                </Button>
+            <VBox spacing="5">
+                <Label text="Mode:" style="-fx-font-size: 11;" />
+                <ComboBox fx:id="comboMode" prefWidth="260.0" promptText="Select mode" />
+            </VBox>
+
+            <VBox spacing="5">
+                <Label text="Status:" style="-fx-font-size: 11;" />
+                <ComboBox fx:id="comboStatus" prefWidth="260.0" promptText="Select status" />
+            </VBox>
+
+            <HBox spacing="8" style="-fx-padding: 15 0 0 0;">
+                <Button fx:id="btnAdd" onAction="#handleAddInterview" text="Add" prefWidth="100.0" />
+                <Button fx:id="btnUpdate" onAction="#handleUpdateInterview" text="Update" prefWidth="100.0" />
             </HBox>
 
-            <HBox spacing="10.0">
-                <Button fx:id="btnDelete" onAction="#handleDeleteInterview" text="Delete" prefWidth="120.0">
-                    <font>
-                        <Font size="14.0" />
-                    </font>
-                </Button>
-                <Button fx:id="btnRefresh" onAction="#handleRefresh" text="Refresh" prefWidth="120.0">
-                    <font>
-                        <Font size="14.0" />
-                    </font>
-                </Button>
+            <HBox spacing="8">
+                <Button fx:id="btnDelete" onAction="#handleDeleteInterview" text="Delete" prefWidth="100.0" />
+                <Button fx:id="btnRefresh" onAction="#handleRefresh" text="Refresh" prefWidth="100.0" />
             </HBox>
         </VBox>
-    </right>
-</BorderPane>
+    </HBox>
+</VBox>
 

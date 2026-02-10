@@ -2,76 +2,95 @@ package Controllers;
 
 import Models.Interview;
 import Services.InterviewService;
+import Utils.InputValidator;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.List;
 
+/**
+ * Controller for Interview Management view
+ * Handles CRUD operations for interviews with input validation
+ */
 public class InterviewManagementController {
 
-    @FXML private TableView<Interview> tableInterviews;
-    @FXML private TableColumn<Interview, Integer> colId;
-    @FXML private TableColumn<Interview, Integer> colApplicationId;
-    @FXML private TableColumn<Interview, Integer> colRecruiterId;
-    @FXML private TableColumn<Interview, String> colScheduledAt;
-    @FXML private TableColumn<Interview, Integer> colDuration;
-    @FXML private TableColumn<Interview, String> colMode;
-    @FXML private TableColumn<Interview, String> colStatus;
+    @FXML
+    private VBox interviewsListContainer;
 
-    @FXML private TextField txtApplicationId;
-    @FXML private TextField txtRecruiterId;
-    @FXML private TextField txtScheduledAt;
-    @FXML private TextField txtDuration;
-    @FXML private ComboBox<String> comboMode;
-    @FXML private ComboBox<String> comboStatus;
+    @FXML
+    private TextField txtApplicationId;
+    @FXML
+    private TextField txtRecruiterId;
+    @FXML
+    private TextField txtScheduledAt;
+    @FXML
+    private TextField txtDuration;
+    @FXML
+    private ComboBox<String> comboMode;
+    @FXML
+    private ComboBox<String> comboStatus;
 
-    @FXML private Button btnAdd;
-    @FXML private Button btnUpdate;
-    @FXML private Button btnDelete;
-    @FXML private Button btnRefresh;
+    @FXML
+    private Button btnAdd;
+    @FXML
+    private Button btnUpdate;
+    @FXML
+    private Button btnDelete;
+    @FXML
+    private Button btnRefresh;
 
-    private ObservableList<Interview> interviewList = FXCollections.observableArrayList();
+    private InputValidator validator = new InputValidator();
     private Interview selectedInterview = null;
 
     @FXML
     public void initialize() {
-        // Initialize table columns
-        colId.setCellValueFactory(new PropertyValueFactory<>("id"));
-        colApplicationId.setCellValueFactory(new PropertyValueFactory<>("applicationId"));
-        colRecruiterId.setCellValueFactory(new PropertyValueFactory<>("recruiterId"));
-        colScheduledAt.setCellValueFactory(new PropertyValueFactory<>("scheduledAt"));
-        colDuration.setCellValueFactory(new PropertyValueFactory<>("durationMinutes"));
-        colMode.setCellValueFactory(new PropertyValueFactory<>("mode"));
-        colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
-
         // Initialize combo boxes
-        comboMode.setItems(FXCollections.observableArrayList("ONLINE", "IN_PERSON"));
-        comboStatus.setItems(FXCollections.observableArrayList("SCHEDULED", "COMPLETED", "CANCELLED", "APPROVED", "REJECTED"));
+        comboMode.setItems(FXCollections.observableArrayList("ONLINE", "IN_PERSON", "PHONE", "VIDEO"));
+        comboStatus.setItems(FXCollections.observableArrayList("SCHEDULED", "COMPLETED", "CANCELLED", "RESCHEDULED"));
 
         // Load data
         loadInterviews();
 
-        // Add selection listener
-        tableInterviews.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                selectedInterview = newSelection;
-                fillFormWithSelectedInterview();
-            }
+        // Add input placeholders and format hints
+        txtApplicationId.setPromptText("Enter Application ID");
+        txtRecruiterId.setPromptText("Enter Recruiter ID");
+        txtScheduledAt.setPromptText("yyyy-MM-dd HH:mm");
+        txtDuration.setPromptText("Duration in minutes");
+
+        // Real-time validation on text fields
+        txtApplicationId.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal) validateApplicationId();
+        });
+
+        txtRecruiterId.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal) validateRecruiterId();
+        });
+
+        txtScheduledAt.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal) validateScheduledAt();
+        });
+
+        txtDuration.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal) validateDuration();
         });
     }
 
     @FXML
     private void handleAddInterview() {
+        if (!validateAllInputs()) {
+            return;
+        }
+
         try {
             Interview interview = new Interview(
-                Integer.parseInt(txtApplicationId.getText()),
-                Integer.parseInt(txtRecruiterId.getText()),
-                parseDateTime(txtScheduledAt.getText()),
-                Integer.parseInt(txtDuration.getText()),
+                Integer.parseInt(txtApplicationId.getText().trim()),
+                Integer.parseInt(txtRecruiterId.getText().trim()),
+                InputValidator.parseDateTime(txtScheduledAt.getText().trim()),
+                Integer.parseInt(txtDuration.getText().trim()),
                 comboMode.getValue()
             );
 
@@ -95,12 +114,16 @@ public class InterviewManagementController {
             return;
         }
 
+        if (!validateAllInputs()) {
+            return;
+        }
+
         try {
             Interview interview = new Interview(
-                Integer.parseInt(txtApplicationId.getText()),
-                Integer.parseInt(txtRecruiterId.getText()),
-                parseDateTime(txtScheduledAt.getText()),
-                Integer.parseInt(txtDuration.getText()),
+                Integer.parseInt(txtApplicationId.getText().trim()),
+                Integer.parseInt(txtRecruiterId.getText().trim()),
+                InputValidator.parseDateTime(txtScheduledAt.getText().trim()),
+                Integer.parseInt(txtDuration.getText().trim()),
                 comboMode.getValue()
             );
 
@@ -144,18 +167,163 @@ public class InterviewManagementController {
     }
 
     private void loadInterviews() {
-        interviewList.clear();
-        interviewList.setAll(InterviewService.getAll());
-        tableInterviews.setItems(interviewList);
+        interviewsListContainer.getChildren().clear();
+        List<Interview> interviews = InterviewService.getAll();
+
+        if (interviews.isEmpty()) {
+            Label emptyLabel = new Label("No interviews found");
+            emptyLabel.setStyle("-fx-text-fill: #999999; -fx-font-size: 14;");
+            interviewsListContainer.getChildren().add(emptyLabel);
+            return;
+        }
+
+        for (Interview interview : interviews) {
+            VBox card = createInterviewCard(interview);
+            interviewsListContainer.getChildren().add(card);
+        }
+    }
+
+    private VBox createInterviewCard(Interview interview) {
+        VBox card = new VBox(8);
+        card.setStyle("-fx-border-color: #E0E0E0; -fx-border-width: 1; -fx-padding: 12; -fx-background-color: white; -fx-cursor: hand;");
+        card.setPadding(new Insets(12));
+
+        // Click to select
+        card.setOnMouseClicked(e -> {
+            selectedInterview = interview;
+            fillFormWithSelectedInterview();
+            highlightCard(card);
+        });
+
+        // Header with ID
+        HBox headerBox = new HBox(15);
+        Label idLabel = new Label("ID: " + interview.getId());
+        idLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12; -fx-text-fill: #0066CC;");
+        Label appIdLabel = new Label("App: " + interview.getApplicationId());
+        appIdLabel.setStyle("-fx-font-size: 11;");
+        Label recruiterLabel = new Label("Recruiter: " + interview.getRecruiterId());
+        recruiterLabel.setStyle("-fx-font-size: 11;");
+        headerBox.getChildren().addAll(idLabel, appIdLabel, recruiterLabel);
+
+        // Date and time
+        Label dateLabel = new Label("📅 " + InputValidator.formatDateTime(interview.getScheduledAt()));
+        dateLabel.setStyle("-fx-font-size: 11; -fx-text-fill: #555555;");
+
+        // Mode, Duration, and Status
+        HBox detailsBox = new HBox(15);
+        Label modeLabel = new Label("Mode: " + interview.getMode());
+        modeLabel.setStyle("-fx-font-size: 11;");
+        Label durationLabel = new Label("Duration: " + interview.getDurationMinutes() + " min");
+        durationLabel.setStyle("-fx-font-size: 11;");
+        Label statusLabel = new Label("Status: " + interview.getStatus());
+        statusLabel.setStyle("-fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: " + getStatusColor(interview.getStatus()) + ";");
+        detailsBox.getChildren().addAll(modeLabel, durationLabel, statusLabel);
+
+        card.getChildren().addAll(headerBox, dateLabel, detailsBox);
+        return card;
+    }
+
+    private void highlightCard(VBox card) {
+        // Reset all cards
+        for (javafx.scene.Node node : interviewsListContainer.getChildren()) {
+            if (node instanceof VBox) {
+                ((VBox) node).setStyle("-fx-border-color: #E0E0E0; -fx-border-width: 1; -fx-padding: 12; -fx-background-color: white; -fx-cursor: hand;");
+            }
+        }
+        // Highlight selected
+        card.setStyle("-fx-border-color: #0066CC; -fx-border-width: 2; -fx-padding: 11; -fx-background-color: #F0F8FF; -fx-cursor: hand;");
+    }
+
+    private String getStatusColor(String status) {
+        return switch (status) {
+            case "COMPLETED" -> "#28A745";
+            case "SCHEDULED" -> "#0066CC";
+            case "CANCELLED" -> "#DC3545";
+            case "RESCHEDULED" -> "#FFC107";
+            default -> "#666666";
+        };
     }
 
     private void fillFormWithSelectedInterview() {
-        txtApplicationId.setText(String.valueOf(selectedInterview.getApplicationId()));
-        txtRecruiterId.setText(String.valueOf(selectedInterview.getRecruiterId()));
-        txtScheduledAt.setText(selectedInterview.getScheduledAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
-        txtDuration.setText(String.valueOf(selectedInterview.getDurationMinutes()));
-        comboMode.setValue(selectedInterview.getMode());
-        comboStatus.setValue(selectedInterview.getStatus());
+        if (selectedInterview != null) {
+            txtApplicationId.setText(String.valueOf(selectedInterview.getApplicationId()));
+            txtRecruiterId.setText(String.valueOf(selectedInterview.getRecruiterId()));
+            txtScheduledAt.setText(InputValidator.formatDateTime(selectedInterview.getScheduledAt()));
+            txtDuration.setText(String.valueOf(selectedInterview.getDurationMinutes()));
+            comboMode.setValue(selectedInterview.getMode());
+            comboStatus.setValue(selectedInterview.getStatus());
+        }
+    }
+
+    // Input validation methods
+    private boolean validateApplicationId() {
+        String value = txtApplicationId.getText().trim();
+        if (!validator.isValidInteger(value)) {
+            showValidationError("Application ID must be a valid number");
+            txtApplicationId.setStyle("-fx-border-color: #DC3545; -fx-border-width: 2;");
+            return false;
+        }
+        txtApplicationId.setStyle("-fx-border-color: #28A745; -fx-border-width: 1;");
+        return true;
+    }
+
+    private boolean validateRecruiterId() {
+        String value = txtRecruiterId.getText().trim();
+        if (!validator.isValidInteger(value)) {
+            showValidationError("Recruiter ID must be a valid number");
+            txtRecruiterId.setStyle("-fx-border-color: #DC3545; -fx-border-width: 2;");
+            return false;
+        }
+        txtRecruiterId.setStyle("-fx-border-color: #28A745; -fx-border-width: 1;");
+        return true;
+    }
+
+    private boolean validateScheduledAt() {
+        String value = txtScheduledAt.getText().trim();
+        if (!validator.isValidDateTime(value)) {
+            showValidationError("Date must be in format: yyyy-MM-dd HH:mm");
+            txtScheduledAt.setStyle("-fx-border-color: #DC3545; -fx-border-width: 2;");
+            return false;
+        }
+        txtScheduledAt.setStyle("-fx-border-color: #28A745; -fx-border-width: 1;");
+        return true;
+    }
+
+    private boolean validateDuration() {
+        String value = txtDuration.getText().trim();
+        if (!validator.isValidInteger(value)) {
+            showValidationError("Duration must be a valid number");
+            txtDuration.setStyle("-fx-border-color: #DC3545; -fx-border-width: 2;");
+            return false;
+        }
+        int duration = Integer.parseInt(value);
+        if (!validator.isInRange(duration, 1, 480)) {
+            showValidationError("Duration must be between 1 and 480 minutes");
+            txtDuration.setStyle("-fx-border-color: #DC3545; -fx-border-width: 2;");
+            return false;
+        }
+        txtDuration.setStyle("-fx-border-color: #28A745; -fx-border-width: 1;");
+        return true;
+    }
+
+    private boolean validateAllInputs() {
+        boolean isValid = true;
+        isValid &= validateApplicationId();
+        isValid &= validateRecruiterId();
+        isValid &= validateScheduledAt();
+        isValid &= validateDuration();
+
+        if (comboMode.getValue() == null) {
+            showValidationError("Please select an interview mode");
+            isValid = false;
+        }
+
+        if (comboStatus.getValue() == null) {
+            showValidationError("Please select an interview status");
+            isValid = false;
+        }
+
+        return isValid;
     }
 
     private void clearForm() {
@@ -166,21 +334,30 @@ public class InterviewManagementController {
         comboMode.setValue(null);
         comboStatus.setValue(null);
         selectedInterview = null;
-        tableInterviews.getSelectionModel().clearSelection();
+        resetFieldStyles();
     }
 
-    private LocalDateTime parseDateTime(String dateTimeStr) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        return LocalDateTime.parse(dateTimeStr, formatter);
+    private void resetFieldStyles() {
+        txtApplicationId.setStyle("-fx-border-color: #CCCCCC; -fx-border-width: 1;");
+        txtRecruiterId.setStyle("-fx-border-color: #CCCCCC; -fx-border-width: 1;");
+        txtScheduledAt.setStyle("-fx-border-color: #CCCCCC; -fx-border-width: 1;");
+        txtDuration.setStyle("-fx-border-color: #CCCCCC; -fx-border-width: 1;");
     }
 
-    private void showAlert(String title, String content, Alert.AlertType type) {
+    private void showValidationError(String message) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Validation Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void showAlert(String title, String message, Alert.AlertType type) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(content);
+        alert.setContentText(message);
         alert.showAndWait();
     }
 }
-
 

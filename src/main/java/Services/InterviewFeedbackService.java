@@ -12,13 +12,14 @@ import java.util.List;
 
 public class InterviewFeedbackService {
 
-    private static final Connection cnx =
-            MyDatabase.getInstance().getConnection();
+    private static Connection getConnection() {
+        return MyDatabase.getInstance().getConnection();
+    }
 
     public static void addFeedback(InterviewFeedback f) {
         String sql = "INSERT INTO interview_feedback(interview_id, recruiter_id, technical_score, communication_score, culture_fit_score, overall_score, decision, comment) VALUES (?,?,?,?,?,?,?,?)";
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setInt(1, f.getInterviewId());
             ps.setInt(2, f.getRecruiterId());
             ps.setInt(3, f.getTechnicalScore());
@@ -38,7 +39,7 @@ public class InterviewFeedbackService {
         List<InterviewFeedback> list = new ArrayList<>();
         String sql = "SELECT * FROM interview_feedback";
 
-        try (Statement st = cnx.createStatement();
+        try (Statement st = getConnection().createStatement();
              ResultSet rs = st.executeQuery(sql)) {
 
             while (rs.next()) {
@@ -63,7 +64,7 @@ public class InterviewFeedbackService {
     public static void updateFeedback(int id, InterviewFeedback f) {
         String sql = "UPDATE interview_feedback SET interview_id=?, recruiter_id=?, technical_score=?, communication_score=?, culture_fit_score=?, overall_score=?, decision=?, comment=? WHERE id=?";
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setInt(1, f.getInterviewId());
             ps.setInt(2, f.getRecruiterId());
             ps.setInt(3, f.getTechnicalScore());
@@ -83,7 +84,7 @@ public class InterviewFeedbackService {
     public static void deleteFeedback(int id) {
         String sql = "DELETE FROM interview_feedback WHERE id=?";
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.executeUpdate();
             System.out.println("Feedback deleted");

@@ -5,114 +5,104 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.RescheduleManagementController">
-    <top>
-        <Label text="Interview Reschedule Request Management">
-            <font>
-                <Font name="System Bold" size="24.0" />
-            </font>
-            <BorderPane.margin>
-                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-            </BorderPane.margin>
-        </Label>
-    </top>
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.RescheduleManagementController" spacing="15" style="-fx-background-color: #ecf0f1;">
+    <padding>
+        <Insets top="20.0" left="20.0" right="20.0" bottom="20.0" />
+    </padding>
 
-    <center>
-        <TableView fx:id="tableReschedule" BorderPane.alignment="CENTER">
-            <columns>
-                <TableColumn fx:id="colId" prefWidth="50.0" text="ID" />
-                <TableColumn fx:id="colInterviewId" prefWidth="100.0" text="Interview ID" />
-                <TableColumn fx:id="colCandidateId" prefWidth="100.0" text="Candidate ID" />
-                <TableColumn fx:id="colRequestedDateTime" prefWidth="150.0" text="Requested Date" />
-                <TableColumn fx:id="colReason" prefWidth="200.0" text="Reason" />
-                <TableColumn fx:id="colStatus" prefWidth="100.0" text="Status" />
-            </columns>
-            <BorderPane.margin>
-                <Insets left="20.0" right="20.0" />
-            </BorderPane.margin>
-        </TableView>
-    </center>
+    <Label text="Interview Reschedule Request Management">
+        <font>
+            <Font name="System Bold" size="20.0" />
+        </font>
+    </Label>
 
-    <right>
-        <VBox spacing="15.0" prefWidth="300.0">
-            <padding>
-                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-            </padding>
-
-            <Label text="Reschedule Request Details">
-                <font>
-                    <Font name="System Bold" size="16.0" />
-                </font>
-            </Label>
-
-            <Label text="Interview ID:" />
-            <TextField fx:id="txtInterviewId" promptText="Enter interview ID" />
-
-            <Label text="Candidate ID:" />
-            <TextField fx:id="txtCandidateId" promptText="Enter candidate ID" />
-
-            <Label text="Requested Date (yyyy-MM-dd HH:mm):" />
-            <TextField fx:id="txtRequestedDateTime" promptText="2024-12-31 14:30" />
-
-            <Label text="Reason:" />
-            <TextArea fx:id="txtReason" prefHeight="80.0" promptText="Enter reason for reschedule" />
-
-            <Label text="Status:" />
-            <ComboBox fx:id="comboStatus" prefWidth="260.0" promptText="Select status" />
-
-            <HBox spacing="10.0">
-                <VBox.margin>
-                    <Insets top="10.0" />
-                </VBox.margin>
-                <Button fx:id="btnAdd" onAction="#handleAddRequest" text="Add" prefWidth="120.0">
-                    <font>
-                        <Font size="14.0" />
-                    </font>
-                </Button>
-                <Button fx:id="btnUpdate" onAction="#handleUpdateRequest" text="Update" prefWidth="120.0">
-                    <font>
-                        <Font size="14.0" />
-                    </font>
-                </Button>
-            </HBox>
-
-            <HBox spacing="10.0">
-                <Button fx:id="btnDelete" onAction="#handleDeleteRequest" text="Delete" prefWidth="120.0">
-                    <font>
-                        <Font size="14.0" />
-                    </font>
-                </Button>
-                <Button fx:id="btnRefresh" onAction="#handleRefresh" text="Refresh" prefWidth="120.0">
-                    <font>
-                        <Font size="14.0" />
-                    </font>
-                </Button>
-            </HBox>
-
-            <Separator>
-                <VBox.margin>
-                    <Insets top="10.0" bottom="10.0" />
-                </VBox.margin>
-            </Separator>
-
-            <Label text="Recruiter Actions">
+    <HBox spacing="15" VBox.vgrow="ALWAYS">
+        <!-- Left side: VBox List -->
+        <VBox HBox.hgrow="ALWAYS" spacing="10" style="-fx-border-color: #bdc3c7; -fx-border-width: 1; -fx-padding: 10;">
+            <Label text="Reschedule Requests">
                 <font>
                     <Font name="System Bold" size="14.0" />
                 </font>
             </Label>
 
-            <Button fx:id="btnApprove" onAction="#handleApproveRequest" text="Approve Request" prefWidth="260.0" style="-fx-background-color: #4CAF50; -fx-text-fill: white;">
-                <font>
-                    <Font size="14.0" />
-                </font>
-            </Button>
-
-            <Button fx:id="btnReject" onAction="#handleRejectRequest" text="Reject Request" prefWidth="260.0" style="-fx-background-color: #f44336; -fx-text-fill: white;">
-                <font>
-                    <Font size="14.0" />
-                </font>
-            </Button>
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <content>
+                    <VBox fx:id="rescheduleListContainer" spacing="8" style="-fx-padding: 5;">
+                        <!-- Reschedule items will be generated dynamically -->
+                        <VBox spacing="5" style="-fx-border-color: #d5d8dc; -fx-border-width: 1; -fx-padding: 10; -fx-background-color: white;">
+                            <HBox spacing="10">
+                                <Label text="ID: 1" style="-fx-font-weight: bold;" prefWidth="40" />
+                                <Label text="Interview: 101" prefWidth="90" />
+                                <Label text="Candidate: C1" prefWidth="100" />
+                            </HBox>
+                            <HBox spacing="10">
+                                <Label text="Requested: 2024-12-31 14:30" style="-fx-font-size: 11;" />
+                            </HBox>
+                            <HBox spacing="10">
+                                <Label text="Reason: Conflict with meeting" style="-fx-font-size: 11;" />
+                            </HBox>
+                            <Label text="Status: Pending" style="-fx-font-size: 11; -fx-text-fill: orange; -fx-font-weight: bold;" />
+                        </VBox>
+                    </VBox>
+                </content>
+            </ScrollPane>
         </VBox>
-    </right>
-</BorderPane>
+
+        <!-- Right side: Form -->
+        <VBox spacing="12" prefWidth="250" style="-fx-border-left: 1 solid #bdc3c7; -fx-padding: 0 0 0 15;">
+            <Label text="Reschedule Details">
+                <font>
+                    <Font name="System Bold" size="14.0" />
+                </font>
+            </Label>
+
+            <VBox spacing="5">
+                <Label text="Interview ID:" style="-fx-font-size: 11;" />
+                <TextField fx:id="txtInterviewId" promptText="Enter interview ID" />
+            </VBox>
+
+            <VBox spacing="5">
+                <Label text="Candidate ID:" style="-fx-font-size: 11;" />
+                <TextField fx:id="txtCandidateId" promptText="Enter candidate ID" />
+            </VBox>
+
+            <VBox spacing="5">
+                <Label text="Requested Date (yyyy-MM-dd HH:mm):" style="-fx-font-size: 11;" />
+                <TextField fx:id="txtRequestedDateTime" promptText="2024-12-31 14:30" />
+            </VBox>
+
+            <VBox spacing="5">
+                <Label text="Reason:" style="-fx-font-size: 11;" />
+                <TextArea fx:id="txtReason" prefHeight="60.0" promptText="Enter reason for reschedule" />
+            </VBox>
+
+            <VBox spacing="5">
+                <Label text="Status:" style="-fx-font-size: 11;" />
+                <ComboBox fx:id="comboStatus" prefWidth="260.0" promptText="Select status" />
+            </VBox>
+
+            <HBox spacing="8" style="-fx-padding: 15 0 0 0;">
+                <Button fx:id="btnAdd" onAction="#handleAddRequest" text="Add" prefWidth="100.0" />
+                <Button fx:id="btnUpdate" onAction="#handleUpdateRequest" text="Update" prefWidth="100.0" />
+            </HBox>
+
+            <HBox spacing="8">
+                <Button fx:id="btnDelete" onAction="#handleDeleteRequest" text="Delete" prefWidth="100.0" />
+                <Button fx:id="btnRefresh" onAction="#handleRefresh" text="Refresh" prefWidth="100.0" />
+            </HBox>
+
+            <Separator style="-fx-padding: 10 0 10 0;" />
+
+            <Label text="Recruiter Actions">
+                <font>
+                    <Font name="System Bold" size="12.0" />
+                </font>
+            </Label>
+
+            <Button fx:id="btnApprove" onAction="#handleApproveRequest" text="✓ Approve" prefWidth="240.0" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" />
+
+            <Button fx:id="btnReject" onAction="#handleRejectRequest" text="✗ Reject" prefWidth="240.0" style="-fx-background-color: #f44336; -fx-text-fill: white;" />
+        </VBox>
+    </HBox>
+</VBox>
 

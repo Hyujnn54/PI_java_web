@@ -10,13 +10,14 @@ import java.util.List;
 
 public class InterviewService {
 
-    private static final Connection cnx =
-            MyDatabase.getInstance().getConnection();
+    private static Connection getConnection() {
+        return MyDatabase.getInstance().getConnection();
+    }
 
     public static void addInterview(Interview i) {
         String sql = "INSERT INTO interview(application_id, recruiter_id, scheduled_at, duration_minutes, mode, status) VALUES (?,?,?,?,?,?)";
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setInt(1, i.getApplicationId());
             ps.setInt(2, i.getRecruiterId());
             ps.setTimestamp(3, Timestamp.valueOf(i.getScheduledAt()));
@@ -34,7 +35,7 @@ public class InterviewService {
         List<Interview> list = new ArrayList<>();
         String sql = "SELECT * FROM interview";
 
-        try (Statement st = cnx.createStatement();
+        try (Statement st = getConnection().createStatement();
              ResultSet rs = st.executeQuery(sql)) {
 
             while (rs.next()) {
@@ -57,7 +58,7 @@ public class InterviewService {
     public static void updateInterview(int id, Interview i) {
         String sql = "UPDATE interview SET application_id=?, recruiter_id=?, scheduled_at=?, duration_minutes=?, mode=?, status=? WHERE id=?";
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setInt(1, i.getApplicationId());
             ps.setInt(2, i.getRecruiterId());
             ps.setTimestamp(3, Timestamp.valueOf(i.getScheduledAt()));
@@ -75,7 +76,7 @@ public class InterviewService {
     public static void approveRescheduleRequest(int interviewId, LocalDateTime newDate) {
         String sql = "UPDATE interview SET scheduled_at=?, status='APPROVED' WHERE id=?";
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setTimestamp(1, Timestamp.valueOf(newDate));
             ps.setInt(2, interviewId);
             ps.executeUpdate();
@@ -88,7 +89,7 @@ public class InterviewService {
     public static void rejectRescheduleRequest(int interviewId) {
         String sql = "UPDATE interview SET status='REJECTED' WHERE id=?";
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setInt(1, interviewId);
             ps.executeUpdate();
             System.out.println("Reschedule request rejected");
@@ -100,7 +101,7 @@ public class InterviewService {
     public static void delete(int id) {
         String sql = "DELETE FROM interview WHERE id=?";
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.executeUpdate();
             System.out.println("Interview deleted");

@@ -3,48 +3,115 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" spacing="20.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.MainMenuController">
-    <padding>
-        <Insets bottom="40.0" left="40.0" right="40.0" top="40.0" />
-    </padding>
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.MainMenuController" style="-fx-background-color: #FFFFFF;">
 
-    <Label text="Interview Management System">
-        <font>
-            <Font name="System Bold" size="28.0" />
-        </font>
-    </Label>
+    <!-- Left Sidebar -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="280" spacing="0" style="-fx-background-color: #0052A3;">
+            <padding>
+                <Insets top="30.0" left="0.0" right="0.0" bottom="0.0" />
+            </padding>
 
-    <Label text="Select a module to manage:">
-        <font>
-            <Font size="16.0" />
-        </font>
-        <VBox.margin>
-            <Insets top="20.0" />
-        </VBox.margin>
-    </Label>
+            <!-- App Logo and Title -->
+            <VBox alignment="TOP_CENTER" spacing="10" style="-fx-padding: 0 20 30 20;">
+                <Label text="Talent Bridge" textFill="WHITE" wrapText="true" style="-fx-font-size: 22; -fx-font-weight: bold;">
+                </Label>
+                <Label text="Interview Management" textFill="#B0D4FF" wrapText="true" style="-fx-font-size: 11; -fx-text-alignment: center;">
+                </Label>
+            </VBox>
 
-    <Button fx:id="btnInterviews" onAction="#handleInterviewsButton" prefWidth="300.0" text="Interview Management">
-        <font>
-            <Font size="16.0" />
-        </font>
-        <VBox.margin>
-            <Insets top="30.0" />
-        </VBox.margin>
-    </Button>
+            <!-- Separator -->
+            <Label style="-fx-border-color: #004499; -fx-border-width: 1 0 0 0; -fx-padding: 0 20 20 20; -fx-text-fill: transparent;" />
 
-    <Button fx:id="btnFeedback" onAction="#handleFeedbackButton" prefWidth="300.0" text="Feedback Management">
-        <font>
-            <Font size="16.0" />
-        </font>
-    </Button>
+            <!-- Navigation Buttons -->
+            <Button fx:id="btnInterviews" onAction="#handleInterviewsNav" text="📋  Interviews"
+                    styleClass="sidebar-button"
+                    style="-fx-padding: 14 20; -fx-font-size: 13; -fx-background-color: transparent; -fx-text-fill: white; -fx-alignment: CENTER_LEFT;"
+                    prefWidth="280">
+                <font>
+                    <Font size="13.0" />
+                </font>
+            </Button>
 
-    <Button fx:id="btnReschedule" onAction="#handleRescheduleButton" prefWidth="300.0" text="Reschedule Management">
-        <font>
-            <Font size="16.0" />
-        </font>
-    </Button>
-</VBox>
+            <Button fx:id="btnJobOffers" onAction="#handleJobOffersNav" text="💼  Job Offers"
+                    styleClass="sidebar-button"
+                    style="-fx-padding: 14 20; -fx-font-size: 13; -fx-background-color: transparent; -fx-text-fill: white; -fx-alignment: CENTER_LEFT;"
+                    prefWidth="280">
+                <font>
+                    <Font size="13.0" />
+                </font>
+            </Button>
+
+            <Button fx:id="btnFeedback" onAction="#handleFeedbackNav" text="⭐  Feedback"
+                    styleClass="sidebar-button"
+                    style="-fx-padding: 14 20; -fx-font-size: 13; -fx-background-color: transparent; -fx-text-fill: white; -fx-alignment: CENTER_LEFT;"
+                    prefWidth="280">
+                <font>
+                    <Font size="13.0" />
+                </font>
+            </Button>
+
+            <Button fx:id="btnReschedule" onAction="#handleRescheduleNav" text="🔄  Reschedule"
+                    styleClass="sidebar-button"
+                    style="-fx-padding: 14 20; -fx-font-size: 13; -fx-background-color: transparent; -fx-text-fill: white; -fx-alignment: CENTER_LEFT;"
+                    prefWidth="280">
+                <font>
+                    <Font size="13.0" />
+                </font>
+            </Button>
+
+            <Button fx:id="btnEvents" onAction="#handleEventsNav" text="📅  Events"
+                    styleClass="sidebar-button"
+                    style="-fx-padding: 14 20; -fx-font-size: 13; -fx-background-color: transparent; -fx-text-fill: white; -fx-alignment: CENTER_LEFT;"
+                    prefWidth="280">
+                <font>
+                    <Font size="13.0" />
+                </font>
+            </Button>
+
+            <Button fx:id="btnSettings" onAction="#handleSettingsNav" text="⚙️  Settings"
+                    styleClass="sidebar-button"
+                    style="-fx-padding: 14 20; -fx-font-size: 13; -fx-background-color: transparent; -fx-text-fill: white; -fx-alignment: CENTER_LEFT;"
+                    prefWidth="280">
+                <font>
+                    <Font size="13.0" />
+                </font>
+            </Button>
+
+            <VBox VBox.vgrow="ALWAYS" />
+
+            <!-- Fullscreen Toggle Button -->
+            <Label style="-fx-border-color: #004499; -fx-border-width: 1 0 0 0; -fx-padding: 20 20 15 20; -fx-text-fill: transparent;" />
+
+            <Button fx:id="btnFullscreen" onAction="#handleFullscreenToggle" text="⛶  Fullscreen"
+                    styleClass="sidebar-button"
+                    style="-fx-padding: 14 20; -fx-font-size: 13; -fx-background-color: transparent; -fx-text-fill: white; -fx-alignment: CENTER_LEFT;"
+                    prefWidth="280">
+                <font>
+                    <Font size="13.0" />
+                </font>
+            </Button>
+        </VBox>
+    </left>
+
+    <!-- Main Content Area -->
+    <center>
+        <StackPane fx:id="contentArea" style="-fx-background-color: #F5F5F5;">
+            <!-- Default Welcome Screen -->
+            <VBox alignment="CENTER" spacing="30" fx:id="welcomeScreen" style="-fx-background-color: #F5F5F5;">
+                <Label text="Welcome to Talent Bridge" textFill="#0052A3" style="-fx-font-size: 32; -fx-font-weight: bold;">
+                </Label>
+                <Label text="Interview Management System" textFill="#0066CC" style="-fx-font-size: 18;">
+                </Label>
+                <Label text="Select a section from the left sidebar to get started" textFill="#666666" wrapText="true" style="-fx-font-size: 14;">
+                </Label>
+            </VBox>
+        </StackPane>
+    </center>
+</BorderPane>
 

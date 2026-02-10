@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" spacing="15" style="-fx-background-color: #ecf0f1;">
+    <padding>
+        <Insets top="20.0" left="20.0" right="20.0" bottom="20.0" />
+    </padding>
+
+    <Label text="Settings">
+        <font>
+            <Font name="System Bold" size="20.0" />
+        </font>
+    </Label>
+
+    <VBox spacing="15">
+        <TitledPane text="Application Settings" expanded="true">
+            <VBox spacing="12">
+                <padding>
+                    <Insets top="10.0" left="10.0" right="10.0" bottom="10.0" />
+                </padding>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Theme:" style="-fx-font-size: 12;" prefWidth="100" />
+                    <ComboBox promptText="Select theme" prefWidth="200" />
+                </HBox>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Language:" style="-fx-font-size: 12;" prefWidth="100" />
+                    <ComboBox promptText="Select language" prefWidth="200" />
+                </HBox>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Font Size:" style="-fx-font-size: 12;" prefWidth="100" />
+                    <ComboBox promptText="Select size" prefWidth="200" />
+                </HBox>
+            </VBox>
+        </TitledPane>
+
+        <TitledPane text="Database Settings" expanded="true">
+            <VBox spacing="12">
+                <padding>
+                    <Insets top="10.0" left="10.0" right="10.0" bottom="10.0" />
+                </padding>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Host:" style="-fx-font-size: 12;" prefWidth="100" />
+                    <TextField promptText="localhost" prefWidth="200" />
+                </HBox>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Port:" style="-fx-font-size: 12;" prefWidth="100" />
+                    <TextField promptText="3306" prefWidth="200" />
+                </HBox>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Database:" style="-fx-font-size: 12;" prefWidth="100" />
+                    <TextField promptText="dbname" prefWidth="200" />
+                </HBox>
+            </VBox>
+        </TitledPane>
+
+        <TitledPane text="About">
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10.0" left="10.0" right="10.0" bottom="10.0" />
+                </padding>
+
+                <Label text="Interview Management System" style="-fx-font-size: 14; -fx-font-weight: bold;" />
+                <Label text="Version: 1.0.0" style="-fx-font-size: 12;" />
+                <Label text="© 2026 All rights reserved" style="-fx-font-size: 11;" />
+            </VBox>
+        </TitledPane>
+
+        <HBox spacing="10" style="-fx-padding: 20 0 0 0;">
+            <Button text="Save Settings" prefWidth="120.0" />
+            <Button text="Reset to Default" prefWidth="120.0" />
+        </HBox>
+    </VBox>
+</VBox>
+
