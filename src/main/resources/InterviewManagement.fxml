@@ -6,7 +6,8 @@
 
 <VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="Controllers.InterviewManagementController"
-      spacing="25" style="-fx-background-color: #f8f9fa; -fx-padding: 25;">
+      spacing="25" style="-fx-background-color: #f8f9fa; -fx-padding: 25;"
+      stylesheets="@styles.css">
 
     <!-- Header Section -->
     <HBox alignment="CENTER_LEFT" spacing="15">

@@ -4,60 +4,221 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" spacing="18" styleClass="page">
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" spacing="20" styleClass="page"
+      stylesheets="@styles.css" style="-fx-background-color: #f8f9fa;">
+
     <padding>
-        <Insets top="20.0" left="20.0" right="20.0" bottom="20.0" />
+        <Insets top="25" left="25" right="25" bottom="25"/>
     </padding>
 
-    <!-- Page Header -->
-    <VBox spacing="6" styleClass="page-header">
-        <Label text="Job Offers" styleClass="page-title" />
-        <Label text="Manage job offers (UI template)" styleClass="page-subtitle" />
-    </VBox>
+    <!-- Header Section -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox spacing="5" HBox.hgrow="ALWAYS">
+            <Label text="Job Offers Management" styleClass="page-title"/>
+            <Label text="Create and manage job postings" styleClass="page-subtitle"/>
+        </VBox>
+        <Button text="+ New Job Offer" styleClass="btn-primary" style="-fx-font-size: 14px; -fx-padding: 12 24;"/>
+    </HBox>
 
-    <!-- Main Body -->
-    <HBox spacing="20" VBox.vgrow="ALWAYS">
-        <!-- Left: Modern list area (cards) -->
-        <VBox spacing="12" HBox.hgrow="ALWAYS" styleClass="section-card">
-            <Label text="Offers" styleClass="section-title" />
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
-                <VBox spacing="12" style="-fx-padding: 10;">
-                    <!-- Placeholder card -->
-                    <VBox spacing="10" styleClass="interview-card">
-                        <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Label text="Senior Developer" styleClass="card-title" />
-                            <Region HBox.hgrow="ALWAYS" />
-                            <Label text="ACTIVE" styleClass="tag tag-success" />
+    <!-- Main Content: Split View -->
+    <HBox spacing="25" VBox.vgrow="ALWAYS">
+
+        <!-- LEFT SIDE: Job Offers List (40%) -->
+        <VBox spacing="15" prefWidth="450" styleClass="job-offers-list-container">
+            <Label text="Active Job Offers" styleClass="section-title"/>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
+                <VBox spacing="15" style="-fx-padding: 5;">
+
+                    <!-- Job Offer Card 1 -->
+                    <VBox styleClass="job-offer-card job-offer-selected" spacing="12">
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <VBox HBox.hgrow="ALWAYS" spacing="6">
+                                <Label text="Senior Frontend Developer" styleClass="job-title"/>
+                                <Label text="Technology • Full-time" styleClass="job-meta"/>
+                            </VBox>
+                            <Label text="ACTIVE" styleClass="job-status-badge job-status-active"/>
                         </HBox>
-                        <HBox spacing="30">
-                            <VBox spacing="4">
-                                <Label text="Company" styleClass="info-label" />
-                                <Label text="Tech Corp" styleClass="info-value" />
-                            </VBox>
-                            <VBox spacing="4">
-                                <Label text="Salary" styleClass="info-label" />
-                                <Label text="\$150k" styleClass="info-value" />
-                            </VBox>
+
+                        <HBox spacing="15">
+                            <Label text="📍 New York, NY" styleClass="job-info"/>
+                            <Label text="💰 $120k - $150k" styleClass="job-info"/>
+                        </HBox>
+
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="12 Applicants" styleClass="applicant-count"/>
+                            <Label text="•" styleClass="job-separator"/>
+                            <Label text="Posted: 1/15/2026" styleClass="job-date"/>
                         </HBox>
                     </VBox>
+
+                    <!-- Job Offer Card 2 -->
+                    <VBox styleClass="job-offer-card" spacing="12">
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <VBox HBox.hgrow="ALWAYS" spacing="6">
+                                <Label text="Product Designer" styleClass="job-title"/>
+                                <Label text="Design • Full-time" styleClass="job-meta"/>
+                            </VBox>
+                            <Label text="ACTIVE" styleClass="job-status-badge job-status-active"/>
+                        </HBox>
+
+                        <HBox spacing="15">
+                            <Label text="📍 San Francisco, CA" styleClass="job-info"/>
+                            <Label text="💰 $100k - $130k" styleClass="job-info"/>
+                        </HBox>
+
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="8 Applicants" styleClass="applicant-count"/>
+                            <Label text="•" styleClass="job-separator"/>
+                            <Label text="Posted: 1/18/2026" styleClass="job-date"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Job Offer Card 3 -->
+                    <VBox styleClass="job-offer-card" spacing="12">
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <VBox HBox.hgrow="ALWAYS" spacing="6">
+                                <Label text="DevOps Engineer" styleClass="job-title"/>
+                                <Label text="Technology • Full-time" styleClass="job-meta"/>
+                            </VBox>
+                            <Label text="CLOSED" styleClass="job-status-badge job-status-closed"/>
+                        </HBox>
+
+                        <HBox spacing="15">
+                            <Label text="📍 Remote" styleClass="job-info"/>
+                            <Label text="💰 $110k - $140k" styleClass="job-info"/>
+                        </HBox>
+
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="24 Applicants" styleClass="applicant-count"/>
+                            <Label text="•" styleClass="job-separator"/>
+                            <Label text="Posted: 1/10/2026" styleClass="job-date"/>
+                        </HBox>
+                    </VBox>
+
                 </VBox>
             </ScrollPane>
         </VBox>
 
-        <!-- Right: Modern actions panel placeholder -->
-        <VBox spacing="12" prefWidth="340" styleClass="section-card">
-            <Label text="Actions" styleClass="section-title" />
-            <Label text="This module will be wired later. For now it uses the shared template." styleClass="page-subtitle" wrapText="true" />
+        <!-- RIGHT SIDE: Job Offer Form (60%) -->
+        <VBox spacing="20" HBox.hgrow="ALWAYS" styleClass="job-form-container">
 
-            <HBox spacing="10">
-                <Button text="+ Add Offer" styleClass="btn-primary" />
-                <Button text="Refresh" styleClass="btn-secondary" />
-            </HBox>
+            <Label text="Job Offer Details" styleClass="section-title"/>
 
-            <Separator />
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
+                <VBox spacing="20" style="-fx-padding: 10;">
 
-            <Label text="Tip: Use cards (VBox) like Interview screen for items." styleClass="info-label" wrapText="true" />
+                    <!-- Basic Information Section -->
+                    <VBox spacing="15" styleClass="form-section-card">
+                        <Label text="Basic Information" styleClass="form-section-title"/>
+
+                        <VBox spacing="8">
+                            <Label text="Job Title *" styleClass="form-label"/>
+                            <TextField fx:id="txtJobTitle" promptText="e.g. Senior Frontend Developer" styleClass="modern-text-field"/>
+                        </VBox>
+
+                        <HBox spacing="15">
+                            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Department *" styleClass="form-label"/>
+                                <ComboBox fx:id="cbDepartment" promptText="Select department" prefWidth="200" styleClass="modern-combo"/>
+                            </VBox>
+
+                            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Employment Type *" styleClass="form-label"/>
+                                <ComboBox fx:id="cbEmploymentType" promptText="Select type" prefWidth="200" styleClass="modern-combo"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Location & Salary Section -->
+                    <VBox spacing="15" styleClass="form-section-card">
+                        <Label text="Location &amp; Compensation" styleClass="form-section-title"/>
+
+                        <HBox spacing="15">
+                            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Location *" styleClass="form-label"/>
+                                <TextField fx:id="txtLocation" promptText="e.g. New York, NY or Remote" styleClass="modern-text-field"/>
+                            </VBox>
+
+                            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Work Mode" styleClass="form-label"/>
+                                <ComboBox fx:id="cbWorkMode" promptText="Select mode" prefWidth="200" styleClass="modern-combo"/>
+                            </VBox>
+                        </HBox>
+
+                        <HBox spacing="15">
+                            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Salary Min ($)" styleClass="form-label"/>
+                                <TextField fx:id="txtSalaryMin" promptText="e.g. 100000" styleClass="modern-text-field"/>
+                            </VBox>
+
+                            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Salary Max ($)" styleClass="form-label"/>
+                                <TextField fx:id="txtSalaryMax" promptText="e.g. 150000" styleClass="modern-text-field"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Job Description Section -->
+                    <VBox spacing="15" styleClass="form-section-card">
+                        <Label text="Job Description" styleClass="form-section-title"/>
+
+                        <VBox spacing="8">
+                            <Label text="Description *" styleClass="form-label"/>
+                            <TextArea fx:id="txtDescription" promptText="Enter detailed job description..."
+                                      prefRowCount="6" wrapText="true" styleClass="modern-text-area"/>
+                        </VBox>
+
+                        <VBox spacing="8">
+                            <Label text="Requirements" styleClass="form-label"/>
+                            <TextArea fx:id="txtRequirements" promptText="Enter job requirements (one per line)..."
+                                      prefRowCount="5" wrapText="true" styleClass="modern-text-area"/>
+                        </VBox>
+
+                        <VBox spacing="8">
+                            <Label text="Benefits" styleClass="form-label"/>
+                            <TextArea fx:id="txtBenefits" promptText="Enter benefits offered..."
+                                      prefRowCount="4" wrapText="true" styleClass="modern-text-area"/>
+                        </VBox>
+                    </VBox>
+
+                    <!-- Additional Information Section -->
+                    <VBox spacing="15" styleClass="form-section-card">
+                        <Label text="Additional Information" styleClass="form-section-title"/>
+
+                        <HBox spacing="15">
+                            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Experience Level" styleClass="form-label"/>
+                                <ComboBox fx:id="cbExperienceLevel" promptText="Select level" prefWidth="200" styleClass="modern-combo"/>
+                            </VBox>
+
+                            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Application Deadline" styleClass="form-label"/>
+                                <DatePicker fx:id="dpDeadline" promptText="Select deadline" prefWidth="200" styleClass="modern-date-picker"/>
+                            </VBox>
+                        </HBox>
+
+                        <VBox spacing="8">
+                            <Label text="Contact Email" styleClass="form-label"/>
+                            <TextField fx:id="txtContactEmail" promptText="hr@company.com" styleClass="modern-text-field"/>
+                        </VBox>
+                    </VBox>
+
+                    <!-- Action Buttons -->
+                    <HBox spacing="15" alignment="CENTER_LEFT" styleClass="form-action-buttons">
+                        <Button text="💾 Save Job Offer" styleClass="btn-primary action-button" style="-fx-font-size: 14px;"/>
+                        <Button text="📤 Publish Now" styleClass="btn-success action-button" style="-fx-font-size: 14px;"/>
+                        <Button text="📋 Save as Draft" styleClass="btn-secondary action-button" style="-fx-font-size: 14px;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="🗑 Clear Form" styleClass="btn-danger action-button" style="-fx-font-size: 14px;"/>
+                    </HBox>
+
+                </VBox>
+            </ScrollPane>
+
         </VBox>
+
     </HBox>
+
 </VBox>
 

@@ -212,11 +212,13 @@ public class InterviewManagementController {
         card.getStyleClass().add("interview-card");
         card.setPadding(new Insets(20));
 
+        boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
+
         // Header with title and status
         HBox header = new HBox(15);
         header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
-        Label title = new Label("Frontend Developer Interview");
+        Label title = new Label(isRecruiter ? "Interview #" + interview.getId() : "Your Upcoming Interview");
         title.getStyleClass().add("card-title");
 
         Region spacer = new Region();
@@ -227,6 +229,19 @@ public class InterviewManagementController {
 
         header.getChildren().addAll(title, spacer, statusTag);
 
+        // Interview Status Box for Candidates (Prominent Display)
+        VBox statusBox = new VBox(10);
+        statusBox.setStyle("-fx-background-color: rgba(91, 163, 245, 0.1); -fx-padding: 15; -fx-background-radius: 8;");
+
+        Label statusLabel = new Label("Interview Status");
+        statusLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;");
+
+        Label statusValue = new Label(getStatusDescription(interview.getStatus()));
+        statusValue.setWrapText(true);
+        statusValue.setStyle("-fx-text-fill: #5BA3F5; -fx-font-size: 16px; -fx-font-weight: bold;");
+
+        statusBox.getChildren().addAll(statusLabel, statusValue);
+
         // Interview details (no raw IDs shown)
         HBox detailsRow = new HBox(30);
         detailsRow.getChildren().addAll(
@@ -235,19 +250,51 @@ public class InterviewManagementController {
             createInfoBox("🎯 Mode", interview.getMode())
         );
 
+        // Add meeting link or location info
+        if ("ONLINE".equals(interview.getMode()) && interview.getMeetingLink() != null && !interview.getMeetingLink().trim().isEmpty()) {
+            Label linkLabel = new Label("🔗 Meeting Link: " + interview.getMeetingLink());
+            linkLabel.setWrapText(true);
+            linkLabel.setStyle("-fx-text-fill: #5BA3F5; -fx-font-size: 12px; -fx-padding: 5 0;");
+            card.getChildren().add(linkLabel);
+        } else if ("ON_SITE".equals(interview.getMode()) && interview.getLocation() != null && !interview.getLocation().trim().isEmpty()) {
+            Label locLabel = new Label("📍 Location: " + interview.getLocation());
+            locLabel.setWrapText(true);
+            locLabel.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 12px; -fx-padding: 5 0;");
+            card.getChildren().add(locLabel);
+        }
+
         // Action buttons based on role
         HBox actionRow = createActionButtons(interview);
 
-        card.getChildren().addAll(header, detailsRow, actionRow);
+        if (isRecruiter) {
+            card.getChildren().addAll(header, detailsRow, actionRow);
+        } else {
+            // For candidates, show status prominently
+            card.getChildren().addAll(header, statusBox, detailsRow, actionRow);
+        }
 
-        // Click to select interview and show bottom action buttons
-        card.setOnMouseClicked(e -> {
-            selectedInterview = interview;
-            highlightSelectedCard(card);
-            showBottomActionButtons();
-        });
+        // Click to select interview and show bottom action buttons (recruiter only)
+        if (isRecruiter) {
+            card.setOnMouseClicked(e -> {
+                selectedInterview = interview;
+                highlightSelectedCard(card);
+                showBottomActionButtons();
+            });
+        }
 
         return card;
+    }
+
+    private String getStatusDescription(String status) {
+        if (status == null) return "Pending Confirmation";
+
+        return switch (status.toUpperCase()) {
+            case "SCHEDULED" -> "✓ Confirmed - Interview is scheduled and confirmed";
+            case "COMPLETED" -> "✓ Completed - Interview has been conducted";
+            case "CANCELLED" -> "✕ Cancelled - Interview has been cancelled";
+            case "RESCHEDULED" -> "🔄 Rescheduled - New time has been set";
+            default -> "Pending Confirmation";
+        };
     }
 
     private VBox createInfoBox(String label, String value) {
@@ -267,7 +314,18 @@ public class InterviewManagementController {
         HBox actionBox = new HBox(10);
         actionBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
-        // Check if feedback exists for this interview (mock check for now)
+        boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
+
+        // Only recruiters can manage feedback
+        if (!isRecruiter) {
+            // Candidates see a simple message
+            Label candidateMsg = new Label("You will be notified about interview results");
+            candidateMsg.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 12px; -fx-font-style: italic;");
+            actionBox.getChildren().add(candidateMsg);
+            return actionBox;
+        }
+
+        // Check if feedback exists for this interview (recruiter only)
         boolean hasFeedback = checkIfFeedbackExists(interview.getId());
 
         if (hasFeedback) {
@@ -278,13 +336,11 @@ public class InterviewManagementController {
             actionBox.getChildren().add(viewFeedbackBtn);
         }
 
-        // Always show "Add Feedback" button for recruiters or if no feedback exists
-        if ("Recruiter".equalsIgnoreCase(userRole) || !hasFeedback) {
-            Button addFeedbackBtn = new Button("✍️ Add Feedback");
-            addFeedbackBtn.getStyleClass().add("btn-success");
-            addFeedbackBtn.setOnAction(e -> createFeedbackDialog(interview));
-            actionBox.getChildren().add(addFeedbackBtn);
-        }
+        // Always show "Add Feedback" button for recruiters
+        Button addFeedbackBtn = new Button("✍️ Add Feedback");
+        addFeedbackBtn.getStyleClass().add("btn-success");
+        addFeedbackBtn.setOnAction(e -> createFeedbackDialog(interview));
+        actionBox.getChildren().add(addFeedbackBtn);
 
         return actionBox;
     }
@@ -386,112 +442,138 @@ public class InterviewManagementController {
         if (interview == null) return;
 
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle(existing == null ? "Add Feedback" : "Update Feedback");
+        dialog.setTitle(existing == null ? "Add Interview Feedback" : "Update Interview Feedback");
         dialog.setHeaderText("Interview #" + interview.getId());
 
-        VBox content = new VBox(12);
-        content.getStyleClass().add("dialog-content");
+        VBox content = new VBox(18);
+        content.setPadding(new Insets(25));
+        content.setStyle("-fx-background-color: white;");
 
+        // Technical Score
+        VBox techBox = new VBox(8);
+        Label techLabel = new Label("Technical Skills *");
+        techLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         TextField tfTech = new TextField();
-        tfTech.getStyleClass().add("dialog-input");
-        tfTech.setPromptText("Technical score (0-100)");
+        tfTech.setPromptText("Score: 0-100");
+        tfTech.setStyle("-fx-pref-width: 350px;");
+        techBox.getChildren().addAll(techLabel, tfTech);
 
+        // Communication Score
+        VBox commBox = new VBox(8);
+        Label commLabel = new Label("Communication Skills *");
+        commLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         TextField tfComm = new TextField();
-        tfComm.getStyleClass().add("dialog-input");
-        tfComm.setPromptText("Communication score (0-100)");
+        tfComm.setPromptText("Score: 0-100");
+        tfComm.setStyle("-fx-pref-width: 350px;");
+        commBox.getChildren().addAll(commLabel, tfComm);
 
+        // Culture Fit Score
+        VBox cultureBox = new VBox(8);
+        Label cultureLabel = new Label("Culture Fit *");
+        cultureLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         TextField tfCulture = new TextField();
-        tfCulture.getStyleClass().add("dialog-input");
-        tfCulture.setPromptText("Culture fit score (0-100)");
+        tfCulture.setPromptText("Score: 0-100");
+        tfCulture.setStyle("-fx-pref-width: 350px;");
+        cultureBox.getChildren().addAll(cultureLabel, tfCulture);
 
+        // Decision
+        VBox decisionBox = new VBox(8);
+        Label decisionLabel = new Label("Decision *");
+        decisionLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         ComboBox<String> cbDecision = new ComboBox<>();
         cbDecision.getItems().addAll("ACCEPTED", "REJECTED");
-        cbDecision.getStyleClass().add("dialog-input");
-        cbDecision.setPromptText("Decision");
+        cbDecision.setPromptText("Select decision");
+        cbDecision.setStyle("-fx-pref-width: 350px;");
+        decisionBox.getChildren().addAll(decisionLabel, cbDecision);
 
+        // Comments
+        VBox commentsBox = new VBox(8);
+        Label commentsLabel = new Label("Additional Comments");
+        commentsLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         TextArea taComment = new TextArea();
-        taComment.getStyleClass().add("dialog-input");
+        taComment.setPromptText("Enter detailed feedback and observations...");
         taComment.setPrefRowCount(4);
-        taComment.setPromptText("Comment");
+        taComment.setStyle("-fx-pref-width: 350px;");
+        commentsBox.getChildren().addAll(commentsLabel, taComment);
 
+        // Add separator
+        Separator separator = new Separator();
+        separator.setStyle("-fx-padding: 10 0;");
+
+        content.getChildren().addAll(
+            techBox, commBox, cultureBox,
+            separator, decisionBox, commentsBox
+        );
+
+        // Pre-fill if editing
         if (existing != null) {
             tfTech.setText(String.valueOf(existing.getTechnicalScore()));
             tfComm.setText(String.valueOf(existing.getCommunicationScore()));
             tfCulture.setText(String.valueOf(existing.getCultureFitScore()));
             cbDecision.setValue(existing.getDecision());
-            taComment.setText(existing.getComment());
+            taComment.setText(existing.getComment() != null ? existing.getComment() : "");
         }
-
-        content.getChildren().addAll(
-                new Label("Technical Score"), tfTech,
-                new Label("Communication Score"), tfComm,
-                new Label("Culture Fit Score"), tfCulture,
-                new Label("Decision"), cbDecision,
-                new Label("Comment"), taComment
-        );
 
         dialog.getDialogPane().setContent(content);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        dialog.showAndWait().ifPresent(result -> {
-            if (result != ButtonType.OK) return;
+        // Style the buttons
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.setText(existing == null ? "Save Feedback" : "Update Feedback");
+        okButton.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
 
-            // validate
-            Integer tech = parseScore(tfTech.getText(), "Technical");
-            if (tech == null) return;
-            Integer comm = parseScore(tfComm.getText(), "Communication");
-            if (comm == null) return;
-            Integer culture = parseScore(tfCulture.getText(), "Culture Fit");
-            if (culture == null) return;
-            if (cbDecision.getValue() == null) {
-                showAlert("Validation Error", "Please select a decision.", Alert.AlertType.WARNING);
-                return;
+        Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+        cancelButton.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+
+        dialog.showAndWait().ifPresent(r -> {
+            if (r == ButtonType.OK) {
+                try {
+                    // Validation
+                    if (tfTech.getText().trim().isEmpty() || tfComm.getText().trim().isEmpty() ||
+                        tfCulture.getText().trim().isEmpty() || cbDecision.getValue() == null) {
+                        showAlert("Validation Error", "Please fill in all required fields.", Alert.AlertType.WARNING);
+                        return;
+                    }
+
+                    int tech = Integer.parseInt(tfTech.getText().trim());
+                    int comm = Integer.parseInt(tfComm.getText().trim());
+                    int culture = Integer.parseInt(tfCulture.getText().trim());
+
+                    // Validate scores are between 0-100
+                    if (tech < 0 || tech > 100 || comm < 0 || comm > 100 || culture < 0 || culture > 100) {
+                        showAlert("Validation Error", "Scores must be between 0 and 100.", Alert.AlertType.WARNING);
+                        return;
+                    }
+
+                    String decision = cbDecision.getValue();
+                    String comment = taComment.getText();
+
+                    int recruiterId = getEffectiveRecruiterIdForInterview(interview);
+                    InterviewFeedback fb = existing != null ? existing : new InterviewFeedback();
+                    fb.setInterviewId(interview.getId());
+                    fb.setRecruiterId(recruiterId);
+                    fb.setTechnicalScore(tech);
+                    fb.setCommunicationScore(comm);
+                    fb.setCultureFitScore(culture);
+                    fb.setDecision(decision);
+                    fb.setComment(comment);
+
+                    if (existing == null) {
+                        InterviewFeedbackService.addFeedback(fb);
+                        showAlert("Success", "Feedback added successfully.", Alert.AlertType.INFORMATION);
+                    } else {
+                        InterviewFeedbackService.updateFeedback(fb.getId(), fb);
+                        showAlert("Success", "Feedback updated successfully.", Alert.AlertType.INFORMATION);
+                    }
+
+                    loadInterviews();
+                } catch (NumberFormatException e) {
+                    showAlert("Validation Error", "Scores must be valid numbers.", Alert.AlertType.WARNING);
+                } catch (Exception e) {
+                    showAlert("Error", "Failed to save feedback: " + e.getMessage(), Alert.AlertType.ERROR);
+                }
             }
-
-            InterviewFeedback fb;
-            if (existing != null) {
-                fb = existing;
-                fb.setTechnicalScore(tech);
-                fb.setCommunicationScore(comm);
-                fb.setCultureFitScore(culture);
-                fb.setOverallScore((tech + comm + culture) / 3);
-                fb.setDecision(cbDecision.getValue());
-                fb.setComment(taComment.getText());
-            } else {
-                fb = new InterviewFeedback(
-                        interview.getId(),
-                        getEffectiveRecruiterIdForInterview(interview),
-                        tech,
-                        comm,
-                        culture,
-                        cbDecision.getValue(),
-                        taComment.getText()
-                );
-            }
-
-            // persist
-            if (existing != null) {
-                InterviewFeedbackService.updateFeedback(existing.getId(), fb);
-            } else {
-                InterviewFeedbackService.addFeedback(fb);
-            }
-
-            loadInterviews();
         });
-    }
-
-    private Integer parseScore(String value, String label) {
-        try {
-            int v = Integer.parseInt(value.trim());
-            if (v < 0 || v > 100) {
-                showAlert("Validation Error", label + " score must be between 0 and 100", Alert.AlertType.WARNING);
-                return null;
-            }
-            return v;
-        } catch (Exception e) {
-            showAlert("Validation Error", label + " score must be a number", Alert.AlertType.WARNING);
-            return null;
-        }
     }
 
     private void showEditDialog(Interview interview) {
@@ -540,7 +622,9 @@ public class InterviewManagementController {
     }
 
     private void showBottomActionButtons() {
-        if (bottomActionButtons != null) {
+        boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
+
+        if (bottomActionButtons != null && isRecruiter) {
             bottomActionButtons.setVisible(true);
             bottomActionButtons.setManaged(true);
         }

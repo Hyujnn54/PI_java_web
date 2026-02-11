@@ -3,15 +3,21 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
 
 <BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="Controllers.MainShellController" style="-fx-background-color: #f8f9fa;">
+            fx:controller="Controllers.MainShellController" style="-fx-background-color: #f8f9fa;"
+            stylesheets="@styles.css">
 
     <!-- TOP BAR -->
     <top>
         <HBox alignment="CENTER_LEFT" spacing="20" styleClass="top-bar">
             <HBox alignment="CENTER_LEFT" spacing="12">
-                <Label text="🎯" style="-fx-font-size: 28px;"/>
+                <ImageView fitHeight="32" fitWidth="32" preserveRatio="true">
+                    <image>
+                        <Image url="@images/logo.jpg"/>
+                    </image>
+                </ImageView>
                 <Label text="Talent Bridge" styleClass="logo-text"/>
             </HBox>
 
@@ -33,32 +39,35 @@
 
     <!-- LEFT SIDEBAR -->
     <left>
-        <VBox prefWidth="280" spacing="8" styleClass="sidebar" style="-fx-padding: 25 0;">
+        <VBox prefWidth="260" spacing="12" styleClass="sidebar" style="-fx-padding: 30 15;">
 
-            <Button fx:id="btnInterviews" onAction="#handleInterviewsNav" text="📋  Interviews"
-                    styleClass="nav-button nav-button-active" prefWidth="280">
-                <VBox.margin><Insets left="10" right="10"/></VBox.margin>
-            </Button>
+            <!-- Navigation Section -->
+            <VBox spacing="8">
+                <Label text="NAVIGATION" styleClass="sidebar-section-label"/>
 
-            <Button fx:id="btnApplications" onAction="#handleApplicationsNav" text="📨  Applications"
-                    styleClass="nav-button nav-button-inactive" prefWidth="280">
-                <VBox.margin><Insets left="10" right="10"/></VBox.margin>
-            </Button>
+                <Button fx:id="btnInterviews" onAction="#handleInterviewsNav" text="Interviews"
+                        styleClass="nav-button nav-button-active">
+                    <VBox.margin><Insets top="5"/></VBox.margin>
+                </Button>
 
-            <Button fx:id="btnJobOffers" onAction="#handleJobOffersNav" text="💼  Job Offers"
-                    styleClass="nav-button nav-button-inactive" prefWidth="280">
-                <VBox.margin><Insets left="10" right="10"/></VBox.margin>
-            </Button>
+                <Button fx:id="btnApplications" onAction="#handleApplicationsNav" text="Applications"
+                        styleClass="nav-button nav-button-inactive"/>
+
+                <Button fx:id="btnJobOffers" onAction="#handleJobOffersNav" text="Job Offers"
+                        styleClass="nav-button nav-button-inactive"/>
+            </VBox>
 
             <Region VBox.vgrow="ALWAYS"/>
 
-            <Separator style="-fx-background-color: rgba(255,255,255,0.2); -fx-padding: 0 20;"/>
+            <!-- Bottom Section -->
+            <VBox spacing="8">
+                <Separator styleClass="sidebar-separator"/>
 
-            <Button fx:id="btnFullscreenToggle" onAction="#handleFullscreenToggle" text="⛶  Fullscreen"
-                    style="-fx-padding: 12 25; -fx-font-size: 13; -fx-background-color: rgba(0,0,0,0.2); -fx-text-fill: white; -fx-alignment: CENTER_LEFT; -fx-background-radius: 8; -fx-cursor: hand;"
-                    prefWidth="280">
-                <VBox.margin><Insets left="10" right="10" top="10" bottom="10"/></VBox.margin>
-            </Button>
+                <Button fx:id="btnFullscreenToggle" onAction="#handleFullscreenToggle" text="Fullscreen"
+                        styleClass="sidebar-bottom-button">
+                    <VBox.margin><Insets top="5"/></VBox.margin>
+                </Button>
+            </VBox>
         </VBox>
     </left>
 

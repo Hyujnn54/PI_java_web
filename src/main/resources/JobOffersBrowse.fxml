@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.JobOffersController"
+      spacing="20" styleClass="page"
+      stylesheets="@styles.css" style="-fx-background-color: #f8f9fa;">
+
+    <padding>
+        <Insets top="25" left="25" right="25" bottom="25"/>
+    </padding>
+
+    <!-- Header Section -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox spacing="5" HBox.hgrow="ALWAYS">
+            <Label fx:id="lblTitle" text="Browse Job Offers" styleClass="page-title"/>
+            <Label fx:id="lblSubtitle" text="Find your next opportunity" styleClass="page-subtitle"/>
+        </VBox>
+    </HBox>
+
+    <!-- Search Bar Section -->
+    <HBox spacing="15" alignment="CENTER_LEFT" styleClass="search-bar-container">
+        <ComboBox fx:id="cbSearchCriteria" promptText="Search by..." prefWidth="180" styleClass="modern-combo"/>
+
+        <TextField fx:id="txtSearch" promptText="Search job offers..." HBox.hgrow="ALWAYS"
+                   styleClass="modern-search-field"/>
+
+        <Button text="Search" styleClass="btn-primary" onAction="#handleSearch"/>
+        <Button text="Clear" styleClass="btn-secondary" onAction="#handleClear"/>
+    </HBox>
+
+    <!-- Main Content Area: Split View -->
+    <HBox fx:id="mainContent" spacing="20" VBox.vgrow="ALWAYS" styleClass="split-view-container"/>
+
+</VBox>
+

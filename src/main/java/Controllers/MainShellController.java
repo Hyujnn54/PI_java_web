@@ -61,8 +61,9 @@ public class MainShellController {
     }
 
     @FXML private void handleJobOffersNav() {
-        // Job offers is UI-only placeholder
-        activePage = "/JobOffers.fxml";
+        // Load different views based on user role
+        boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
+        activePage = isRecruiter ? "/JobOffers.fxml" : "/JobOffersBrowse.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnJobOffers);
     }
