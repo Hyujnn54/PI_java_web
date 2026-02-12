@@ -5,11 +5,11 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class MyDatabase {
-    private final String URl = "jdbc:mysql://localhost:3306/recruitment_db";
+    private final String URL = "jdbc:mysql://localhost:3306/rh?autoReconnect=true&useSSL=false";
     private final String USERNAME = "root";
     private final String PASSWORD = "";
     private Connection connection;
-    private  static MyDatabase instance ;
+    private static MyDatabase instance;
 
     public static MyDatabase getInstance() {
         if (instance == null) {
@@ -19,16 +19,29 @@ public class MyDatabase {
     }
 
     public Connection getConnection() {
+        try {
+            // Check if connection is valid, if not, reconnect
+            if (connection == null || connection.isClosed() || !connection.isValid(2)) {
+                System.out.println("Connection is closed or invalid, reconnecting...");
+                connect();
+            }
+        } catch (SQLException e) {
+            System.err.println("Error checking connection validity: " + e.getMessage());
+            connect();
+        }
         return connection;
     }
 
     private MyDatabase() {
+        connect();
+    }
 
+    private void connect() {
         try {
-            connection = DriverManager.getConnection(URl,USERNAME,PASSWORD);
+            connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
             System.out.println("Connected to database successfully");
         } catch (SQLException e) {
-            System.out.println("Database connection failed: " + e.getMessage());
+            System.err.println("Database connection failed: " + e.getMessage());
             e.printStackTrace();
         }
     }

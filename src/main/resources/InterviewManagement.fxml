@@ -9,11 +9,26 @@
       spacing="25" style="-fx-background-color: #f8f9fa; -fx-padding: 25;"
       stylesheets="@styles.css">
 
-    <!-- Header Section -->
+    <!-- Header Section with Search and Calendar -->
     <HBox alignment="CENTER_LEFT" spacing="15">
         <Label text="📋 My Interviews" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <!-- Only visible for recruiter -->
+
+        <!-- Search Bar for Recruiter -->
+        <HBox fx:id="searchBox" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
+            <TextField fx:id="txtSearchInterview" promptText="Search interviews..."
+                      style="-fx-pref-width: 250px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 8 12; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+            <Button fx:id="btnSearchInterview" text="🔍"
+                   style="-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 6 12; -fx-background-radius: 8; -fx-cursor: hand;"
+                   onAction="#handleSearchInterview"/>
+        </HBox>
+
+        <!-- Calendar Button for Recruiter -->
+        <Button fx:id="btnCalendar" text="📅 Calendar" visible="false" managed="false"
+                style="-fx-background-color: white; -fx-text-fill: #5BA3F5; -fx-font-weight: 600; -fx-padding: 10 20; -fx-background-radius: 8; -fx-border-color: #5BA3F5; -fx-border-width: 2; -fx-border-radius: 8; -fx-cursor: hand;"
+                onAction="#handleShowCalendar"/>
+
+        <!-- Schedule button for recruiter -->
         <Button fx:id="btnScheduleNew" text="+ Schedule Interview" visible="false" managed="false"
                 styleClass="btn-primary" onAction="#handleScheduleNew"/>
     </HBox>
@@ -33,7 +48,45 @@
                 onAction="#handleUpdateInterview"/>
         <Button fx:id="btnDelete" text="🗑️ Delete Interview" styleClass="btn-danger"
                 onAction="#handleDeleteInterview"/>
+        <Button fx:id="btnManageFeedback" text="📋 Manage Feedback" styleClass="btn-success"
+                onAction="#handleManageFeedbackPanel" visible="false" managed="false"/>
     </HBox>
+
+    <!-- Feedback Panel (Hidden by default, similar to edit dialog) -->
+    <VBox fx:id="feedbackPanel" visible="false" managed="false" spacing="15"
+          style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 25; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 5);">
+
+        <Label text="Interview Feedback" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+        <GridPane hgap="15" vgap="15">
+            <columnConstraints>
+                <ColumnConstraints minWidth="120" prefWidth="120"/>
+                <ColumnConstraints/>
+            </columnConstraints>
+
+            <!-- Overall Score -->
+            <Label text="Overall Score:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="info-label"/>
+            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                <TextField fx:id="txtFeedbackScore" promptText="0-100" prefWidth="100" styleClass="dialog-input"/>
+                <Label fx:id="lblScoreIndicator" style="-fx-font-size: 12px; -fx-font-weight: 600;"/>
+            </HBox>
+
+            <!-- Comments -->
+            <Label text="Comments:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="info-label"/>
+            <TextArea fx:id="txtFeedbackComments" promptText="Enter detailed feedback, strengths, areas for improvement..."
+                     GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="dialog-input" prefRowCount="5" wrapText="true"/>
+        </GridPane>
+
+        <!-- Feedback Action Buttons -->
+        <HBox spacing="15" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+            <Button fx:id="btnSaveFeedback" text="💾 Save Feedback" styleClass="btn-primary" onAction="#handleSaveFeedback"/>
+            <Button fx:id="btnAcceptCandidate" text="✓ Accept Candidate" styleClass="btn-success" onAction="#handleAcceptCandidate"/>
+            <Button fx:id="btnRejectCandidate" text="✗ Reject Candidate" styleClass="btn-danger" onAction="#handleRejectCandidate"/>
+            <Button fx:id="btnDeleteFeedback" text="🗑️ Delete Feedback" styleClass="btn-secondary"
+                   onAction="#handleDeleteFeedback" visible="false" managed="false"/>
+            <Button fx:id="btnCancelFeedback" text="Cancel" styleClass="btn-secondary" onAction="#handleCancelFeedback"/>
+        </HBox>
+    </VBox>
 
     <!-- Modern Add/Edit Dialog (Hidden by default) -->
     <VBox fx:id="editDialog" visible="false" managed="false" spacing="15"

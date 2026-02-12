@@ -1,5 +1,5 @@
 /* Talent Bridge - Main Stylesheet */
-/* Colors: Bright Blue (#5BA3F5), White (#FFFFFF), Light Gray (#F8F9FA) */
+/* Colors: Bright Blue (#5BA3F5), White (#FFFFFF), Light Gray (#F5F6F8) */
 
 * {
     -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
@@ -7,97 +7,104 @@
 
 /* Root styling */
 .root {
-    -fx-background-color: #FFFFFF;
+    -fx-background-color: #F5F6F8;
     -fx-font-size: 12px;
 }
 
 /* Brighter color palette */
 :root {
-    /* Much brighter blues */
-    -tb-primary: #5BA3F5; /* bright blue */
+    /* Bright blues matching logo */
+    -tb-primary: #5BA3F5; /* bright blue from logo */
     -tb-primary-hover: #4A90E2; /* hover state */
     -tb-primary-dark: #3B82DB; /* darker blue */
-    -tb-bg: #f8f9fa;
+    -tb-bg-main: #F5F6F8; /* slightly darker white for main content */
+    -tb-bg-white: #FFFFFF; /* pure white for sidebar/header */
     -tb-text: #2c3e50;
+    -tb-text-light: #6c757d;
 }
 
-/* Sidebar styling - modern with smooth gradient */
+/* Sidebar styling - Clean white with blue accents */
 .sidebar {
-    -fx-background-color: linear-gradient(to bottom right, #4A90E2, #5BA3F5, #6BB6FF);
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 20, 0, 3, 0);
+    -fx-background-color: #FFFFFF;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 2, 0);
+    -fx-padding: 0;
 }
 
 .sidebar-section-label {
-    -fx-text-fill: rgba(255,255,255,0.7);
+    -fx-text-fill: #8e9ba8;
     -fx-font-size: 11px;
-    -fx-font-weight: bold;
-    -fx-padding: 5 12;
+    -fx-font-weight: 600;
+    -fx-padding: 5 20;
     -fx-letter-spacing: 1.2px;
+    -fx-text-transform: uppercase;
 }
 
 .sidebar-title {
-    -fx-text-fill: #FFFFFF;
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-font-size: 20px;
+    -fx-font-weight: 700;
+    -fx-padding: 20 20 15 20;
 }
 
+/* Sidebar buttons - Full width, centered text */
 .sidebar-button {
-    -fx-padding: 12px 15px;
-    -fx-text-fill: #FFFFFF;
-    -fx-font-size: 13px;
+    -fx-padding: 16px 20px;
+    -fx-text-fill: #6c757d;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
     -fx-background-color: transparent;
-    -fx-alignment: CENTER_LEFT;
+    -fx-alignment: CENTER;
     -fx-cursor: hand;
+    -fx-border-width: 0;
+    -fx-background-radius: 0;
 }
 
 .sidebar-button:hover {
-    -fx-background-color: rgba(255,255,255,0.2);
-    -fx-scale-x: 1.02;
-    -fx-scale-y: 1.02;
+    -fx-background-color: #F5F6F8;
+    -fx-text-fill: #5BA3F5;
 }
 
-.sidebar-button:pressed {
-    -fx-background-color: rgba(255,255,255,0.3);
-    -fx-scale-x: 0.98;
-    -fx-scale-y: 0.98;
+/* Active/selected sidebar button - Blue background */
+.sidebar-button-active {
+    -fx-background-color: #5BA3F5;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: 600;
+}
+
+.sidebar-button-active:hover {
+    -fx-background-color: #4A90E2;
+    -fx-text-fill: #FFFFFF;
 }
 
 .sidebar-separator {
-    -fx-background-color: rgba(255,255,255,0.25);
+    -fx-background-color: #e9ecef;
     -fx-pref-height: 1;
+    -fx-padding: 0 15;
 }
 
 .sidebar-bottom-button {
-    -fx-background-color: rgba(0,0,0,0.15);
-    -fx-text-fill: white;
+    -fx-background-color: #F5F6F8;
+    -fx-text-fill: #6c757d;
     -fx-font-size: 13px;
     -fx-font-weight: 600;
     -fx-padding: 12 20;
     -fx-background-radius: 8;
     -fx-cursor: hand;
-    -fx-alignment: CENTER_LEFT;
+    -fx-alignment: CENTER;
 }
 
 .sidebar-bottom-button:hover {
-    -fx-background-color: rgba(0,0,0,0.25);
-    -fx-scale-x: 1.03;
-    -fx-scale-y: 1.03;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 2);
+    -fx-background-color: #e9ecef;
+    -fx-text-fill: #5BA3F5;
 }
 
-.sidebar-bottom-button:pressed {
-    -fx-background-color: rgba(0,0,0,0.35);
-    -fx-scale-x: 0.98;
-    -fx-scale-y: 0.98;
-}
-
-/* Top bar styling */
+/* Top bar styling - White with subtle shadow */
 .top-bar {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #e1e8ed;
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #e9ecef;
     -fx-border-width: 0 0 1 0;
-    -fx-padding: 12 25;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 5, 0, 0, 2);
+    -fx-padding: 15 25;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 8, 0, 0, 2);
 }
 
 .logo-text {

@@ -3,16 +3,29 @@ package Services;
 import Utils.MyDatabase;
 
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Minimal read-only service for applications.
- * We only need retrieval for the UI flows (schedule interview from application).
+ * Service for job_application table.
+ * Provides read and status update operations for applications.
  */
 public class ApplicationService {
 
-    public record ApplicationRow(int id, int candidateId, String status) {}
+    public record ApplicationRow(
+        Long id,
+        Long offerId,
+        Long candidateId,
+        String phone,
+        String coverLetter,
+        String cvPath,
+        LocalDateTime appliedAt,
+        String currentStatus,
+        String candidateName,
+        String candidateEmail,
+        String jobTitle
+    ) {}
 
     private static Connection getConnection() {
         return MyDatabase.getInstance().getConnection();
@@ -20,16 +33,32 @@ public class ApplicationService {
 
     public static List<ApplicationRow> getAll() {
         List<ApplicationRow> list = new ArrayList<>();
-        String sql = "SELECT id, candidate_id, status FROM application ORDER BY id DESC";
+        String sql = "SELECT ja.id, ja.offer_id, ja.candidate_id, ja.phone, ja.cover_letter, ja.cv_path, " +
+                     "ja.applied_at, ja.current_status, " +
+                     "CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as candidate_name, " +
+                     "u.email as candidate_email, " +
+                     "jo.title as job_title " +
+                     "FROM job_application ja " +
+                     "LEFT JOIN users u ON ja.candidate_id = u.id " +
+                     "LEFT JOIN job_offer jo ON ja.offer_id = jo.id " +
+                     "ORDER BY ja.applied_at DESC";
 
         try (Statement st = getConnection().createStatement();
              ResultSet rs = st.executeQuery(sql)) {
 
             while (rs.next()) {
                 list.add(new ApplicationRow(
-                        rs.getInt("id"),
-                        rs.getInt("candidate_id"),
-                        rs.getString("status")
+                        rs.getLong("id"),
+                        rs.getLong("offer_id"),
+                        rs.getLong("candidate_id"),
+                        rs.getString("phone"),
+                        rs.getString("cover_letter"),
+                        rs.getString("cv_path"),
+                        rs.getTimestamp("applied_at") != null ? rs.getTimestamp("applied_at").toLocalDateTime() : null,
+                        rs.getString("current_status"),
+                        rs.getString("candidate_name"),
+                        rs.getString("candidate_email"),
+                        rs.getString("job_title")
                 ));
             }
         } catch (SQLException e) {
@@ -39,13 +68,33 @@ public class ApplicationService {
         return list;
     }
 
-    public static ApplicationRow getById(int id) {
-        String sql = "SELECT id, candidate_id, status FROM application WHERE id = ?";
+    public static ApplicationRow getById(Long id) {
+        String sql = "SELECT ja.id, ja.offer_id, ja.candidate_id, ja.phone, ja.cover_letter, ja.cv_path, " +
+                     "ja.applied_at, ja.current_status, " +
+                     "CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as candidate_name, " +
+                     "u.email as candidate_email, " +
+                     "jo.title as job_title " +
+                     "FROM job_application ja " +
+                     "LEFT JOIN users u ON ja.candidate_id = u.id " +
+                     "LEFT JOIN job_offer jo ON ja.offer_id = jo.id " +
+                     "WHERE ja.id = ?";
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setInt(1, id);
+            ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return new ApplicationRow(rs.getInt("id"), rs.getInt("candidate_id"), rs.getString("status"));
+                    return new ApplicationRow(
+                            rs.getLong("id"),
+                            rs.getLong("offer_id"),
+                            rs.getLong("candidate_id"),
+                            rs.getString("phone"),
+                            rs.getString("cover_letter"),
+                            rs.getString("cv_path"),
+                            rs.getTimestamp("applied_at") != null ? rs.getTimestamp("applied_at").toLocalDateTime() : null,
+                            rs.getString("current_status"),
+                            rs.getString("candidate_name"),
+                            rs.getString("candidate_email"),
+                            rs.getString("job_title")
+                    );
                 }
             }
         } catch (SQLException e) {
@@ -54,36 +103,91 @@ public class ApplicationService {
         return null;
     }
 
-    public static void updateStatus(int applicationId, String status) {
-        String sql = "UPDATE application SET status = ? WHERE id = ?";
+    public static List<ApplicationRow> getByCandidateId(Long candidateId) {
+        List<ApplicationRow> list = new ArrayList<>();
+        String sql = "SELECT ja.id, ja.offer_id, ja.candidate_id, ja.phone, ja.cover_letter, ja.cv_path, " +
+                     "ja.applied_at, ja.current_status, " +
+                     "CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as candidate_name, " +
+                     "u.email as candidate_email, " +
+                     "jo.title as job_title " +
+                     "FROM job_application ja " +
+                     "LEFT JOIN users u ON ja.candidate_id = u.id " +
+                     "LEFT JOIN job_offer jo ON ja.offer_id = jo.id " +
+                     "WHERE ja.candidate_id = ? " +
+                     "ORDER BY ja.applied_at DESC";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setLong(1, candidateId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                list.add(new ApplicationRow(
+                        rs.getLong("id"),
+                        rs.getLong("offer_id"),
+                        rs.getLong("candidate_id"),
+                        rs.getString("phone"),
+                        rs.getString("cover_letter"),
+                        rs.getString("cv_path"),
+                        rs.getTimestamp("applied_at") != null ? rs.getTimestamp("applied_at").toLocalDateTime() : null,
+                        rs.getString("current_status"),
+                        rs.getString("candidate_name"),
+                        rs.getString("candidate_email"),
+                        rs.getString("job_title")
+                ));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving applications by candidate: " + e.getMessage());
+        }
+
+        return list;
+    }
+
+    public static void updateStatus(Long applicationId, String status) {
+        // Validate status enum
+        List<String> validStatuses = List.of("SUBMITTED", "IN_REVIEW", "SHORTLISTED", "REJECTED", "INTERVIEW", "HIRED");
+        if (!validStatuses.contains(status)) {
+            throw new IllegalArgumentException("Invalid status: " + status);
+        }
+
+        String sql = "UPDATE job_application SET current_status = ? WHERE id = ?";
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setString(1, status);
-            ps.setInt(2, applicationId);
+            ps.setLong(2, applicationId);
             int rows = ps.executeUpdate();
             if (rows == 0) {
                 throw new RuntimeException("Application not found: " + applicationId);
             }
+            System.out.println("Application " + applicationId + " status updated to: " + status);
         } catch (SQLException e) {
             throw new RuntimeException("Failed to update application status: " + e.getMessage(), e);
         }
     }
 
-    public static void reject(int applicationId) {
+    public static void reject(Long applicationId) {
         updateStatus(applicationId, "REJECTED");
     }
 
-    public static void accept(int applicationId) {
-        updateStatus(applicationId, "ACCEPTED");
+    public static void shortlist(Long applicationId) {
+        updateStatus(applicationId, "SHORTLISTED");
     }
 
-    public static void delete(int applicationId) {
-        String sql = "DELETE FROM application WHERE id = ?";
+    public static void setToInterview(Long applicationId) {
+        updateStatus(applicationId, "INTERVIEW");
+    }
+
+    public static void hire(Long applicationId) {
+        updateStatus(applicationId, "HIRED");
+    }
+
+    public static void delete(Long applicationId) {
+        String sql = "DELETE FROM job_application WHERE id = ?";
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setInt(1, applicationId);
+            ps.setLong(1, applicationId);
             int rows = ps.executeUpdate();
             if (rows == 0) {
                 throw new RuntimeException("Application not found: " + applicationId);
             }
+            System.out.println("Application deleted: " + applicationId);
         } catch (SQLException e) {
             throw new RuntimeException("Failed to delete application: " + e.getMessage(), e);
         }

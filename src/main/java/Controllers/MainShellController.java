@@ -3,10 +3,13 @@ package Controllers;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 
 import java.io.IOException;
 
@@ -34,7 +37,7 @@ public class MainShellController {
 
     @FXML
     private void initialize() {
-        if (lblUserName != null) lblUserName.setText("Sarah Johnson");
+        if (lblUserName != null) lblUserName.setText("User"); // Will be updated dynamically
         if (lblUserRole != null) lblUserRole.setText(Utils.UserContext.getRoleLabel());
 
         applyRoleToShell();
@@ -69,11 +72,32 @@ public class MainShellController {
     }
 
     @FXML private void handleDisconnect() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Disconnect");
-        alert.setHeaderText("Login removed");
-        alert.setContentText("This app currently starts directly in the main shell. Add auth later to enable logout.");
-        alert.showAndWait();
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmAlert.setTitle("Disconnect");
+        confirmAlert.setHeaderText("Are you sure you want to logout?");
+        confirmAlert.setContentText("You will be redirected to the login page.");
+
+        confirmAlert.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    // Load login page
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/Login.fxml"));
+                    Parent root = loader.load();
+
+                    Stage stage = (Stage) btnDisconnect.getScene().getWindow();
+                    stage.setScene(new Scene(root, 550, 650));
+                    stage.setTitle("Talent Bridge - Login");
+                    stage.centerOnScreen();
+
+                } catch (IOException e) {
+                    Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                    errorAlert.setTitle("Error");
+                    errorAlert.setHeaderText("Failed to logout");
+                    errorAlert.setContentText(e.getMessage());
+                    errorAlert.showAndWait();
+                }
+            }
+        });
     }
 
     @FXML private void handleUserProfile() {
@@ -128,17 +152,17 @@ public class MainShellController {
     private void highlightActiveButton(Button activeBtn) {
         resetButtonStyles();
         if (activeBtn == null) return;
-        activeBtn.getStyleClass().removeAll("nav-button-inactive");
-        activeBtn.getStyleClass().add("nav-button-active");
+        activeBtn.getStyleClass().removeAll("sidebar-button");
+        activeBtn.getStyleClass().add("sidebar-button-active");
     }
 
     private void resetButtonStyles() {
         Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers};
         for (Button btn : navButtons) {
             if (btn != null) {
-                btn.getStyleClass().removeAll("nav-button-active");
-                if (!btn.getStyleClass().contains("nav-button-inactive")) {
-                    btn.getStyleClass().add("nav-button-inactive");
+                btn.getStyleClass().removeAll("sidebar-button-active");
+                if (!btn.getStyleClass().contains("sidebar-button")) {
+                    btn.getStyleClass().add("sidebar-button");
                 }
             }
         }

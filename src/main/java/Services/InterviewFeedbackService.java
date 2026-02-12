@@ -17,98 +17,118 @@ public class InterviewFeedbackService {
     }
 
     public static void addFeedback(InterviewFeedback f) {
-        String sql = "INSERT INTO interview_feedback(interview_id, recruiter_id, technical_score, communication_score, culture_fit_score, overall_score, decision, comment) VALUES (?,?,?,?,?,?,?,?)";
+        // Validate decision enum
+        if (f.getDecision() == null || (!f.getDecision().equals("ACCEPTED") && !f.getDecision().equals("REJECTED"))) {
+            throw new IllegalArgumentException("Decision must be ACCEPTED or REJECTED");
+        }
+
+        // Validate overall score if present
+        if (f.getOverallScore() != null && (f.getOverallScore() < 0 || f.getOverallScore() > 100)) {
+            throw new IllegalArgumentException("Overall score must be between 0 and 100");
+        }
+
+        String sql = "INSERT INTO interview_feedback(interview_id, recruiter_id, overall_score, decision, comment) VALUES (?,?,?,?,?)";
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setInt(1, f.getInterviewId());
-            ps.setInt(2, f.getRecruiterId());
-            ps.setInt(3, f.getTechnicalScore());
-            ps.setInt(4, f.getCommunicationScore());
-            ps.setInt(5, f.getCultureFitScore());
-            ps.setInt(6, f.getOverallScore());
-            ps.setString(7, f.getDecision());
-            ps.setString(8, f.getComment());
+            ps.setLong(1, f.getInterviewId());
+            ps.setLong(2, f.getRecruiterId());
+            if (f.getOverallScore() != null) {
+                ps.setInt(3, f.getOverallScore());
+            } else {
+                ps.setNull(3, Types.INTEGER);
+            }
+            ps.setString(4, f.getDecision());
+            ps.setString(5, f.getComment());
             ps.executeUpdate();
             System.out.println("Feedback added");
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            System.err.println("Error adding feedback: " + e.getMessage());
+            throw new RuntimeException("Failed to add feedback: " + e.getMessage(), e);
         }
     }
 
     public static List<InterviewFeedback> getAll() {
         List<InterviewFeedback> list = new ArrayList<>();
-        String sql = "SELECT * FROM interview_feedback";
+        String sql = "SELECT * FROM interview_feedback ORDER BY created_at DESC";
 
         try (Statement st = getConnection().createStatement();
              ResultSet rs = st.executeQuery(sql)) {
 
             while (rs.next()) {
                 InterviewFeedback f = new InterviewFeedback();
-                f.setId(rs.getInt("id"));
-                f.setInterviewId(rs.getInt("interview_id"));
-                f.setRecruiterId(rs.getInt("recruiter_id"));
-                f.setTechnicalScore(rs.getInt("technical_score"));
-                f.setCommunicationScore(rs.getInt("communication_score"));
-                f.setCultureFitScore(rs.getInt("culture_fit_score"));
-                f.setOverallScore(rs.getInt("overall_score"));
+                f.setId(rs.getLong("id"));
+                f.setInterviewId(rs.getLong("interview_id"));
+                f.setRecruiterId(rs.getLong("recruiter_id"));
+                int score = rs.getInt("overall_score");
+                f.setOverallScore(rs.wasNull() ? null : score);
                 f.setDecision(rs.getString("decision"));
                 f.setComment(rs.getString("comment"));
                 list.add(f);
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            System.err.println("Error retrieving feedback: " + e.getMessage());
         }
         return list;
     }
 
-    public static void updateFeedback(int id, InterviewFeedback f) {
-        String sql = "UPDATE interview_feedback SET interview_id=?, recruiter_id=?, technical_score=?, communication_score=?, culture_fit_score=?, overall_score=?, decision=?, comment=? WHERE id=?";
+    public static void updateFeedback(Long id, InterviewFeedback f) {
+        // Validate decision enum
+        if (f.getDecision() == null || (!f.getDecision().equals("ACCEPTED") && !f.getDecision().equals("REJECTED"))) {
+            throw new IllegalArgumentException("Decision must be ACCEPTED or REJECTED");
+        }
+
+        // Validate overall score if present
+        if (f.getOverallScore() != null && (f.getOverallScore() < 0 || f.getOverallScore() > 100)) {
+            throw new IllegalArgumentException("Overall score must be between 0 and 100");
+        }
+
+        String sql = "UPDATE interview_feedback SET interview_id=?, recruiter_id=?, overall_score=?, decision=?, comment=? WHERE id=?";
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setInt(1, f.getInterviewId());
-            ps.setInt(2, f.getRecruiterId());
-            ps.setInt(3, f.getTechnicalScore());
-            ps.setInt(4, f.getCommunicationScore());
-            ps.setInt(5, f.getCultureFitScore());
-            ps.setInt(6, f.getOverallScore());
-            ps.setString(7, f.getDecision());
-            ps.setString(8, f.getComment());
-            ps.setInt(9, id);
+            ps.setLong(1, f.getInterviewId());
+            ps.setLong(2, f.getRecruiterId());
+            if (f.getOverallScore() != null) {
+                ps.setInt(3, f.getOverallScore());
+            } else {
+                ps.setNull(3, Types.INTEGER);
+            }
+            ps.setString(4, f.getDecision());
+            ps.setString(5, f.getComment());
+            ps.setLong(6, id);
             ps.executeUpdate();
             System.out.println("Feedback updated");
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            System.err.println("Error updating feedback: " + e.getMessage());
+            throw new RuntimeException("Failed to update feedback: " + e.getMessage(), e);
         }
     }
 
-    public static void deleteFeedback(int id) {
+    public static void deleteFeedback(Long id) {
         String sql = "DELETE FROM interview_feedback WHERE id=?";
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setInt(1, id);
+            ps.setLong(1, id);
             ps.executeUpdate();
             System.out.println("Feedback deleted");
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            System.err.println("Error deleting feedback: " + e.getMessage());
         }
     }
 
-    public static List<InterviewFeedback> getByInterviewId(int interviewId) {
+    public static List<InterviewFeedback> getByInterviewId(Long interviewId) {
         List<InterviewFeedback> list = new ArrayList<>();
         String sql = "SELECT * FROM interview_feedback WHERE interview_id = ? ORDER BY created_at DESC";
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setInt(1, interviewId);
+            ps.setLong(1, interviewId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     InterviewFeedback f = new InterviewFeedback();
-                    f.setId(rs.getInt("id"));
-                    f.setInterviewId(rs.getInt("interview_id"));
-                    f.setRecruiterId(rs.getInt("recruiter_id"));
-                    f.setTechnicalScore(rs.getInt("technical_score"));
-                    f.setCommunicationScore(rs.getInt("communication_score"));
-                    f.setCultureFitScore(rs.getInt("culture_fit_score"));
-                    f.setOverallScore(rs.getInt("overall_score"));
+                    f.setId(rs.getLong("id"));
+                    f.setInterviewId(rs.getLong("interview_id"));
+                    f.setRecruiterId(rs.getLong("recruiter_id"));
+                    int score = rs.getInt("overall_score");
+                    f.setOverallScore(rs.wasNull() ? null : score);
                     f.setDecision(rs.getString("decision"));
                     f.setComment(rs.getString("comment"));
                     list.add(f);
@@ -121,10 +141,10 @@ public class InterviewFeedbackService {
         return list;
     }
 
-    public static boolean existsForInterview(int interviewId) {
+    public static boolean existsForInterview(Long interviewId) {
         String sql = "SELECT 1 FROM interview_feedback WHERE interview_id = ? LIMIT 1";
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setInt(1, interviewId);
+            ps.setLong(1, interviewId);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
@@ -134,20 +154,18 @@ public class InterviewFeedbackService {
         }
     }
 
-    public static InterviewFeedback getById(int id) {
+    public static InterviewFeedback getById(Long id) {
         String sql = "SELECT * FROM interview_feedback WHERE id = ?";
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setInt(1, id);
+            ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     InterviewFeedback f = new InterviewFeedback();
-                    f.setId(rs.getInt("id"));
-                    f.setInterviewId(rs.getInt("interview_id"));
-                    f.setRecruiterId(rs.getInt("recruiter_id"));
-                    f.setTechnicalScore(rs.getInt("technical_score"));
-                    f.setCommunicationScore(rs.getInt("communication_score"));
-                    f.setCultureFitScore(rs.getInt("culture_fit_score"));
-                    f.setOverallScore(rs.getInt("overall_score"));
+                    f.setId(rs.getLong("id"));
+                    f.setInterviewId(rs.getLong("interview_id"));
+                    f.setRecruiterId(rs.getLong("recruiter_id"));
+                    int score = rs.getInt("overall_score");
+                    f.setOverallScore(rs.wasNull() ? null : score);
                     f.setDecision(rs.getString("decision"));
                     f.setComment(rs.getString("comment"));
                     return f;
@@ -161,7 +179,7 @@ public class InterviewFeedbackService {
 
     // Optional convenience for dialogs: create or update depending on id.
     public static void save(InterviewFeedback f) {
-        if (f.getId() > 0) {
+        if (f.getId() != null && f.getId() > 0) {
             updateFeedback(f.getId(), f);
         } else {
             addFeedback(f);
