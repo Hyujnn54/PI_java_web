@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="Controllers.MainShellController" style="-fx-background-color: #F5F6F8;"
+            stylesheets="@styles.css">
+
+    <!-- TOP BAR - White with shadow -->
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="20" styleClass="top-bar">
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <ImageView fitHeight="35" fitWidth="35" preserveRatio="true">
+                    <image>
+                        <Image url="@images/logo.jpg"/>
+                    </image>
+                </ImageView>
+                <Label text="Talent Bridge" styleClass="logo-text"/>
+            </HBox>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <HBox alignment="CENTER_RIGHT" spacing="16">
+                <Button fx:id="btnNotifications" text="🔔" style="-fx-background-color: transparent; -fx-font-size: 18px; -fx-cursor: hand;" onAction="#handleNotifications"/>
+
+                <VBox alignment="CENTER_RIGHT" spacing="2">
+                    <Label fx:id="lblUserName" text="Sarah Johnson" styleClass="user-name"/>
+                    <Label fx:id="lblUserRole" text="Recruiter" styleClass="user-role"/>
+                </VBox>
+
+                <Button fx:id="btnUserProfile" text="👤" styleClass="profile-button" onAction="#handleUserProfile"/>
+                <Button fx:id="btnDisconnect" text="⎋ Disconnect" styleClass="disconnect-button" onAction="#handleDisconnect"/>
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- LEFT SIDEBAR - White with centered buttons, no logo -->
+    <left>
+        <VBox prefWidth="250" spacing="0" styleClass="sidebar" style="-fx-padding: 0;">
+
+            <!-- Navigation Section -->
+            <VBox spacing="0" style="-fx-padding: 25 0 15 0;">
+                <Label text="MENU" styleClass="sidebar-section-label"/>
+
+                <Button fx:id="btnInterviews" onAction="#handleInterviewsNav" text="📅  Interviews"
+                        styleClass="sidebar-button" maxWidth="Infinity">
+                    <VBox.margin><Insets top="8"/></VBox.margin>
+                </Button>
+
+                <Button fx:id="btnApplications" onAction="#handleApplicationsNav" text="📋  Applications"
+                        styleClass="sidebar-button" maxWidth="Infinity"/>
+
+                <Button fx:id="btnJobOffers" onAction="#handleJobOffersNav" text="💼  Job Offers"
+                        styleClass="sidebar-button" maxWidth="Infinity"/>
+            </VBox>
+
+            <Region VBox.vgrow="ALWAYS"/>
+
+            <!-- Bottom Section -->
+            <VBox spacing="8" style="-fx-padding: 20;">
+                <Separator styleClass="sidebar-separator"/>
+
+                <Button fx:id="btnFullscreenToggle" onAction="#handleFullscreenToggle" text="🖥  Toggle View"
+                        styleClass="sidebar-bottom-button" maxWidth="Infinity">
+                    <VBox.margin><Insets top="8"/></VBox.margin>
+                </Button>
+            </VBox>
+        </VBox>
+    </left>
+
+    <!-- CONTENT SLOT - Slightly darker white for depth -->
+    <center>
+        <StackPane fx:id="contentArea" style="-fx-background-color: #F5F6F8; -fx-padding: 30;" />
+    </center>
+
+</BorderPane>
+
