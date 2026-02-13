@@ -3,7 +3,6 @@ package Controllers;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -42,25 +41,21 @@ public class MainShellController {
 
         applyRoleToShell();
 
-        // Default page depends on role
-        if (Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER) {
-            handleApplicationsNav();
-        } else {
-            handleApplicationsNav();
-        }
+        // Default page: Load Job Offers
+        handleJobOffersNav();
     }
 
     @FXML
     private void handleApplicationsNav() {
-        activePage = "/Applications.fxml";
-        loadContentView(activePage);
-        highlightActiveButton(btnApplications);
+        // Applications.fxml not yet implemented - redirect to Job Offers
+        showNotImplementedAlert("Applications Management");
+        handleJobOffersNav();
     }
 
     @FXML private void handleInterviewsNav() {
-        activePage = "/InterviewManagement.fxml";
-        loadContentView(activePage);
-        highlightActiveButton(btnInterviews);
+        // InterviewManagement.fxml not yet implemented - redirect to Job Offers
+        showNotImplementedAlert("Interview Management");
+        handleJobOffersNav();
     }
 
     @FXML private void handleJobOffersNav() {
@@ -74,28 +69,14 @@ public class MainShellController {
     @FXML private void handleDisconnect() {
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
         confirmAlert.setTitle("Disconnect");
-        confirmAlert.setHeaderText("Are you sure you want to logout?");
-        confirmAlert.setContentText("You will be redirected to the login page.");
+        confirmAlert.setHeaderText("Are you sure you want to exit?");
+        confirmAlert.setContentText("The application will close.");
 
         confirmAlert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                try {
-                    // Load login page
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/Login.fxml"));
-                    Parent root = loader.load();
-
-                    Stage stage = (Stage) btnDisconnect.getScene().getWindow();
-                    stage.setScene(new Scene(root, 550, 650));
-                    stage.setTitle("Talent Bridge - Login");
-                    stage.centerOnScreen();
-
-                } catch (IOException e) {
-                    Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                    errorAlert.setTitle("Error");
-                    errorAlert.setHeaderText("Failed to logout");
-                    errorAlert.setContentText(e.getMessage());
-                    errorAlert.showAndWait();
-                }
+                // Close the application
+                Stage stage = (Stage) btnDisconnect.getScene().getWindow();
+                stage.close();
             }
         });
     }
@@ -106,8 +87,8 @@ public class MainShellController {
 
         applyRoleToShell();
 
-        // Navigate to role home
-        handleApplicationsNav();
+        // Navigate to Job Offers page
+        handleJobOffersNav();
     }
 
     @FXML private void handleNotifications() {
@@ -147,6 +128,14 @@ public class MainShellController {
             System.err.println("Error loading view: " + fxmlFile);
             e.printStackTrace();
         }
+    }
+
+    private void showNotImplementedAlert(String featureName) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Feature Not Implemented");
+        alert.setHeaderText(featureName + " - Coming Soon");
+        alert.setContentText("This feature is not yet implemented.\nRedirecting to Job Offers...");
+        alert.show();
     }
 
     private void highlightActiveButton(Button activeBtn) {

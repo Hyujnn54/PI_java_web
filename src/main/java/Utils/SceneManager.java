@@ -31,6 +31,27 @@ public final class SceneManager {
         }
     }
 
+    /**
+     * Load a new scene with specified dimensions
+     */
+    public static void loadScene(String fxmlPath, String title, double width, double height) throws Exception {
+        FXMLLoader loader = new FXMLLoader(SceneManager.class.getResource(fxmlPath));
+        Parent root = loader.load();
+        Scene newScene = new Scene(root, width, height);
+
+        // Copy stylesheets from current scene if any
+        if (scene != null && !scene.getStylesheets().isEmpty()) {
+            newScene.getStylesheets().addAll(scene.getStylesheets());
+        }
+
+        stage.setScene(newScene);
+        stage.setTitle(title);
+        stage.centerOnScreen();
+
+        // Update the scene reference
+        scene = newScene;
+    }
+
     public static Stage getStage() {
         return stage;
     }

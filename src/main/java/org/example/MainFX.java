@@ -1,6 +1,6 @@
 package org.example;
 
-import Utils.SceneManager;
+import Utils.UserContext;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -24,12 +24,16 @@ public class MainFX extends Application {
         primaryStage = stage;
 
         try {
-            System.out.println("Loading Login.fxml...");
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/Login.fxml"));
-            Parent root = fxmlLoader.load();
-            System.out.println("Login page loaded successfully");
+            // Initialize default user context (demo user)
+            UserContext.login(1L, "Demo User", "demo@talentbridge.com", UserContext.Role.RECRUITER);
+            System.out.println("User context initialized: " + UserContext.getRoleLabel());
 
-            Scene scene = new Scene(root, 550, 650);
+            System.out.println("Loading MainShell.fxml...");
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));
+            Parent root = fxmlLoader.load();
+            System.out.println("MainShell loaded successfully");
+
+            Scene scene = new Scene(root, WINDOWED_WIDTH, WINDOWED_HEIGHT);
 
             // Add global CSS styling with error handling
             try {
@@ -43,9 +47,9 @@ public class MainFX extends Application {
             // Initialize centralized navigation
             Utils.SceneManager.init(stage, scene);
 
-            stage.setTitle("Talent Bridge - Login");
+            stage.setTitle("Talent Bridge - Dashboard");
             stage.setScene(scene);
-            stage.setResizable(false);
+            stage.setResizable(true);
             stage.centerOnScreen();
             stage.show();
 
