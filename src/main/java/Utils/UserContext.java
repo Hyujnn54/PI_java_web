@@ -10,12 +10,14 @@ public final class UserContext {
 
     public enum Role {
         RECRUITER,
-        CANDIDATE
+        CANDIDATE,
+        ADMIN
     }
 
     private static Role currentRole = Role.RECRUITER;
     private static Long cachedRecruiterId = null;
     private static Long cachedCandidateId = null;
+    private static Long cachedAdminId = null;
 
     private UserContext() {}
 
@@ -28,11 +30,19 @@ public final class UserContext {
     }
 
     public static void toggleRole() {
-        currentRole = (currentRole == Role.RECRUITER) ? Role.CANDIDATE : Role.RECRUITER;
+        currentRole = switch (currentRole) {
+            case RECRUITER -> Role.CANDIDATE;
+            case CANDIDATE -> Role.ADMIN;
+            case ADMIN -> Role.RECRUITER;
+        };
     }
 
     public static String getRoleLabel() {
-        return currentRole == Role.RECRUITER ? "Recruiter" : "Candidate";
+        return switch (currentRole) {
+            case RECRUITER -> "Recruiter";
+            case CANDIDATE -> "Candidate";
+            case ADMIN -> "Admin";
+        };
     }
 
     // Mock ids for now (replace with authenticated user ids)
@@ -48,6 +58,13 @@ public final class UserContext {
             cachedCandidateId = getFirstCandidateId();
         }
         return cachedCandidateId;
+    }
+
+    public static Long getAdminId() {
+        if (cachedAdminId == null) {
+            cachedAdminId = getFirstAdminId();
+        }
+        return cachedAdminId;
     }
 
     private static Long getFirstRecruiterId() {
@@ -72,6 +89,19 @@ public final class UserContext {
             }
         } catch (SQLException e) {
             System.err.println("Error getting candidate ID: " + e.getMessage());
+        }
+        return 1L; // Fallback
+    }
+
+    private static Long getFirstAdminId() {
+        try (Connection conn = MyDatabase.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1")) {
+            if (rs.next()) {
+                return rs.getLong("id");
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting admin ID: " + e.getMessage());
         }
         return 1L; // Fallback
     }

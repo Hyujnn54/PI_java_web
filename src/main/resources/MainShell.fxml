@@ -55,6 +55,9 @@
 
                 <Button fx:id="btnJobOffers" onAction="#handleJobOffersNav" text="💼  Job Offers"
                         styleClass="sidebar-button" maxWidth="Infinity"/>
+
+                <Button fx:id="btnDashboard" onAction="#handleDashboardNav" text="👨‍💼  Dashboard"
+                        styleClass="sidebar-button" maxWidth="Infinity" visible="false" managed="false"/>
             </VBox>
 
             <Region VBox.vgrow="ALWAYS"/>

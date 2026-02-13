@@ -22,6 +22,7 @@ public class MainShellController {
     @FXML private Button btnInterviews;
     @FXML private Button btnApplications;
     @FXML private Button btnJobOffers;
+    @FXML private Button btnDashboard;
     @FXML private Button btnFullscreenToggle;
 
     @FXML private Button btnDisconnect;
@@ -69,6 +70,12 @@ public class MainShellController {
         activePage = isRecruiter ? "/JobOffers.fxml" : "/JobOffersBrowse.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnJobOffers);
+    }
+
+    @FXML private void handleDashboardNav() {
+        activePage = "/AdminDashboard.fxml";
+        loadContentView(activePage);
+        highlightActiveButton(btnDashboard);
     }
 
     @FXML private void handleDisconnect() {
@@ -157,7 +164,7 @@ public class MainShellController {
     }
 
     private void resetButtonStyles() {
-        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers};
+        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers, btnDashboard};
         for (Button btn : navButtons) {
             if (btn != null) {
                 btn.getStyleClass().removeAll("sidebar-button-active");
@@ -170,19 +177,54 @@ public class MainShellController {
 
     private void applyRoleToShell() {
         boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
+        boolean isAdmin = Utils.UserContext.getRole() == Utils.UserContext.Role.ADMIN;
 
+        // Update button labels for interviews
         if (btnInterviews != null) {
             btnInterviews.setText(isRecruiter ? "📋  Interviews" : "📋  Upcoming Interviews");
+            // Show for recruiter and admin, hide for candidate
+            if (isAdmin) {
+                btnInterviews.setVisible(true);
+                btnInterviews.setManaged(true);
+            } else if (!isRecruiter) {
+                btnInterviews.setVisible(true);
+                btnInterviews.setManaged(true);
+            } else {
+                btnInterviews.setVisible(true);
+                btnInterviews.setManaged(true);
+            }
         }
+
+        // Applications button
         if (btnApplications != null) {
             btnApplications.setText("📨  Applications");
             btnApplications.setVisible(true);
             btnApplications.setManaged(true);
         }
+
+        // Job Offers button
         if (btnJobOffers != null) {
             btnJobOffers.setText("💼  Job Offers");
-            btnJobOffers.setVisible(true);
-            btnJobOffers.setManaged(true);
+            // Hide for admin in job offers view (show dashboard instead)
+            if (isAdmin) {
+                btnJobOffers.setVisible(false);
+                btnJobOffers.setManaged(false);
+            } else {
+                btnJobOffers.setVisible(true);
+                btnJobOffers.setManaged(true);
+            }
+        }
+
+        // Dashboard button - only show for admin
+        if (btnDashboard != null) {
+            if (isAdmin) {
+                btnDashboard.setText("👨‍💼  Dashboard");
+                btnDashboard.setVisible(true);
+                btnDashboard.setManaged(true);
+            } else {
+                btnDashboard.setVisible(false);
+                btnDashboard.setManaged(false);
+            }
         }
     }
 }
