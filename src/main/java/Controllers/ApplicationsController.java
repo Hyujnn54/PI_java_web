@@ -244,6 +244,23 @@ public class ApplicationsController {
                     historyItem.getChildren().add(noteLabel);
                 }
 
+                // Edit and Delete buttons for admin
+                if (role == UserContext.Role.ADMIN) {
+                    HBox adminButtonBox = new HBox(10);
+                    adminButtonBox.setAlignment(Pos.CENTER_RIGHT);
+
+                    Button btnEdit = new Button("Edit");
+                    btnEdit.setStyle("-fx-padding: 4 8; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
+                    btnEdit.setOnAction(e -> editStatusHistory(record));
+
+                    Button btnDelete = new Button("Delete");
+                    btnDelete.setStyle("-fx-padding: 4 8; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
+                    btnDelete.setOnAction(e -> deleteStatusHistory(record, app));
+
+                    adminButtonBox.getChildren().addAll(btnEdit, btnDelete);
+                    historyItem.getChildren().add(adminButtonBox);
+                }
+
                 historyBox.getChildren().add(historyItem);
             }
         }
@@ -544,5 +561,79 @@ public class ApplicationsController {
             showAlert("Error", "Could not download PDF: " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
+    }
+
+    private void editStatusHistory(ApplicationStatusHistoryService.StatusHistoryRow record) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Edit Status History");
+        dialog.setHeaderText("Edit Status History Entry #" + record.id());
+
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+
+        // Status field (read-only)
+        Label statusLabel = new Label("Status:");
+        statusLabel.setStyle("-fx-font-weight: bold;");
+        TextField statusField = new TextField(record.status());
+        statusField.setEditable(false);
+        statusField.setStyle("-fx-opacity: 0.7;");
+
+        // Date field (read-only)
+        Label dateLabel = new Label("Changed At:");
+        dateLabel.setStyle("-fx-font-weight: bold;");
+        TextField dateField = new TextField(record.changedAt() != null ?
+            record.changedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")) : "N/A");
+        dateField.setEditable(false);
+        dateField.setStyle("-fx-opacity: 0.7;");
+
+        // Note field (editable)
+        Label noteLabel = new Label("Note:");
+        noteLabel.setStyle("-fx-font-weight: bold;");
+        TextArea noteArea = new TextArea(record.note() != null ? record.note() : "");
+        noteArea.setPromptText("Edit note...");
+        noteArea.setPrefRowCount(6);
+        noteArea.setWrapText(true);
+
+        content.getChildren().addAll(
+            statusLabel, statusField,
+            dateLabel, dateField,
+            noteLabel, noteArea
+        );
+
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                try {
+                    ApplicationStatusHistoryService.updateStatusHistory(record.id(), noteArea.getText());
+                    loadApplications();
+                    showAlert("Success", "Status history updated!", Alert.AlertType.INFORMATION);
+                } catch (Exception e) {
+                    showAlert("Error", "Failed to update status history: " + e.getMessage(), Alert.AlertType.ERROR);
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    private void deleteStatusHistory(ApplicationStatusHistoryService.StatusHistoryRow record, ApplicationService.ApplicationRow app) {
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Delete Status History");
+        confirmation.setHeaderText("Are you sure?");
+        confirmation.setContentText("Delete this status history entry?\nThis action cannot be undone.");
+
+        confirmation.showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                try {
+                    ApplicationStatusHistoryService.deleteStatusHistory(record.id());
+                    loadApplications();
+                    showAlert("Success", "Status history entry deleted!", Alert.AlertType.INFORMATION);
+                } catch (Exception e) {
+                    showAlert("Error", "Failed to delete status history: " + e.getMessage(), Alert.AlertType.ERROR);
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 }
