@@ -33,11 +33,11 @@ public class UserContext {
 
     // Private constructor for Singleton
     private UserContext() {
-        // Default values
-        this.currentRole = Role.RECRUITER; // Default role
-        this.userName = "Demo User";
-        this.userEmail = "demo@example.com";
-        this.userId = 1L;
+        // Default values - start as Recruiter with ID 1
+        this.currentRole = Role.RECRUITER;
+        this.userName = "Demo Recruiter";
+        this.userEmail = "recruiter@talentbridge.com";
+        this.userId = 1L; // Recruiter ID
     }
 
     // Get singleton instance
@@ -65,9 +65,17 @@ public class UserContext {
         UserContext ctx = getInstance();
         // Toggle between CANDIDATE and RECRUITER for demo purposes
         if (ctx.currentRole == Role.CANDIDATE) {
+            // Switch to Recruiter
             ctx.currentRole = Role.RECRUITER;
+            ctx.userId = 1L; // Recruiter ID
+            ctx.userName = "Demo Recruiter";
+            ctx.userEmail = "recruiter@talentbridge.com";
         } else if (ctx.currentRole == Role.RECRUITER) {
+            // Switch to Candidate
             ctx.currentRole = Role.CANDIDATE;
+            ctx.userId = 2L; // Candidate ID (different user)
+            ctx.userName = "John Doe";
+            ctx.userEmail = "candidate@example.com";
         }
     }
 
@@ -159,4 +167,6 @@ public class UserContext {
                 '}';
     }
 }
+
+
 

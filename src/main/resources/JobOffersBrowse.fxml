@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 
 <VBox fx:id="mainContainer" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="Controllers.JobOffersController"
+      fx:controller="Controllers.JobOffersBrowseController"
       spacing="0" styleClass="page"
       stylesheets="@styles.css" style="-fx-background-color: #f8f9fa;"
       VBox.vgrow="ALWAYS">

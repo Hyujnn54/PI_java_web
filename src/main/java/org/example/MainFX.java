@@ -24,9 +24,9 @@ public class MainFX extends Application {
         primaryStage = stage;
 
         try {
-            // Initialize default user context (demo user)
-            UserContext.login(1L, "Demo User", "demo@talentbridge.com", UserContext.Role.RECRUITER);
-            System.out.println("User context initialized: " + UserContext.getRoleLabel());
+            // Initialize default user context (Recruiter with ID 1)
+            UserContext.login(1L, "Demo Recruiter", "recruiter@talentbridge.com", UserContext.Role.RECRUITER);
+            System.out.println("User context initialized: " + UserContext.getRoleLabel() + " (ID: " + UserContext.getUserId() + ")");
 
             System.out.println("Loading MainShell.fxml...");
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));

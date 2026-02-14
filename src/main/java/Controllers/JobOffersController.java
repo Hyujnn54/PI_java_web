@@ -184,10 +184,11 @@ public class JobOffersController {
         jobListContainer.getChildren().clear();
 
         try {
+            // Load ALL job offers (recruiter can see all but edit only their own)
             List<JobOffer> jobs = jobOfferService.getAllJobOffers();
 
             if (jobs.isEmpty()) {
-                Label empty = new Label("No job offers found");
+                Label empty = new Label("No job offers available");
                 empty.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 14px; -fx-padding: 20;");
                 jobListContainer.getChildren().add(empty);
                 return;
@@ -371,6 +372,12 @@ public class JobOffersController {
     }
 
     private void showEditForm(JobOffer job) {
+        // Check if the current user owns this job offer
+        if (!job.getRecruiterId().equals(UserContext.getRecruiterId())) {
+            showAlert("Permission Denied", "You can only edit job offers that you created.", Alert.AlertType.WARNING);
+            return;
+        }
+
         isEditMode = true;
         editingJob = job;
         showJobForm("Edit Job Offer");
@@ -418,6 +425,9 @@ public class JobOffersController {
         formDeadline = new DatePicker();
         formDeadline.setPromptText("Deadline (optional)");
         formDeadline.setStyle("-fx-font-size: 14px;");
+
+        // Add real-time validation listeners
+        addValidationListeners();
 
         // Skills section
         VBox skillsSection = new VBox(10);
@@ -604,6 +614,12 @@ public class JobOffersController {
     }
 
     private void handleDeleteJobOffer(JobOffer job) {
+        // Check if the current user owns this job offer
+        if (!job.getRecruiterId().equals(UserContext.getRecruiterId())) {
+            showAlert("Permission Denied", "You can only delete job offers that you created.", Alert.AlertType.WARNING);
+            return;
+        }
+
         Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
         confirmation.setTitle("Confirm Delete");
         confirmation.setHeaderText("Delete Job Offer");
@@ -632,6 +648,12 @@ public class JobOffersController {
     }
 
     private void handleToggleStatus(JobOffer job) {
+        // Check if the current user owns this job offer
+        if (!job.getRecruiterId().equals(UserContext.getRecruiterId())) {
+            showAlert("Permission Denied", "You can only change the status of job offers that you created.", Alert.AlertType.WARNING);
+            return;
+        }
+
         try {
             JobOffer.Status newStatus = job.getStatus() == JobOffer.Status.OPEN
                 ? JobOffer.Status.CLOSED
@@ -653,27 +675,180 @@ public class JobOffersController {
     }
 
     private boolean validateForm() {
-        if (formTitleField.getText().trim().isEmpty()) {
-            showAlert("Validation Error", "Please enter a job title", Alert.AlertType.WARNING);
+        String title = formTitleField.getText().trim();
+        String description = formDescription.getText().trim();
+        String location = formLocation.getText().trim();
+
+        // Validate Title
+        if (title.isEmpty()) {
+            showAlert("Validation Error", "Job title is required", Alert.AlertType.WARNING);
+            formTitleField.requestFocus();
             return false;
         }
-        if (formDescription.getText().trim().isEmpty()) {
-            showAlert("Validation Error", "Please enter a job description", Alert.AlertType.WARNING);
+        if (title.length() < 3) {
+            showAlert("Validation Error", "Job title must be at least 3 characters long", Alert.AlertType.WARNING);
+            formTitleField.requestFocus();
             return false;
         }
-        if (formLocation.getText().trim().isEmpty()) {
-            showAlert("Validation Error", "Please enter a location", Alert.AlertType.WARNING);
+        if (title.length() > 100) {
+            showAlert("Validation Error", "Job title must not exceed 100 characters", Alert.AlertType.WARNING);
+            formTitleField.requestFocus();
             return false;
         }
+        if (!title.matches("^[a-zA-Z0-9\\s\\-\\/&,.]+$")) {
+            showAlert("Validation Error", "Job title contains invalid characters.\nOnly letters, numbers, spaces, and basic punctuation are allowed.", Alert.AlertType.WARNING);
+            formTitleField.requestFocus();
+            return false;
+        }
+
+        // Validate Description
+        if (description.isEmpty()) {
+            showAlert("Validation Error", "Job description is required", Alert.AlertType.WARNING);
+            formDescription.requestFocus();
+            return false;
+        }
+        if (description.length() < 20) {
+            showAlert("Validation Error", "Job description must be at least 20 characters long", Alert.AlertType.WARNING);
+            formDescription.requestFocus();
+            return false;
+        }
+        if (description.length() > 2000) {
+            showAlert("Validation Error", "Job description must not exceed 2000 characters", Alert.AlertType.WARNING);
+            formDescription.requestFocus();
+            return false;
+        }
+
+        // Validate Location
+        if (location.isEmpty()) {
+            showAlert("Validation Error", "Location is required", Alert.AlertType.WARNING);
+            formLocation.requestFocus();
+            return false;
+        }
+        if (location.length() < 2) {
+            showAlert("Validation Error", "Location must be at least 2 characters long", Alert.AlertType.WARNING);
+            formLocation.requestFocus();
+            return false;
+        }
+        if (location.length() > 100) {
+            showAlert("Validation Error", "Location must not exceed 100 characters", Alert.AlertType.WARNING);
+            formLocation.requestFocus();
+            return false;
+        }
+        if (!location.matches("^[a-zA-Z0-9\\s\\-,./]+$")) {
+            showAlert("Validation Error", "Location contains invalid characters.\nOnly letters, numbers, spaces, and basic punctuation are allowed.", Alert.AlertType.WARNING);
+            formLocation.requestFocus();
+            return false;
+        }
+
+        // Validate Contract Type
         if (formContractType.getValue() == null) {
             showAlert("Validation Error", "Please select a contract type", Alert.AlertType.WARNING);
+            formContractType.requestFocus();
             return false;
         }
+
+        // Validate Status
         if (formStatus.getValue() == null) {
             showAlert("Validation Error", "Please select a status", Alert.AlertType.WARNING);
+            formStatus.requestFocus();
             return false;
         }
+
+        // Validate Deadline (if provided)
+        if (formDeadline.getValue() != null) {
+            if (formDeadline.getValue().isBefore(java.time.LocalDate.now())) {
+                showAlert("Validation Error", "Deadline cannot be in the past", Alert.AlertType.WARNING);
+                formDeadline.requestFocus();
+                return false;
+            }
+        }
+
+        // Validate Skills
+        boolean hasValidSkill = false;
+        for (SkillRow row : skillRows) {
+            String skillName = row.nameField.getText().trim();
+            if (!skillName.isEmpty()) {
+                if (skillName.length() < 2) {
+                    showAlert("Validation Error", "Skill name must be at least 2 characters long", Alert.AlertType.WARNING);
+                    row.nameField.requestFocus();
+                    return false;
+                }
+                if (skillName.length() > 50) {
+                    showAlert("Validation Error", "Skill name must not exceed 50 characters", Alert.AlertType.WARNING);
+                    row.nameField.requestFocus();
+                    return false;
+                }
+                if (!skillName.matches("^[a-zA-Z0-9\\s\\-+#.]+$")) {
+                    showAlert("Validation Error", "Skill name '" + skillName + "' contains invalid characters.\nOnly letters, numbers, spaces, and -, +, #, . are allowed.", Alert.AlertType.WARNING);
+                    row.nameField.requestFocus();
+                    return false;
+                }
+                if (row.levelCombo.getValue() == null) {
+                    showAlert("Validation Error", "Please select a level for skill: " + skillName, Alert.AlertType.WARNING);
+                    row.levelCombo.requestFocus();
+                    return false;
+                }
+                hasValidSkill = true;
+            }
+        }
+
+        if (!hasValidSkill) {
+            showAlert("Validation Error", "Please add at least one skill for this job offer", Alert.AlertType.WARNING);
+            return false;
+        }
+
         return true;
+    }
+
+    private void addValidationListeners() {
+        // Title validation - max 100 chars
+        formTitleField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.length() > 100) {
+                formTitleField.setText(oldVal);
+            }
+            if (!newVal.isEmpty() && newVal.length() < 3) {
+                formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #ffc107; -fx-border-width: 2;");
+            } else if (!newVal.isEmpty() && !newVal.matches("^[a-zA-Z0-9\\s\\-\\/&,.]+$")) {
+                formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #dc3545; -fx-border-width: 2;");
+            } else {
+                formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
+            }
+        });
+
+        // Description validation - max 2000 chars
+        formDescription.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.length() > 2000) {
+                formDescription.setText(oldVal);
+            }
+            if (!newVal.isEmpty() && newVal.length() < 20) {
+                formDescription.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #ffc107; -fx-border-width: 2;");
+            } else {
+                formDescription.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
+            }
+        });
+
+        // Location validation - max 100 chars
+        formLocation.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.length() > 100) {
+                formLocation.setText(oldVal);
+            }
+            if (!newVal.isEmpty() && newVal.length() < 2) {
+                formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #ffc107; -fx-border-width: 2;");
+            } else if (!newVal.isEmpty() && !newVal.matches("^[a-zA-Z0-9\\s\\-,./]+$")) {
+                formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #dc3545; -fx-border-width: 2;");
+            } else {
+                formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
+            }
+        });
+
+        // Deadline validation - not in the past
+        formDeadline.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && newVal.isBefore(java.time.LocalDate.now())) {
+                formDeadline.setStyle("-fx-font-size: 14px; -fx-border-color: #dc3545; -fx-border-width: 2;");
+            } else {
+                formDeadline.setStyle("-fx-font-size: 14px;");
+            }
+        });
     }
 
     private List<OfferSkill> getSkillsFromForm(Long offerId) {
