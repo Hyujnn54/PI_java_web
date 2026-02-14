@@ -292,11 +292,21 @@ public class ApplicationsController {
             btnUpdate.setStyle("-fx-padding: 6 12; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand;");
             btnUpdate.setOnAction(e -> updateApplicationStatus(app, statusCombo.getValue(), noteArea.getText()));
 
-            Button btnDelete = new Button("Delete Application");
-            btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
-            btnDelete.setOnAction(e -> deleteApplication(app));
+            // Quick Action Buttons
+            HBox quickActionsBox = new HBox(10);
+            quickActionsBox.setStyle("-fx-padding: 10 0; -fx-border-top: 1px solid #ddd; -fx-padding: 10;");
 
-            statusUpdateBox.getChildren().addAll(statusLabel, statusCombo, new Label("Note:"), noteArea, btnUpdate, btnDelete);
+            Button btnAccept = new Button("✓ Accept (Shortlist)");
+            btnAccept.setStyle("-fx-padding: 8 15; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+            btnAccept.setOnAction(e -> acceptApplication(app));
+
+            Button btnReject = new Button("✕ Reject");
+            btnReject.setStyle("-fx-padding: 8 15; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+            btnReject.setOnAction(e -> rejectApplication(app));
+
+            quickActionsBox.getChildren().addAll(btnAccept, btnReject);
+
+            statusUpdateBox.getChildren().addAll(statusLabel, statusCombo, new Label("Note:"), noteArea, btnUpdate, quickActionsBox);
             actionsBox.getChildren().add(statusUpdateBox);
         } else if (role == UserContext.Role.ADMIN) {
             HBox buttonBox = new HBox(10);
@@ -445,11 +455,56 @@ public class ApplicationsController {
     private void updateApplicationStatus(ApplicationService.ApplicationRow app, String newStatus, String note) {
         try {
             Long recruiterId = UserContext.getRecruiterId();
-            ApplicationService.updateStatus(app.id(), newStatus, recruiterId, note);
+
+            // Generate automatic note if empty
+            String finalNote = note;
+            if (note == null || note.trim().isEmpty()) {
+                finalNote = generateStatusChangeNote(app.currentStatus(), newStatus);
+            }
+
+            ApplicationService.updateStatus(app.id(), newStatus, recruiterId, finalNote);
             loadApplications();
-            showAlert("Success", "Status updated to: " + newStatus, Alert.AlertType.INFORMATION);
+            showAlert("Success", "Status updated to: " + newStatus + "\nNote: " + finalNote, Alert.AlertType.INFORMATION);
         } catch (Exception e) {
             showAlert("Error", "Failed to update status: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    private String generateStatusChangeNote(String oldStatus, String newStatus) {
+        return switch (newStatus) {
+            case "SUBMITTED" -> "Application re-submitted for review";
+            case "IN_REVIEW" -> "Recruiter is now reviewing this application";
+            case "SHORTLISTED" -> "Candidate has been shortlisted";
+            case "REJECTED" -> "Application has been rejected";
+            case "INTERVIEW" -> "Candidate is scheduled for interview";
+            case "HIRED" -> "Candidate has been hired";
+            default -> "Status updated to " + newStatus;
+        };
+    }
+
+    private void acceptApplication(ApplicationService.ApplicationRow app) {
+        try {
+            Long recruiterId = UserContext.getRecruiterId();
+            String note = "Recruiter likes this profile and has shortlisted the candidate";
+
+            ApplicationService.updateStatus(app.id(), "SHORTLISTED", recruiterId, note);
+            loadApplications();
+            showAlert("Success", "Application accepted!\n\nCandidate has been shortlisted", Alert.AlertType.INFORMATION);
+        } catch (Exception e) {
+            showAlert("Error", "Failed to accept application: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    private void rejectApplication(ApplicationService.ApplicationRow app) {
+        try {
+            Long recruiterId = UserContext.getRecruiterId();
+            String note = "Recruiter has reviewed the profile and decided not to proceed";
+
+            ApplicationService.updateStatus(app.id(), "REJECTED", recruiterId, note);
+            loadApplications();
+            showAlert("Success", "Application rejected", Alert.AlertType.INFORMATION);
+        } catch (Exception e) {
+            showAlert("Error", "Failed to reject application: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
