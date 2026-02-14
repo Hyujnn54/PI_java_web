@@ -24,12 +24,12 @@ public class MainFX extends Application {
         primaryStage = stage;
 
         try {
-            System.out.println("Loading Login.fxml...");
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/Login.fxml"));
+            System.out.println("Loading MainShell.fxml...");
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));
             Parent root = fxmlLoader.load();
-            System.out.println("Login page loaded successfully");
+            System.out.println("MainShell page loaded successfully");
 
-            Scene scene = new Scene(root, 550, 650);
+            Scene scene = new Scene(root, 1400, 800);
 
             // Add global CSS styling with error handling
             try {
@@ -43,7 +43,7 @@ public class MainFX extends Application {
             // Initialize centralized navigation
             SceneManager.init(stage, scene);
 
-            stage.setTitle("Talent Bridge - Login");
+            stage.setTitle("Talent Bridge - Application Management");
             stage.setScene(scene);
             stage.setResizable(false);
             stage.centerOnScreen();

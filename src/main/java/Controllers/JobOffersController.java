@@ -1,8 +1,10 @@
 package Controllers;
 
+import Services.ApplicationService;
 import Services.JobOfferService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -288,7 +290,7 @@ public class JobOffersController {
         if (UserContext.getRole() != UserContext.Role.RECRUITER) {
             Button btnApply = new Button("Apply Now");
             btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);");
-            btnApply.setOnAction(e -> showAlert("Apply", "Application feature will be integrated later", Alert.AlertType.INFORMATION));
+            btnApply.setOnAction(e -> showApplicationForm(job));
 
             btnApply.setOnMouseEntered(e -> btnApply.setStyle("-fx-background-color: #4A90E2; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.5), 15, 0, 0, 3);"));
             btnApply.setOnMouseExited(e -> btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);"));
@@ -412,5 +414,78 @@ public class JobOffersController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private void showApplicationForm(JobOfferService.JobOfferRow job) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Apply for Job");
+        dialog.setHeaderText("Apply for: " + job.title());
+
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+
+        // Phone field
+        Label phoneLabel = new Label("Phone Number *");
+        phoneLabel.setStyle("-fx-font-weight: bold;");
+        TextField phoneField = new TextField();
+        phoneField.setPromptText("Enter your phone number");
+        phoneField.setPrefWidth(400);
+
+        // Cover Letter field
+        Label letterLabel = new Label("Cover Letter *");
+        letterLabel.setStyle("-fx-font-weight: bold;");
+        TextArea letterArea = new TextArea();
+        letterArea.setPromptText("Tell us why you're interested in this position...");
+        letterArea.setPrefRowCount(8);
+        letterArea.setWrapText(true);
+
+        // CV Path (optional)
+        Label cvLabel = new Label("CV Path (optional)");
+        cvLabel.setStyle("-fx-font-weight: bold;");
+        TextField cvField = new TextField();
+        cvField.setPromptText("/path/to/your/cv.pdf");
+        cvField.setPrefWidth(400);
+
+        content.getChildren().addAll(
+            phoneLabel, phoneField,
+            letterLabel, letterArea,
+            cvLabel, cvField
+        );
+
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                submitApplication(job, phoneField.getText(), letterArea.getText(), cvField.getText());
+            }
+        });
+    }
+
+    private void submitApplication(JobOfferService.JobOfferRow job, String phone, String coverLetter, String cvPath) {
+        if (phone == null || phone.trim().isEmpty()) {
+            showAlert("Validation Error", "Phone number is required", Alert.AlertType.ERROR);
+            return;
+        }
+
+        if (coverLetter == null || coverLetter.trim().isEmpty()) {
+            showAlert("Validation Error", "Cover letter is required", Alert.AlertType.ERROR);
+            return;
+        }
+
+        try {
+            Long candidateId = UserContext.getCandidateId();
+            if (candidateId == null) {
+                showAlert("Error", "Candidate ID not found. Please login again.", Alert.AlertType.ERROR);
+                return;
+            }
+
+            ApplicationService.create(job.id(), candidateId, phone, coverLetter, cvPath != null ? cvPath : "");
+            showAlert("Success", "Application submitted successfully!", Alert.AlertType.INFORMATION);
+
+        } catch (Exception e) {
+            showAlert("Error", "Failed to submit application: " + e.getMessage(), Alert.AlertType.ERROR);
+            e.printStackTrace();
+        }
     }
 }

@@ -1,7 +1,5 @@
 package Utils;
 
-import java.sql.*;
-
 /**
  * UI-only user context.
  * Later you can replace this with real authentication + session.
@@ -15,9 +13,7 @@ public final class UserContext {
     }
 
     private static Role currentRole = Role.RECRUITER;
-    private static Long cachedRecruiterId = null;
-    private static Long cachedCandidateId = null;
-    private static Long cachedAdminId = null;
+    // Using static IDs for testing: candidate=1, recruiter=2, admin=3
 
     private UserContext() {}
 
@@ -47,63 +43,15 @@ public final class UserContext {
 
     // Mock ids for now (replace with authenticated user ids)
     public static Long getRecruiterId() {
-        if (cachedRecruiterId == null) {
-            cachedRecruiterId = getFirstRecruiterId();
-        }
-        return cachedRecruiterId;
+        return 2L; // Static ID for testing
     }
 
     public static Long getCandidateId() {
-        if (cachedCandidateId == null) {
-            cachedCandidateId = getFirstCandidateId();
-        }
-        return cachedCandidateId;
+        return 1L; // Static ID for testing
     }
 
     public static Long getAdminId() {
-        if (cachedAdminId == null) {
-            cachedAdminId = getFirstAdminId();
-        }
-        return cachedAdminId;
-    }
-
-    private static Long getFirstRecruiterId() {
-        try (Connection conn = MyDatabase.getInstance().getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT id FROM recruiter LIMIT 1")) {
-            if (rs.next()) {
-                return rs.getLong("id");
-            }
-        } catch (SQLException e) {
-            System.err.println("Error getting recruiter ID: " + e.getMessage());
-        }
-        return 1L; // Fallback
-    }
-
-    private static Long getFirstCandidateId() {
-        try (Connection conn = MyDatabase.getInstance().getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT id FROM candidate LIMIT 1")) {
-            if (rs.next()) {
-                return rs.getLong("id");
-            }
-        } catch (SQLException e) {
-            System.err.println("Error getting candidate ID: " + e.getMessage());
-        }
-        return 1L; // Fallback
-    }
-
-    private static Long getFirstAdminId() {
-        try (Connection conn = MyDatabase.getInstance().getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1")) {
-            if (rs.next()) {
-                return rs.getLong("id");
-            }
-        } catch (SQLException e) {
-            System.err.println("Error getting admin ID: " + e.getMessage());
-        }
-        return 1L; // Fallback
+        return 3L; // Static ID for testing
     }
 }
 

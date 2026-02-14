@@ -1,665 +1,357 @@
 package Controllers;
 
 import Services.ApplicationService;
-import Services.InterviewService;
+import Services.ApplicationStatusHistoryService;
+import Services.JobOfferService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.stage.Stage;
 
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/**
- * Modern Applications UI with CRUD functionality
- * - Recruiter: Full CRUD - view details, accept, reject, schedule interviews
- * - Candidate: Read-only view of their applications
- */
 public class ApplicationsController {
 
+    @FXML private VBox mainContainer;
     @FXML private VBox candidateListContainer;
     @FXML private TextField txtSearch;
     @FXML private ComboBox<String> cbSearchCriteria;
-    @FXML private ComboBox<String> cbApplicationStatus;
     @FXML private Label lblSubtitle;
     @FXML private Button btnSearch;
     @FXML private Button btnClear;
 
-    // Detail view elements (dynamically populated)
-    private ApplicationService.ApplicationRow selectedApplication;
     private VBox detailContainer;
+    private ApplicationService.ApplicationRow selectedApplication;
 
     @FXML
     public void initialize() {
-        setupComboBoxes();
+        // mainContainer is injected from FXML - it's the right panel VBox
+        if (mainContainer != null) {
+            detailContainer = mainContainer;
+        } else {
+            detailContainer = new VBox(15);
+        }
         loadApplications();
     }
 
-    private void setupComboBoxes() {
-        if (cbSearchCriteria != null) {
-            cbSearchCriteria.getItems().addAll("Name", "Email", "Position", "Status", "Date");
-            cbSearchCriteria.setValue("Name");
-        }
-
-        if (cbApplicationStatus != null) {
-            cbApplicationStatus.getItems().addAll("New", "Reviewing", "Shortlisted",
-                                                  "Interview Scheduled", "Accepted", "Rejected");
-        }
+    private void setupUI() {
+        // setupUI is no longer needed as FXML handles the layout
     }
 
     private void loadApplications() {
         if (candidateListContainer == null) return;
         candidateListContainer.getChildren().clear();
 
-        List<ApplicationService.ApplicationRow> apps = ApplicationService.getAll();
+        List<ApplicationService.ApplicationRow> applications = ApplicationService.getAll();
+        UserContext.Role role = UserContext.getRole();
 
-        // Filter applications based on user role
-        boolean isRecruiter = UserContext.getRole() == UserContext.Role.RECRUITER;
-
-        if (!isRecruiter) {
-            // Candidate should only see their own applications
-            // Filter by current candidate ID (you can get this from UserContext or session)
-            Long currentCandidateId = UserContext.getCandidateId(); // You'll need to add this method
-            if (currentCandidateId != null) {
-                apps = apps.stream()
-                          .filter(app -> app.candidateId().equals(currentCandidateId))
-                          .toList();
+        // Filter by role
+        if (role == UserContext.Role.CANDIDATE) {
+            Long candidateId = UserContext.getCandidateId();
+            if (candidateId != null) {
+                applications = applications.stream()
+                    .filter(app -> app.candidateId().equals(candidateId))
+                    .toList();
             }
+        } else if (role == UserContext.Role.RECRUITER) {
+            Long recruiterId = UserContext.getRecruiterId();
+            List<JobOfferService.JobOfferRow> recruiterOffers = JobOfferService.getByRecruiterId(recruiterId);
+            List<Long> offerIds = recruiterOffers.stream()
+                .map(JobOfferService.JobOfferRow::id)
+                .toList();
+            applications = applications.stream()
+                .filter(app -> offerIds.contains(app.offerId()))
+                .toList();
         }
 
-        if (apps.isEmpty()) {
-            Label empty = new Label(isRecruiter ? "No applications found" : "You haven't applied to any positions yet");
-            empty.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 14px; -fx-padding: 30;");
+        if (applications.isEmpty()) {
+            Label empty = new Label("No applications found");
+            empty.setStyle("-fx-text-fill: #999; -fx-font-size: 14px; -fx-padding: 30;");
             candidateListContainer.getChildren().add(empty);
             return;
         }
 
-        // Load first application by default
-        boolean firstLoad = true;
-
-        for (ApplicationService.ApplicationRow app : apps) {
-            VBox card = createCandidateCard(app);
+        // Add applications to list
+        boolean first = true;
+        for (ApplicationService.ApplicationRow app : applications) {
+            VBox card = createApplicationCard(app);
             candidateListContainer.getChildren().add(card);
 
-            if (firstLoad) {
+            if (first) {
                 selectApplication(app, card);
-                firstLoad = false;
+                first = false;
             }
         }
     }
 
-    private VBox createCandidateCard(ApplicationService.ApplicationRow app) {
-        VBox card = new VBox(10);
-        card.getStyleClass().add("candidate-card");
-        card.setPadding(new Insets(18));
+    private VBox createApplicationCard(ApplicationService.ApplicationRow app) {
+        VBox card = new VBox(8);
+        card.setStyle("-fx-border-color: #ddd; -fx-border-radius: 4; -fx-padding: 12; -fx-background-color: white; -fx-cursor: hand;");
         card.setUserData(app);
 
-        // Header with name and rating
-        HBox header = new HBox(12);
-        header.setAlignment(Pos.CENTER_LEFT);
+        Label candidateName = new Label(app.candidateName() != null && !app.candidateName().trim().isEmpty()
+            ? app.candidateName()
+            : "Candidate #" + app.id());
+        candidateName.setStyle("-fx-font-weight: bold; -fx-font-size: 13;");
 
-        VBox nameBox = new VBox(4);
-        HBox.setHgrow(nameBox, Priority.ALWAYS);
+        Label jobTitle = new Label(app.jobTitle() != null ? app.jobTitle() : "Job Application");
+        jobTitle.setStyle("-fx-text-fill: #666; -fx-font-size: 12;");
 
-        Label name = new Label(app.candidateName() != null && !app.candidateName().trim().isEmpty()
-                                ? app.candidateName()
-                                : "Candidate #" + app.id());
-        name.getStyleClass().add("candidate-name");
-
-        Label position = new Label(app.jobTitle() != null ? app.jobTitle() : "Application");
-        position.getStyleClass().add("candidate-position");
-
-        nameBox.getChildren().addAll(name, position);
-
-        Label rating = new Label("⭐ 4.5");
-        rating.getStyleClass().add("rating-badge");
-
-        header.getChildren().addAll(nameBox, rating);
-
-        // Info section
-        HBox info = new HBox(8);
-        Label location = new Label("📍 Location TBD");
-        location.getStyleClass().add("candidate-info");
-        info.getChildren().add(location);
-
-        // Status and date
         HBox statusBox = new HBox(10);
-        statusBox.setAlignment(Pos.CENTER_LEFT);
-
         Label statusBadge = new Label(app.currentStatus());
-        statusBadge.getStyleClass().addAll("status-badge", getStatusClass(app.currentStatus()));
+        statusBadge.setStyle("-fx-padding: 4 8; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-border-radius: 3; -fx-font-size: 11;");
 
-        Label date = new Label("1/23/2026"); // Placeholder - ApplicationRow doesn't have appliedAt field
-        date.getStyleClass().add("date-label");
+        Label appliedDate = new Label(app.appliedAt() != null
+            ? app.appliedAt().format(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
+            : "N/A");
+        appliedDate.setStyle("-fx-text-fill: #999; -fx-font-size: 11;");
 
-        statusBox.getChildren().addAll(statusBadge, date);
+        statusBox.getChildren().addAll(statusBadge, appliedDate);
 
-        card.getChildren().addAll(header, info, statusBox);
-
-        // Click handler
+        card.getChildren().addAll(candidateName, jobTitle, statusBox);
         card.setOnMouseClicked(e -> selectApplication(app, card));
 
         return card;
     }
 
-    private String getStatusClass(String status) {
-        return switch (status.toLowerCase()) {
-            case "pending" -> "status-new";
-            case "shortlisted" -> "status-shortlisted";
-            case "reviewing" -> "status-reviewing";
-            default -> "status-new";
-        };
-    }
-
     private void selectApplication(ApplicationService.ApplicationRow app, VBox card) {
-        // Remove selection from all cards
-        if (candidateListContainer != null) {
-            candidateListContainer.getChildren().forEach(node -> {
-                if (node instanceof VBox) {
-                    node.getStyleClass().remove("candidate-card-selected");
-                }
-            });
-        }
+        candidateListContainer.getChildren().forEach(node -> {
+            if (node instanceof VBox) {
+                node.setStyle("-fx-border-color: #ddd; -fx-border-radius: 4; -fx-padding: 12; -fx-background-color: white; -fx-cursor: hand;");
+            }
+        });
 
-        // Add selection to clicked card
-        card.getStyleClass().add("candidate-card-selected");
+        card.setStyle("-fx-border-color: #5BA3F5; -fx-border-radius: 4; -fx-padding: 12; -fx-background-color: #f0f4ff; -fx-cursor: hand;");
         selectedApplication = app;
-
-        // Update detail view
-        loadDetailView(app);
+        displayApplicationDetails(app);
     }
 
-    private void loadDetailView(ApplicationService.ApplicationRow app) {
-        // Find the detail container in the parent scene
-        if (detailContainer == null) {
-            detailContainer = findDetailContainer();
-        }
-
-        if (detailContainer == null) return;
-
+    private void displayApplicationDetails(ApplicationService.ApplicationRow app) {
         detailContainer.getChildren().clear();
 
-        boolean isRecruiter = UserContext.getRole() == UserContext.Role.RECRUITER;
+        // Header section
+        VBox headerBox = new VBox(10);
+        headerBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15; -fx-background-color: #f8f9fa;");
 
-        if (isRecruiter) {
-            // Recruiter view: Show candidate details
-            loadRecruiterDetailView(app);
+        Label candidateName = new Label(app.candidateName());
+        candidateName.setStyle("-fx-font-weight: bold; -fx-font-size: 16;");
+
+        Label jobPosition = new Label("Position: " + (app.jobTitle() != null ? app.jobTitle() : "N/A"));
+        jobPosition.setStyle("-fx-text-fill: #666;");
+
+        Label email = new Label("Email: " + (app.candidateEmail() != null ? app.candidateEmail() : "N/A"));
+        email.setStyle("-fx-text-fill: #666;");
+
+        Label phone = new Label("Phone: " + (app.phone() != null ? app.phone() : "N/A"));
+        phone.setStyle("-fx-text-fill: #666;");
+
+        Label appliedDate = new Label("Applied: " + (app.appliedAt() != null
+            ? app.appliedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"))
+            : "N/A"));
+        appliedDate.setStyle("-fx-text-fill: #666; -fx-font-size: 12;");
+
+        Label currentStatus = new Label("Current Status: " + app.currentStatus());
+        currentStatus.setStyle("-fx-font-weight: bold; -fx-text-fill: #5BA3F5;");
+
+        headerBox.getChildren().addAll(candidateName, jobPosition, email, phone, appliedDate, currentStatus);
+        detailContainer.getChildren().add(headerBox);
+
+        // Cover Letter section
+        if (app.coverLetter() != null && !app.coverLetter().isEmpty()) {
+            VBox coverLetterBox = new VBox(5);
+            coverLetterBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15;");
+
+            Label coverLabel = new Label("Cover Letter:");
+            coverLabel.setStyle("-fx-font-weight: bold;");
+
+            TextArea coverText = new TextArea(app.coverLetter());
+            coverText.setEditable(false);
+            coverText.setWrapText(true);
+            coverText.setPrefRowCount(5);
+            coverText.setStyle("-fx-control-inner-background: #f8f9fa; -fx-text-fill: #333;");
+
+            coverLetterBox.getChildren().addAll(coverLabel, coverText);
+            detailContainer.getChildren().add(coverLetterBox);
+        }
+
+        // CV Path section
+        if (app.cvPath() != null && !app.cvPath().isEmpty()) {
+            VBox cvBox = new VBox(5);
+            Label cvLabel = new Label("CV Path: " + app.cvPath());
+            cvLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12;");
+            cvBox.getChildren().add(cvLabel);
+            detailContainer.getChildren().add(cvBox);
+        }
+
+        // Status History section
+        VBox historyBox = new VBox(8);
+        historyBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15;");
+
+        Label historyLabel = new Label("Status History:");
+        historyLabel.setStyle("-fx-font-weight: bold;");
+        historyBox.getChildren().add(historyLabel);
+
+        List<ApplicationStatusHistoryService.StatusHistoryRow> history =
+            ApplicationStatusHistoryService.getByApplicationId(app.id());
+
+        if (history.isEmpty()) {
+            Label noHistory = new Label("No history available");
+            noHistory.setStyle("-fx-text-fill: #999;");
+            historyBox.getChildren().add(noHistory);
         } else {
-            // Candidate view: Show job details and application status
-            loadCandidateDetailView(app);
-        }
-    }
+            for (ApplicationStatusHistoryService.StatusHistoryRow record : history) {
+                VBox historyItem = new VBox(3);
+                historyItem.setStyle("-fx-border-color: #dee2e6; -fx-border-radius: 3; -fx-padding: 8; -fx-background-color: white;");
 
-    private void loadCandidateDetailView(ApplicationService.ApplicationRow app) {
-        // Header with job title
-        VBox headerCard = new VBox(15);
-        headerCard.getStyleClass().add("detail-header-card");
+                Label statusLabel = new Label(record.status());
+                statusLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12;");
 
-        Label jobTitle = new Label(app.jobTitle() != null ? app.jobTitle() : "Job Position");
-        jobTitle.getStyleClass().add("detail-candidate-name");
+                Label dateLabel = new Label(record.changedAt() != null
+                    ? record.changedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"))
+                    : "N/A");
+                dateLabel.setStyle("-fx-text-fill: #999; -fx-font-size: 11;");
 
-        Label appliedDate = new Label("Applied on: " +
-            (app.appliedAt() != null ? app.appliedAt().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy")) : "N/A"));
-        appliedDate.getStyleClass().add("detail-candidate-position");
+                historyItem.getChildren().addAll(statusLabel, dateLabel);
 
-        headerCard.getChildren().addAll(jobTitle, appliedDate);
-        detailContainer.getChildren().add(headerCard);
-
-        // Application Status Card
-        VBox statusCard = new VBox(15);
-        statusCard.getStyleClass().add("detail-section-card");
-
-        Label statusTitle = new Label("Application Status");
-        statusTitle.getStyleClass().add("detail-section-title");
-
-        Label statusBadge = new Label(app.currentStatus() != null ? app.currentStatus() : "SUBMITTED");
-        statusBadge.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-padding: 8 16; " +
-                           "-fx-background-radius: 6; -fx-font-size: 14px; -fx-font-weight: 600;");
-
-        statusCard.getChildren().addAll(statusTitle, statusBadge);
-        detailContainer.getChildren().add(statusCard);
-
-        // Cover Letter Section
-        if (app.coverLetter() != null && !app.coverLetter().trim().isEmpty()) {
-            VBox coverLetterCard = new VBox(12);
-            coverLetterCard.getStyleClass().add("detail-section-card");
-
-            Label coverLetterTitle = new Label("Your Cover Letter");
-            coverLetterTitle.getStyleClass().add("detail-section-title");
-
-            Label coverLetterText = new Label(app.coverLetter());
-            coverLetterText.setWrapText(true);
-            coverLetterText.setStyle("-fx-text-fill: #495057; -fx-font-size: 13px; -fx-line-spacing: 2;");
-
-            coverLetterCard.getChildren().addAll(coverLetterTitle, coverLetterText);
-            detailContainer.getChildren().add(coverLetterCard);
-        }
-
-        // Contact Information
-        VBox contactCard = new VBox(15);
-        contactCard.getStyleClass().add("detail-section-card");
-
-        Label contactTitle = new Label("Your Contact Information");
-        contactTitle.getStyleClass().add("detail-section-title");
-
-        HBox contactInfo = new HBox(25);
-
-        VBox phoneBox = new VBox(6);
-        Label phoneLabel = new Label("📞 Phone");
-        phoneLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #6c757d; -fx-font-size: 12px;");
-        Label phoneValue = new Label(app.phone() != null ? app.phone() : "Not provided");
-        phoneValue.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 14px;");
-        phoneBox.getChildren().addAll(phoneLabel, phoneValue);
-
-        VBox cvBox = new VBox(6);
-        Label cvLabel = new Label("📄 CV");
-        cvLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #6c757d; -fx-font-size: 12px;");
-        Label cvValue = new Label(app.cvPath() != null ? "Uploaded" : "Not uploaded");
-        cvValue.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 14px;");
-        cvBox.getChildren().addAll(cvLabel, cvValue);
-
-        contactInfo.getChildren().addAll(phoneBox, cvBox);
-        contactCard.getChildren().addAll(contactTitle, contactInfo);
-        detailContainer.getChildren().add(contactCard);
-    }
-
-    private void loadRecruiterDetailView(ApplicationService.ApplicationRow app) {
-        // Create detail header card
-        VBox headerCard = createDetailHeader(app);
-        detailContainer.getChildren().add(headerCard);
-
-        // Cover Letter Section
-        if (app.coverLetter() != null && !app.coverLetter().trim().isEmpty()) {
-            VBox coverLetterCard = new VBox(12);
-            coverLetterCard.getStyleClass().add("detail-section-card");
-
-            Label coverLetterTitle = new Label("Cover Letter");
-            coverLetterTitle.getStyleClass().add("detail-section-title");
-
-            Label coverLetterText = new Label(app.coverLetter());
-            coverLetterText.setWrapText(true);
-            coverLetterText.setStyle("-fx-text-fill: #495057; -fx-font-size: 13px; -fx-line-spacing: 2;");
-
-            coverLetterCard.getChildren().addAll(coverLetterTitle, coverLetterText);
-            detailContainer.getChildren().add(coverLetterCard);
-        }
-
-        // Application Status Section
-        VBox statusSection = new VBox(15);
-        statusSection.getStyleClass().add("detail-section-card");
-
-        Label statusTitle = new Label("Application Status");
-        statusTitle.getStyleClass().add("detail-section-title");
-
-        ComboBox<String> statusCombo = new ComboBox<>();
-        statusCombo.getStyleClass().add("modern-combo");
-        statusCombo.setPrefWidth(300);
-        statusCombo.getItems().addAll("SUBMITTED", "IN_REVIEW", "SHORTLISTED",
-                                      "INTERVIEW", "REJECTED", "HIRED");
-        statusCombo.setValue(app.currentStatus());
-        statusCombo.setOnAction(e -> {
-            ApplicationService.updateStatus(app.id(), statusCombo.getValue());
-        });
-
-        statusSection.getChildren().addAll(statusTitle, statusCombo);
-        detailContainer.getChildren().add(statusSection);
-
-        // Action Buttons (only for recruiters)
-        HBox actionButtons = new HBox(15);
-        actionButtons.getStyleClass().add("action-buttons-container");
-        actionButtons.setAlignment(Pos.CENTER_LEFT);
-
-        Button btnSchedule = new Button("📅 Schedule Interview");
-        btnSchedule.getStyleClass().addAll("btn-primary", "action-button");
-        btnSchedule.setOnAction(e -> handleScheduleInterview(app));
-
-        Button btnReject = new Button("✗ Reject");
-        btnReject.getStyleClass().addAll("btn-danger", "action-button");
-        btnReject.setOnAction(e -> handleRejectCandidate(app));
-
-        Button btnDownload = new Button("📥 Download CV");
-        btnDownload.getStyleClass().addAll("btn-secondary", "action-button");
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        actionButtons.getChildren().addAll(btnSchedule, btnDownload, spacer, btnReject);
-        detailContainer.getChildren().add(actionButtons);
-    }
-
-    private VBox createDetailHeader(ApplicationService.ApplicationRow app) {
-        VBox headerCard = new VBox(15);
-        headerCard.getStyleClass().add("detail-header-card");
-
-        // Name and position
-        HBox header = new HBox(15);
-        header.setAlignment(Pos.CENTER_LEFT);
-
-        VBox nameBox = new VBox(8);
-        HBox.setHgrow(nameBox, Priority.ALWAYS);
-
-        Label name = new Label(app.candidateName() != null && !app.candidateName().trim().isEmpty()
-                              ? app.candidateName()
-                              : "Candidate #" + app.id());
-        name.getStyleClass().add("detail-candidate-name");
-
-        Label position = new Label(app.jobTitle() != null ? "Applied for: " + app.jobTitle() : "Application");
-        position.getStyleClass().add("detail-candidate-position");
-
-        nameBox.getChildren().addAll(name, position);
-
-        Label statusBadge = new Label(app.currentStatus() != null ? app.currentStatus() : "NEW");
-        statusBadge.getStyleClass().add("detail-rating-badge");
-
-        header.getChildren().addAll(nameBox, statusBadge);
-
-        // Separator
-        Separator sep = new Separator();
-        sep.getStyleClass().add("detail-separator");
-
-        // Contact info
-        HBox contactInfo = new HBox(30);
-
-        VBox emailBox = new VBox(5);
-        Label emailLabel = new Label("📧 Email");
-        emailLabel.getStyleClass().add("detail-label");
-        Label emailValue = new Label(app.candidateEmail() != null ? app.candidateEmail() : "N/A");
-        emailValue.getStyleClass().add("detail-value");
-        emailBox.getChildren().addAll(emailLabel, emailValue);
-
-        VBox phoneBox = new VBox(5);
-        Label phoneLabel = new Label("📞 Phone");
-        phoneLabel.getStyleClass().add("detail-label");
-        Label phoneValue = new Label(app.phone() != null ? app.phone() : "N/A");
-        phoneValue.getStyleClass().add("detail-value");
-        phoneBox.getChildren().addAll(phoneLabel, phoneValue);
-
-        VBox dateBox = new VBox(5);
-        Label dateLabel = new Label("📅 Applied On");
-        dateLabel.getStyleClass().add("detail-label");
-        Label dateValue = new Label(app.appliedAt() != null ?
-                                    app.appliedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) : "N/A");
-        dateValue.getStyleClass().add("detail-value");
-        dateBox.getChildren().addAll(dateLabel, dateValue);
-
-        contactInfo.getChildren().addAll(emailBox, phoneBox, dateBox);
-
-        headerCard.getChildren().addAll(header, sep, contactInfo);
-        return headerCard;
-    }
-
-    private VBox findDetailContainer() {
-        // Navigate up the scene graph to find the detail container
-        try {
-            if (candidateListContainer != null && candidateListContainer.getScene() != null) {
-                // Get the root of the scene
-                Parent root = candidateListContainer.getScene().getRoot();
-
-                // Find the main content HBox (the split view)
-                VBox mainVBox = findMainVBox(root);
-                if (mainVBox != null) {
-                    // Find the HBox that contains the split view
-                    for (var node : mainVBox.getChildren()) {
-                        if (node instanceof HBox hbox && hbox.getStyleClass().contains("split-view-container")) {
-                            // Get the right side (detail view container)
-                            if (hbox.getChildren().size() > 1) {
-                                var rightSide = hbox.getChildren().get(1);
-                                if (rightSide instanceof VBox detailViewContainer) {
-                                    // Find the ScrollPane inside
-                                    for (var child : detailViewContainer.getChildren()) {
-                                        if (child instanceof ScrollPane scroll) {
-                                            return (VBox) scroll.getContent();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                if (record.note() != null && !record.note().isEmpty()) {
+                    Label noteLabel = new Label("Note: " + record.note());
+                    noteLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 11; -fx-wrap-text: true;");
+                    noteLabel.setWrapText(true);
+                    historyItem.getChildren().add(noteLabel);
                 }
-            }
-        } catch (Exception e) {
-            System.err.println("Could not find detail container: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null;
-    }
 
-    private VBox findMainVBox(Parent root) {
-        if (root instanceof VBox vbox) {
-            return vbox;
-        }
-        if (root instanceof BorderPane borderPane) {
-            if (borderPane.getCenter() instanceof StackPane stackPane) {
-                if (stackPane.getChildren().size() > 0 && stackPane.getChildren().get(0) instanceof VBox vbox) {
-                    return vbox;
-                }
+                historyBox.getChildren().add(historyItem);
             }
         }
-        return null;
+
+        detailContainer.getChildren().add(historyBox);
+
+        // Actions section
+        UserContext.Role role = UserContext.getRole();
+
+        VBox actionsBox = new VBox(10);
+        actionsBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15; -fx-background-color: #f8f9fa;");
+
+        Label actionsLabel = new Label("Actions:");
+        actionsLabel.setStyle("-fx-font-weight: bold;");
+        actionsBox.getChildren().add(actionsLabel);
+
+        if (role == UserContext.Role.CANDIDATE) {
+            HBox buttonBox = new HBox(10);
+
+            Button btnEdit = new Button("Edit");
+            btnEdit.setStyle("-fx-padding: 6 12; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
+            btnEdit.setOnAction(e -> showEditApplicationDialog(app));
+
+            Button btnDelete = new Button("Delete");
+            btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
+            btnDelete.setOnAction(e -> deleteApplication(app));
+
+            buttonBox.getChildren().addAll(btnEdit, btnDelete);
+            actionsBox.getChildren().add(buttonBox);
+        } else if (role == UserContext.Role.RECRUITER) {
+            VBox statusUpdateBox = new VBox(8);
+
+            Label statusLabel = new Label("Change Status:");
+            statusLabel.setStyle("-fx-font-weight: bold;");
+
+            ComboBox<String> statusCombo = new ComboBox<>();
+            statusCombo.getItems().addAll("SUBMITTED", "IN_REVIEW", "SHORTLISTED", "REJECTED", "INTERVIEW", "HIRED");
+            statusCombo.setValue(app.currentStatus());
+            statusCombo.setPrefWidth(250);
+
+            TextArea noteArea = new TextArea();
+            noteArea.setPromptText("Add note (optional)");
+            noteArea.setPrefRowCount(3);
+            noteArea.setWrapText(true);
+
+            Button btnUpdate = new Button("Update Status");
+            btnUpdate.setStyle("-fx-padding: 6 12; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand;");
+            btnUpdate.setOnAction(e -> updateApplicationStatus(app, statusCombo.getValue(), noteArea.getText()));
+
+            Button btnDelete = new Button("Delete Application");
+            btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
+            btnDelete.setOnAction(e -> deleteApplication(app));
+
+            statusUpdateBox.getChildren().addAll(statusLabel, statusCombo, new Label("Note:"), noteArea, btnUpdate, btnDelete);
+            actionsBox.getChildren().add(statusUpdateBox);
+        } else if (role == UserContext.Role.ADMIN) {
+            HBox buttonBox = new HBox(10);
+
+            Button btnDelete = new Button("Delete");
+            btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
+            btnDelete.setOnAction(e -> deleteApplication(app));
+
+            buttonBox.getChildren().add(btnDelete);
+            actionsBox.getChildren().add(buttonBox);
+        }
+
+        detailContainer.getChildren().add(actionsBox);
     }
 
-    private void handleAcceptCandidate(ApplicationService.ApplicationRow app) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Accept Candidate");
-        confirm.setHeaderText("Accept this candidate?");
-        confirm.setContentText("This will change the application status to 'Accepted'.");
-
-        confirm.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                // Update application status
-                showAlert("Success", "Candidate accepted successfully!", Alert.AlertType.INFORMATION);
-                loadApplications();
-            }
-        });
-    }
-
-    private void handleScheduleInterview(ApplicationService.ApplicationRow app) {
-        showInterviewScheduleDialog(app);
-    }
-
-    private void handleRejectCandidate(ApplicationService.ApplicationRow app) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Reject Candidate");
-        confirm.setHeaderText("Reject this candidate?");
-        confirm.setContentText("This action cannot be undone.");
-
-        confirm.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                showAlert("Success", "Candidate rejected.", Alert.AlertType.INFORMATION);
-                loadApplications();
-            }
-        });
-    }
-
-    private void showInterviewScheduleDialog(ApplicationService.ApplicationRow app) {
+    private void showEditApplicationDialog(ApplicationService.ApplicationRow app) {
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Schedule Interview");
-        dialog.setHeaderText("Schedule interview for Application #" + app.id());
+        dialog.setTitle("Edit Application");
+        dialog.setHeaderText("Edit Application #" + app.id());
 
-        // Modern styled content
-        VBox content = new VBox(18);
-        content.setPadding(new Insets(25));
-        content.setStyle("-fx-background-color: white;");
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
 
-        // Date picker with label
-        VBox dateBox = new VBox(8);
-        Label dateLabel = new Label("Interview Date *");
-        dateLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
-        DatePicker datePicker = new DatePicker();
-        datePicker.setValue(java.time.LocalDate.now().plusDays(7));
-        datePicker.setStyle("-fx-pref-width: 350px;");
-        dateBox.getChildren().addAll(dateLabel, datePicker);
+        TextField phoneField = new TextField(app.phone() != null ? app.phone() : "");
+        phoneField.setPromptText("Phone number");
+        phoneField.setPrefWidth(400);
 
-        // Time field with label
-        VBox timeBox = new VBox(8);
-        Label timeLabel = new Label("Time (HH:mm) *");
-        timeLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
-        TextField timeField = new TextField("14:00");
-        timeField.setPromptText("e.g., 14:00");
-        timeField.setStyle("-fx-pref-width: 350px;");
-        timeBox.getChildren().addAll(timeLabel, timeField);
-
-        // Duration with label
-        VBox durationBox = new VBox(8);
-        Label durationLabel = new Label("Duration (minutes) *");
-        durationLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
-        TextField durationField = new TextField("60");
-        durationField.setPromptText("e.g., 60");
-        durationField.setStyle("-fx-pref-width: 350px;");
-        durationBox.getChildren().addAll(durationLabel, durationField);
-
-        // Mode selection with label
-        VBox modeBox = new VBox(8);
-        Label modeLabel = new Label("Interview Mode *");
-        modeLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
-        ComboBox<String> modeCombo = new ComboBox<>();
-        modeCombo.getItems().addAll("ONLINE", "ON_SITE");
-        modeCombo.setValue("ONLINE");
-        modeCombo.setStyle("-fx-pref-width: 350px;");
-        modeBox.getChildren().addAll(modeLabel, modeCombo);
-
-        // Meeting Link (for ONLINE)
-        VBox linkBox = new VBox(8);
-        Label linkLabel = new Label("Meeting Link (for ONLINE interviews)");
-        linkLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
-        TextField linkField = new TextField();
-        linkField.setPromptText("e.g., https://zoom.us/j/123456789");
-        linkField.setStyle("-fx-pref-width: 350px;");
-        linkBox.getChildren().addAll(linkLabel, linkField);
-
-        // Location (for ON_SITE)
-        VBox locationBox = new VBox(8);
-        Label locationLabel = new Label("Location (for ON_SITE interviews)");
-        locationLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
-        TextField locationField = new TextField();
-        locationField.setPromptText("e.g., Office Building A, Room 301");
-        locationField.setStyle("-fx-pref-width: 350px;");
-        locationBox.getChildren().addAll(locationLabel, locationField);
-
-        // Notes section
-        VBox notesBox = new VBox(8);
-        Label notesLabel = new Label("Additional Notes (Optional)");
-        notesLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
-        TextArea notesArea = new TextArea();
-        notesArea.setPromptText("Enter any additional notes for the interview...");
-        notesArea.setPrefRowCount(3);
-        notesArea.setStyle("-fx-pref-width: 350px;");
-        notesBox.getChildren().addAll(notesLabel, notesArea);
-
-        // Toggle visibility based on mode
-        Runnable toggleFields = () -> {
-            boolean isOnline = "ONLINE".equals(modeCombo.getValue());
-            linkBox.setVisible(isOnline);
-            linkBox.setManaged(isOnline);
-            locationBox.setVisible(!isOnline);
-            locationBox.setManaged(!isOnline);
-        };
-        modeCombo.valueProperty().addListener((obs, oldVal, newVal) -> toggleFields.run());
-        toggleFields.run();
-
-        // Add separator for visual organization
-        Separator separator = new Separator();
-        separator.setStyle("-fx-padding: 10 0;");
+        TextArea coverLetterArea = new TextArea(app.coverLetter() != null ? app.coverLetter() : "");
+        coverLetterArea.setPromptText("Cover letter");
+        coverLetterArea.setPrefRowCount(8);
+        coverLetterArea.setWrapText(true);
 
         content.getChildren().addAll(
-            dateBox, timeBox, durationBox, modeBox,
-            separator, linkBox, locationBox, notesBox
+            new Label("Phone:"),
+            phoneField,
+            new Label("Cover Letter:"),
+            coverLetterArea
         );
 
         dialog.getDialogPane().setContent(content);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        // Style the buttons
-        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-        okButton.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
-
-        Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
-        cancelButton.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
-
-        dialog.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                try {
-                    // Validation
-                    if (datePicker.getValue() == null) {
-                        showAlert("Validation Error", "Please select a date.", Alert.AlertType.WARNING);
-                        return;
-                    }
-
-                    LocalDateTime scheduledAt = LocalDateTime.of(
-                        datePicker.getValue(),
-                        java.time.LocalTime.parse(timeField.getText())
-                    );
-                    int duration = Integer.parseInt(durationField.getText());
-                    String mode = modeCombo.getValue();
-
-                    // Validate required fields based on mode
-                    if ("ONLINE".equals(mode) && (linkField.getText() == null || linkField.getText().trim().isEmpty())) {
-                        showAlert("Validation Error", "Meeting link is required for ONLINE interviews.", Alert.AlertType.WARNING);
-                        return;
-                    }
-
-                    if ("ON_SITE".equals(mode) && (locationField.getText() == null || locationField.getText().trim().isEmpty())) {
-                        showAlert("Validation Error", "Location is required for ON_SITE interviews.", Alert.AlertType.WARNING);
-                        return;
-                    }
-
-                    // Create interview linked to application
-                    Models.Interview interview = new Models.Interview(
-                        app.id(),
-                        UserContext.getRecruiterId(), // Use actual recruiter ID from context
-                        scheduledAt,
-                        duration,
-                        mode
-                    );
-                    interview.setStatus("SCHEDULED");
-                    interview.setNotes(notesArea.getText());
-
-                    // Set meeting link or location based on mode
-                    if ("ONLINE".equals(mode)) {
-                        interview.setMeetingLink(linkField.getText().trim());
-                    } else {
-                        interview.setLocation(locationField.getText().trim());
-                    }
-
-                    InterviewService.addInterview(interview);
-
-                    showAlert("Success", "Interview scheduled successfully!", Alert.AlertType.INFORMATION);
-                    loadApplications();
-                } catch (NumberFormatException e) {
-                    showAlert("Validation Error", "Duration must be a valid number.", Alert.AlertType.WARNING);
-                } catch (Exception e) {
-                    showAlert("Error", "Failed to schedule interview: " + e.getMessage(), Alert.AlertType.ERROR);
-                }
+        dialog.showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                ApplicationService.update(app.id(), phoneField.getText(), coverLetterArea.getText(), app.cvPath());
+                loadApplications();
+                showAlert("Success", "Application updated!", Alert.AlertType.INFORMATION);
             }
         });
     }
 
-    @FXML
-    private void handleRefresh() {
-        loadApplications();
-    }
-
-    @FXML
-    private void handleAcceptAndSchedule() {
-        if (selectedApplication != null) {
-            handleScheduleInterview(selectedApplication);
-        } else {
-            showAlert("No Selection", "Please select an application first.", Alert.AlertType.WARNING);
+    private void updateApplicationStatus(ApplicationService.ApplicationRow app, String newStatus, String note) {
+        try {
+            Long recruiterId = UserContext.getRecruiterId();
+            ApplicationService.updateStatus(app.id(), newStatus, recruiterId, note);
+            loadApplications();
+            showAlert("Success", "Status updated to: " + newStatus, Alert.AlertType.INFORMATION);
+        } catch (Exception e) {
+            showAlert("Error", "Failed to update status: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
-    @FXML
-    private void handleReject() {
-        if (selectedApplication != null) {
-            handleRejectCandidate(selectedApplication);
-        } else {
-            showAlert("No Selection", "Please select an application first.", Alert.AlertType.WARNING);
-        }
+    private void deleteApplication(ApplicationService.ApplicationRow app) {
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Delete Application");
+        confirmation.setHeaderText("Are you sure?");
+        confirmation.setContentText("This action cannot be undone.");
+
+        confirmation.showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                ApplicationService.delete(app.id());
+                loadApplications();
+                showAlert("Success", "Application deleted!", Alert.AlertType.INFORMATION);
+            }
+        });
     }
 
     private void showAlert(String title, String message, Alert.AlertType type) {
@@ -670,3 +362,5 @@ public class ApplicationsController {
         alert.showAndWait();
     }
 }
+
+
