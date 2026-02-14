@@ -2,6 +2,7 @@ package Services;
 
 import Utils.MyDatabase;
 
+import java.io.File;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -23,8 +24,40 @@ public class ApplicationService {
         String jobTitle
     ) {}
 
+    private static FileService fileService = new FileService();
+
     private static Connection getConnection() {
         return MyDatabase.getInstance().getConnection();
+    }
+
+    /**
+     * Create application with PDF file upload
+     */
+    public static Long createWithPDF(Long offerId, Long candidateId, String phone, String coverLetter, File pdfFile) {
+        String cvPath = "";
+
+        // Upload PDF if provided
+        if (pdfFile != null && pdfFile.exists()) {
+            try {
+                cvPath = fileService.uploadPDF(pdfFile);
+            } catch (Exception e) {
+                System.err.println("Error uploading PDF: " + e.getMessage());
+                // Continue without PDF
+            }
+        }
+
+        return create(offerId, candidateId, phone, coverLetter, cvPath);
+    }
+
+    /**
+     * Download PDF for application
+     */
+    public static File downloadPDF(Long applicationId) throws Exception {
+        ApplicationRow app = getById(applicationId);
+        if (app == null || app.cvPath() == null || app.cvPath().isEmpty()) {
+            throw new Exception("Application or PDF not found");
+        }
+        return fileService.downloadPDF(app.cvPath());
     }
 
     // CREATE
@@ -244,6 +277,21 @@ public class ApplicationService {
 
     // DELETE
     public static void delete(Long applicationId) {
+        // First, get the application to retrieve PDF path
+        ApplicationRow app = getById(applicationId);
+
+        // Delete PDF file if it exists
+        if (app != null && app.cvPath() != null && !app.cvPath().isEmpty()) {
+            try {
+                fileService.deletePDF(app.cvPath());
+                System.out.println("PDF file deleted: " + app.cvPath());
+            } catch (Exception e) {
+                System.err.println("Error deleting PDF file: " + e.getMessage());
+                // Continue with database deletion even if file deletion fails
+            }
+        }
+
+        // Delete from database
         String sql = "DELETE FROM job_application WHERE id = ?";
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setLong(1, applicationId);

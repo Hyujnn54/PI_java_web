@@ -2,6 +2,7 @@ package Controllers;
 
 import Services.ApplicationService;
 import Services.ApplicationStatusHistoryService;
+import Services.FileService;
 import Services.JobOfferService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
@@ -9,8 +10,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 
+import java.awt.Desktop;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ApplicationsController {
@@ -132,6 +136,9 @@ public class ApplicationsController {
     private void displayApplicationDetails(ApplicationService.ApplicationRow app) {
         detailContainer.getChildren().clear();
 
+        // Get role at the beginning so it's available throughout the method
+        UserContext.Role role = UserContext.getRole();
+
         // Header section
         VBox headerBox = new VBox(10);
         headerBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15; -fx-background-color: #f8f9fa;");
@@ -180,9 +187,23 @@ public class ApplicationsController {
         // CV Path section
         if (app.cvPath() != null && !app.cvPath().isEmpty()) {
             VBox cvBox = new VBox(5);
+            cvBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15;");
+
+            HBox cvLabelBox = new HBox(10);
             Label cvLabel = new Label("CV Path: " + app.cvPath());
             cvLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12;");
-            cvBox.getChildren().add(cvLabel);
+
+            // Download button for recruiters and admins
+            if (role == UserContext.Role.RECRUITER || role == UserContext.Role.ADMIN) {
+                Button btnDownload = new Button("Download CV");
+                btnDownload.setStyle("-fx-padding: 4 10; -fx-font-size: 11; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand;");
+                btnDownload.setOnAction(e -> downloadPDF(app));
+                cvLabelBox.getChildren().addAll(cvLabel, btnDownload);
+            } else {
+                cvLabelBox.getChildren().add(cvLabel);
+            }
+
+            cvBox.getChildren().add(cvLabelBox);
             detailContainer.getChildren().add(cvBox);
         }
 
@@ -230,7 +251,6 @@ public class ApplicationsController {
         detailContainer.getChildren().add(historyBox);
 
         // Actions section
-        UserContext.Role role = UserContext.getRole();
 
         VBox actionsBox = new VBox(10);
         actionsBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15; -fx-background-color: #f8f9fa;");
@@ -309,11 +329,36 @@ public class ApplicationsController {
         coverLetterArea.setPrefRowCount(8);
         coverLetterArea.setWrapText(true);
 
+        // CV/PDF file selection
+        HBox cvBox = new HBox(10);
+        TextField cvPathField = new TextField();
+        cvPathField.setPromptText(app.cvPath() != null && !app.cvPath().isEmpty() ? "Current: " + app.cvPath() : "No file selected");
+        cvPathField.setEditable(false);
+        cvPathField.setPrefWidth(280);
+
+        Button btnBrowseCV = new Button("Browse");
+        btnBrowseCV.setStyle("-fx-padding: 6 12; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
+        btnBrowseCV.setOnAction(e -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Select PDF File");
+            fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+            );
+            java.io.File selectedFile = fileChooser.showOpenDialog(null);
+            if (selectedFile != null) {
+                cvPathField.setText(selectedFile.getAbsolutePath());
+            }
+        });
+
+        cvBox.getChildren().addAll(cvPathField, btnBrowseCV);
+
         content.getChildren().addAll(
             new Label("Phone:"),
             phoneField,
             new Label("Cover Letter:"),
-            coverLetterArea
+            coverLetterArea,
+            new Label("CV/PDF (optional):"),
+            cvBox
         );
 
         dialog.getDialogPane().setContent(content);
@@ -321,11 +366,80 @@ public class ApplicationsController {
 
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
-                ApplicationService.update(app.id(), phoneField.getText(), coverLetterArea.getText(), app.cvPath());
-                loadApplications();
-                showAlert("Success", "Application updated!", Alert.AlertType.INFORMATION);
+                updateApplicationWithTracking(app, phoneField.getText(), coverLetterArea.getText(), cvPathField.getText());
             }
         });
+    }
+
+    private void updateApplicationWithTracking(ApplicationService.ApplicationRow app, String newPhone, String newCoverLetter, String newCvPath) {
+        // Track what changed
+        List<String> changes = new ArrayList<>();
+        String oldPhone = app.phone() != null ? app.phone() : "";
+        String oldCoverLetter = app.coverLetter() != null ? app.coverLetter() : "";
+        String oldCvPath = app.cvPath() != null ? app.cvPath() : "";
+
+        if (!oldPhone.equals(newPhone)) {
+            changes.add("phone number");
+        }
+        if (!oldCoverLetter.equals(newCoverLetter)) {
+            changes.add("cover letter");
+        }
+
+        // Handle CV file upload if new file selected
+        String finalCvPath = oldCvPath;
+        if (newCvPath != null && !newCvPath.isEmpty() && !newCvPath.equals(oldCvPath)) {
+            try {
+                java.io.File newCvFile = new java.io.File(newCvPath);
+                if (newCvFile.exists()) {
+                    // Delete old CV if it exists
+                    if (!oldCvPath.isEmpty()) {
+                        try {
+                            FileService fileService = new FileService();
+                            fileService.deletePDF(oldCvPath);
+                            System.out.println("Old PDF deleted: " + oldCvPath);
+                        } catch (Exception e) {
+                            System.err.println("Error deleting old PDF: " + e.getMessage());
+                        }
+                    }
+
+                    // Upload new CV
+                    FileService fileService = new FileService();
+                    finalCvPath = fileService.uploadPDF(newCvFile);
+                    System.out.println("New PDF uploaded: " + finalCvPath);
+                    changes.add("CV");
+                }
+            } catch (Exception e) {
+                showAlert("Error", "Failed to upload new CV: " + e.getMessage(), Alert.AlertType.ERROR);
+                e.printStackTrace();
+                return;
+            }
+        }
+
+        if (changes.isEmpty()) {
+            showAlert("Info", "No changes made", Alert.AlertType.INFORMATION);
+            return;
+        }
+
+        // Generate note based on changes
+        String note = "Candidate changed the " + String.join(" and ", changes);
+        System.out.println("Change note: " + note);
+
+        // Update application
+        try {
+            ApplicationService.update(app.id(), newPhone, newCoverLetter, finalCvPath);
+            System.out.println("Application updated in database");
+
+            // Add to status history
+            Long candidateId = UserContext.getCandidateId();
+            ApplicationStatusHistoryService.addStatusHistory(app.id(), app.currentStatus(), candidateId, note);
+            System.out.println("Status history added for application: " + app.id());
+
+            loadApplications();
+            showAlert("Success", "Application updated!\n\n" + note, Alert.AlertType.INFORMATION);
+        } catch (Exception e) {
+            showAlert("Error", "Failed to update application: " + e.getMessage(), Alert.AlertType.ERROR);
+            e.printStackTrace();
+        }
     }
 
     private void updateApplicationStatus(ApplicationService.ApplicationRow app, String newStatus, String note) {
@@ -361,6 +475,19 @@ public class ApplicationsController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    private void downloadPDF(ApplicationService.ApplicationRow app) {
+        try {
+            java.io.File pdfFile = ApplicationService.downloadPDF(app.id());
+
+            // Open file with default PDF viewer
+            if (javafx.application.HostServices.class != null) {
+                Desktop.getDesktop().open(pdfFile);
+                showAlert("Success", "Opening PDF file...", Alert.AlertType.INFORMATION);
+            }
+        } catch (Exception e) {
+            showAlert("Error", "Could not download PDF: " + e.getMessage(), Alert.AlertType.ERROR);
+            e.printStackTrace();
+        }
+    }
 }
-
-

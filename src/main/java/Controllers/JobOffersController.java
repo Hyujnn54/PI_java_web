@@ -8,6 +8,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -439,17 +440,36 @@ public class JobOffersController {
         letterArea.setPrefRowCount(8);
         letterArea.setWrapText(true);
 
-        // CV Path (optional)
-        Label cvLabel = new Label("CV Path (optional)");
-        cvLabel.setStyle("-fx-font-weight: bold;");
-        TextField cvField = new TextField();
-        cvField.setPromptText("/path/to/your/cv.pdf");
-        cvField.setPrefWidth(400);
+        // CV/PDF file selection
+        Label pdfLabel = new Label("Upload CV (PDF) - Optional");
+        pdfLabel.setStyle("-fx-font-weight: bold;");
+
+        HBox pdfBox = new HBox(10);
+        TextField pdfPathField = new TextField();
+        pdfPathField.setPromptText("No file selected");
+        pdfPathField.setEditable(false);
+        pdfPathField.setPrefWidth(280);
+
+        Button btnBrowse = new Button("Browse");
+        btnBrowse.setStyle("-fx-padding: 6 12; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
+        btnBrowse.setOnAction(e -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Select PDF File");
+            fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+            );
+            java.io.File selectedFile = fileChooser.showOpenDialog(null);
+            if (selectedFile != null) {
+                pdfPathField.setText(selectedFile.getAbsolutePath());
+            }
+        });
+
+        pdfBox.getChildren().addAll(pdfPathField, btnBrowse);
 
         content.getChildren().addAll(
             phoneLabel, phoneField,
             letterLabel, letterArea,
-            cvLabel, cvField
+            pdfLabel, pdfBox
         );
 
         dialog.getDialogPane().setContent(content);
@@ -457,7 +477,7 @@ public class JobOffersController {
 
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
-                submitApplication(job, phoneField.getText(), letterArea.getText(), cvField.getText());
+                submitApplication(job, phoneField.getText(), letterArea.getText(), pdfPathField.getText());
             }
         });
     }
@@ -480,7 +500,13 @@ public class JobOffersController {
                 return;
             }
 
-            ApplicationService.create(job.id(), candidateId, phone, coverLetter, cvPath != null ? cvPath : "");
+            // If cvPath is provided, it's a file path - upload the file
+            java.io.File pdfFile = null;
+            if (cvPath != null && !cvPath.isEmpty()) {
+                pdfFile = new java.io.File(cvPath);
+            }
+
+            ApplicationService.createWithPDF(job.id(), candidateId, phone, coverLetter, pdfFile);
             showAlert("Success", "Application submitted successfully!", Alert.AlertType.INFORMATION);
 
         } catch (Exception e) {
