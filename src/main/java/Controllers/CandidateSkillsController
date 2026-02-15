@@ -1,0 +1,147 @@
+package Controllers;
+
+import Models.CandidateSkill;
+import Models.SkillLevel;
+import Services.CandidateSkillService;
+import javafx.collections.FXCollections;
+import javafx.fxml.FXML;
+import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import utils.Session;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class CandidateSkillsController {
+
+    @FXML private VBox rowsBox;
+    @FXML private Label lblStatus;
+
+    private final CandidateSkillService service = new CandidateSkillService();
+
+    // each row = (TextField + ComboBox + remove button)
+    private static class SkillRowUI {
+        HBox root;
+        TextField tfName;
+        ComboBox<SkillLevel> cbLevel;
+        Button btnRemove;
+    }
+
+    private final List<SkillRowUI> rowUIs = new ArrayList<>();
+
+    @FXML
+    public void initialize() {
+        try {
+            long candidateId = Session.getUserId();
+            List<CandidateSkill> existing = service.getByCandidate(candidateId);
+
+            if (existing.isEmpty()) {
+                // ✅ show 2 empty rows by default
+                addRow(null, SkillLevel.BEGINNER);
+                addRow(null, SkillLevel.BEGINNER);
+                lblStatus.setText("Add your skills then Save ✅");
+            } else {
+                // ✅ pre-fill rows
+                for (CandidateSkill s : existing) {
+                    addRow(s.getSkillName(), s.getLevel());
+                }
+                lblStatus.setText("Loaded " + existing.size() + " skill(s) ✅");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            lblStatus.setText("Load failed: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleAddRow() {
+        addRow(null, SkillLevel.BEGINNER);
+    }
+
+    private void addRow(String skillName, SkillLevel level) {
+        SkillRowUI ui = new SkillRowUI();
+        ui.root = new HBox(10);
+
+        ui.tfName = new TextField();
+        ui.tfName.setPromptText("Skill name");
+        ui.tfName.setPrefWidth(220);
+        if (skillName != null) ui.tfName.setText(skillName);
+
+        ui.cbLevel = new ComboBox<>(FXCollections.observableArrayList(SkillLevel.values()));
+        ui.cbLevel.setValue(level != null ? level : SkillLevel.BEGINNER);
+        ui.cbLevel.setPrefWidth(170);
+
+        ui.btnRemove = new Button("✖");
+        ui.btnRemove.setOnAction(e -> removeRow(ui));
+        ui.btnRemove.setStyle("-fx-background-color: transparent; -fx-text-fill: #dc3545; -fx-font-weight: bold;");
+
+        ui.root.getChildren().addAll(ui.tfName, ui.cbLevel, ui.btnRemove);
+
+        rowUIs.add(ui);
+        rowsBox.getChildren().add(ui.root);
+    }
+
+    private void removeRow(SkillRowUI ui) {
+        rowsBox.getChildren().remove(ui.root);
+        rowUIs.remove(ui);
+
+        // if user deletes all rows accidentally, keep at least 1 row
+        if (rowUIs.isEmpty()) {
+            addRow(null, SkillLevel.BEGINNER);
+        }
+    }
+
+    @FXML
+    private void handleSave() {
+        try {
+            long candidateId = Session.getUserId();
+
+            List<CandidateSkill> toSave = new ArrayList<>();
+            for (SkillRowUI ui : rowUIs) {
+                String name = ui.tfName.getText().trim();
+                SkillLevel level = ui.cbLevel.getValue();
+
+                // ignore empty lines
+                if (name.isEmpty()) continue;
+
+                CandidateSkill s = new CandidateSkill(null, candidateId, name, level);
+                toSave.add(s);
+            }
+
+            if (toSave.isEmpty()) {
+                lblStatus.setText("Add at least 1 skill before saving.");
+                return;
+            }
+
+            // ✅ Replace-all strategy = full CRUD (add/update/delete) in one save
+            service.replaceAll(candidateId, toSave);
+            lblStatus.setText("Saved " + toSave.size() + " skill(s) ✅");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            lblStatus.setText("Save failed: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleDeleteAll() {
+        try {
+            long candidateId = Session.getUserId();
+            service.deleteAllForCandidate(candidateId);
+
+            rowsBox.getChildren().clear();
+            rowUIs.clear();
+
+            // keep 2 empty rows again
+            addRow(null, SkillLevel.BEGINNER);
+            addRow(null, SkillLevel.BEGINNER);
+
+            lblStatus.setText("All skills deleted ✅");
+        } catch (Exception e) {
+            e.printStackTrace();
+            lblStatus.setText("Delete failed: " + e.getMessage());
+        }
+    }
+}

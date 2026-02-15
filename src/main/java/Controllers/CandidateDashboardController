@@ -2,6 +2,11 @@ package Controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.ButtonType;
+
 
 public class CandidateDashboardController {
 
@@ -17,4 +22,21 @@ public class CandidateDashboardController {
 
     @FXML private void handleBrowseJobs() { statusLabel.setText("Browse Job Offers clicked"); }
     @FXML private void handleViewMyApplications() { statusLabel.setText("View My Applications clicked"); }
+    @FXML
+    private void handleSkills() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/CandidateSkillsDialog.fxml"));
+            DialogPane pane = loader.load();
+
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("My Skills");
+            dialog.setDialogPane(pane);
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+            dialog.showAndWait();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
 }

@@ -13,6 +13,7 @@
     </padding>
 
     <Label text="Candidate Dashboard" style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+    <Button text="🧠 My Skills" onAction="#handleSkills"/>
 
     <HBox spacing="12">
         <VBox spacing="6" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12;" HBox.hgrow="ALWAYS">
