@@ -36,6 +36,7 @@ public class AdminDashboardController {
     @FXML private ComboBox<Role> roleFilter;
 
     @FXML private TableView<UserRow> userTable;
+    @FXML private TableColumn<UserRow, String> colName;
     @FXML private TableColumn<UserRow, String> colEmail;
     @FXML private TableColumn<UserRow, String> colRole;
     @FXML private TableColumn<UserRow, String> colPhone;
