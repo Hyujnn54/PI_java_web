@@ -60,8 +60,16 @@ public class MainShellController {
 
     @FXML private void handleJobOffersNav() {
         // Load different views based on user role
-        boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
-        activePage = isRecruiter ? "/JobOffers.fxml" : "/JobOffersBrowse.fxml";
+        Utils.UserContext.Role role = Utils.UserContext.getRole();
+
+        if (role == Utils.UserContext.Role.ADMIN) {
+            activePage = "/JobOffersAdmin.fxml";
+        } else if (role == Utils.UserContext.Role.RECRUITER) {
+            activePage = "/JobOffers.fxml";
+        } else {
+            activePage = "/JobOffersBrowse.fxml";
+        }
+
         loadContentView(activePage);
         highlightActiveButton(btnJobOffers);
     }
@@ -158,18 +166,34 @@ public class MainShellController {
     }
 
     private void applyRoleToShell() {
-        boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
+        Utils.UserContext.Role role = Utils.UserContext.getRole();
+        boolean isRecruiter = role == Utils.UserContext.Role.RECRUITER;
+        boolean isAdmin = role == Utils.UserContext.Role.ADMIN;
 
         if (btnInterviews != null) {
-            btnInterviews.setText(isRecruiter ? "📋  Interviews" : "📋  Upcoming Interviews");
+            if (isAdmin) {
+                btnInterviews.setText("⚙️  System");
+            } else if (isRecruiter) {
+                btnInterviews.setText("📋  Interviews");
+            } else {
+                btnInterviews.setText("📋  Upcoming Interviews");
+            }
         }
         if (btnApplications != null) {
-            btnApplications.setText("📨  Applications");
+            if (isAdmin) {
+                btnApplications.setText("📊  Reports");
+            } else {
+                btnApplications.setText("📨  Applications");
+            }
             btnApplications.setVisible(true);
             btnApplications.setManaged(true);
         }
         if (btnJobOffers != null) {
-            btnJobOffers.setText("💼  Job Offers");
+            if (isAdmin) {
+                btnJobOffers.setText("⚙️  Manage All Jobs");
+            } else {
+                btnJobOffers.setText("💼  Job Offers");
+            }
             btnJobOffers.setVisible(true);
             btnJobOffers.setManaged(true);
         }

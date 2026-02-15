@@ -63,17 +63,23 @@ public class UserContext {
 
     public static void toggleRole() {
         UserContext ctx = getInstance();
-        // Toggle between CANDIDATE and RECRUITER for demo purposes
+        // Toggle between CANDIDATE, RECRUITER, and ADMIN
         if (ctx.currentRole == Role.CANDIDATE) {
             // Switch to Recruiter
             ctx.currentRole = Role.RECRUITER;
-            ctx.userId = 1L; // Recruiter ID
+            ctx.userId = 1L;
             ctx.userName = "Demo Recruiter";
             ctx.userEmail = "recruiter@talentbridge.com";
         } else if (ctx.currentRole == Role.RECRUITER) {
+            // Switch to Admin
+            ctx.currentRole = Role.ADMIN;
+            ctx.userId = 99L; // Admin ID
+            ctx.userName = "Admin User";
+            ctx.userEmail = "admin@talentbridge.com";
+        } else if (ctx.currentRole == Role.ADMIN) {
             // Switch to Candidate
             ctx.currentRole = Role.CANDIDATE;
-            ctx.userId = 2L; // Candidate ID (different user)
+            ctx.userId = 2L;
             ctx.userName = "John Doe";
             ctx.userEmail = "candidate@example.com";
         }
