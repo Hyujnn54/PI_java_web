@@ -79,32 +79,11 @@ public class MainShellController {
     }
 
     @FXML private void handleDisconnect() {
-        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmAlert.setTitle("Disconnect");
-        confirmAlert.setHeaderText("Are you sure you want to logout?");
-        confirmAlert.setContentText("You will be redirected to the login page.");
-
-        confirmAlert.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                try {
-                    // Load login page
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/Login.fxml"));
-                    Parent root = loader.load();
-
-                    Stage stage = (Stage) btnDisconnect.getScene().getWindow();
-                    stage.setScene(new Scene(root, 550, 650));
-                    stage.setTitle("Talent Bridge - Login");
-                    stage.centerOnScreen();
-
-                } catch (IOException e) {
-                    Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                    errorAlert.setTitle("Error");
-                    errorAlert.setHeaderText("Failed to logout");
-                    errorAlert.setContentText(e.getMessage());
-                    errorAlert.showAndWait();
-                }
-            }
-        });
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Disconnect");
+        alert.setHeaderText("Logout Feature");
+        alert.setContentText("Login/logout functionality has been removed. Restart the application to reset.");
+        alert.showAndWait();
     }
 
     @FXML private void handleUserProfile() {
@@ -177,22 +156,12 @@ public class MainShellController {
 
     private void applyRoleToShell() {
         boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
-        boolean isAdmin = Utils.UserContext.getRole() == Utils.UserContext.Role.ADMIN;
 
         // Update button labels for interviews
         if (btnInterviews != null) {
             btnInterviews.setText(isRecruiter ? "📋  Interviews" : "📋  Upcoming Interviews");
-            // Show for recruiter and admin, hide for candidate
-            if (isAdmin) {
-                btnInterviews.setVisible(true);
-                btnInterviews.setManaged(true);
-            } else if (!isRecruiter) {
-                btnInterviews.setVisible(true);
-                btnInterviews.setManaged(true);
-            } else {
-                btnInterviews.setVisible(true);
-                btnInterviews.setManaged(true);
-            }
+            btnInterviews.setVisible(true);
+            btnInterviews.setManaged(true);
         }
 
         // Applications button
@@ -205,26 +174,14 @@ public class MainShellController {
         // Job Offers button
         if (btnJobOffers != null) {
             btnJobOffers.setText("💼  Job Offers");
-            // Hide for admin in job offers view (show dashboard instead)
-            if (isAdmin) {
-                btnJobOffers.setVisible(false);
-                btnJobOffers.setManaged(false);
-            } else {
-                btnJobOffers.setVisible(true);
-                btnJobOffers.setManaged(true);
-            }
+            btnJobOffers.setVisible(true);
+            btnJobOffers.setManaged(true);
         }
 
-        // Dashboard button - only show for admin
+        // Dashboard button - hide for all users (admin removed)
         if (btnDashboard != null) {
-            if (isAdmin) {
-                btnDashboard.setText("👨‍💼  Dashboard");
-                btnDashboard.setVisible(true);
-                btnDashboard.setManaged(true);
-            } else {
-                btnDashboard.setVisible(false);
-                btnDashboard.setManaged(false);
-            }
+            btnDashboard.setVisible(false);
+            btnDashboard.setManaged(false);
         }
     }
 }

@@ -35,7 +35,6 @@ public class InterviewManagementController {
     @FXML private HBox bottomActionButtons;
     @FXML private Button btnUpdate;
     @FXML private Button btnDelete;
-    @FXML private Button btnManageFeedback;
 
     // Search and Calendar controls
     @FXML private HBox searchBox;
@@ -45,12 +44,11 @@ public class InterviewManagementController {
 
     // Feedback panel controls (bottom panel like interview edit)
     @FXML private VBox feedbackPanel;
+    @FXML private ComboBox<String> comboFeedbackDecision;
     @FXML private TextField txtFeedbackScore;
     @FXML private Label lblScoreIndicator;
     @FXML private TextArea txtFeedbackComments;
-    @FXML private Button btnSaveFeedback;
-    @FXML private Button btnAcceptCandidate;
-    @FXML private Button btnRejectCandidate;
+    @FXML private Button btnUpdateFeedbackAction;
     @FXML private Button btnDeleteFeedback;
     @FXML private Button btnCancelFeedback;
 
@@ -101,6 +99,11 @@ public class InterviewManagementController {
             comboMode.valueProperty().addListener((obs, oldVal, newVal) -> toggleModeFields(newVal));
         }
 
+        // Setup feedback decision combobox
+        if (comboFeedbackDecision != null) {
+            comboFeedbackDecision.setItems(FXCollections.observableArrayList("ACCEPTED", "REJECTED"));
+        }
+
         // Setup feedback score live indicator
         if (txtFeedbackScore != null && lblScoreIndicator != null) {
             txtFeedbackScore.textProperty().addListener((obs, old, newVal) -> {
@@ -108,13 +111,13 @@ public class InterviewManagementController {
                     if (!newVal.trim().isEmpty()) {
                         int score = Integer.parseInt(newVal);
                         if (score >= 70) {
-                            lblScoreIndicator.setText("✓ ACCEPTED");
+                            lblScoreIndicator.setText("✓ HIGH");
                             lblScoreIndicator.setStyle("-fx-text-fill: #28a745; -fx-font-size: 12px; -fx-font-weight: 600;");
                         } else if (score >= 50) {
-                            lblScoreIndicator.setText("⚠ BORDERLINE");
+                            lblScoreIndicator.setText("⚠ MEDIUM");
                             lblScoreIndicator.setStyle("-fx-text-fill: #f0ad4e; -fx-font-size: 12px; -fx-font-weight: 600;");
                         } else {
-                            lblScoreIndicator.setText("✗ REJECTED");
+                            lblScoreIndicator.setText("✗ LOW");
                             lblScoreIndicator.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: 600;");
                         }
                     } else {
@@ -589,24 +592,110 @@ public class InterviewManagementController {
             return actionBox;
         }
 
-        // Recruiter sees "Manage Feedback" button (shows bottom panel, not popup)
-        // This is handled by the bottom action buttons now
+        // Recruiter sees feedback action buttons in the card itself
+        boolean hasFeedback = checkIfFeedbackExists(interview.getId());
+
+        if (hasFeedback) {
+            // If feedback exists: show View, Update, Delete buttons
+            Button btnViewFeedback = new Button("👁 View");
+            btnViewFeedback.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6; -fx-font-weight: 600; -fx-font-size: 12px; -fx-cursor: hand;");
+            btnViewFeedback.setOnAction(e -> viewFeedback(interview));
+
+            Button btnUpdateFeedback = new Button("✏ Update");
+            btnUpdateFeedback.setStyle("-fx-background-color: #f0ad4e; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6; -fx-font-weight: 600; -fx-font-size: 12px; -fx-cursor: hand;");
+            btnUpdateFeedback.setOnAction(e -> updateFeedback(interview));
+
+            Button btnDeleteFeedback = new Button("🗑 Delete");
+            btnDeleteFeedback.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6; -fx-font-weight: 600; -fx-font-size: 12px; -fx-cursor: hand;");
+            btnDeleteFeedback.setOnAction(e -> deleteFeedbackForInterview(interview));
+
+            actionBox.getChildren().addAll(btnViewFeedback, btnUpdateFeedback, btnDeleteFeedback);
+        } else {
+            // If no feedback: show Create button
+            Button btnCreateFeedback = new Button("📋 Create Feedback");
+            btnCreateFeedback.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6; -fx-font-weight: 600; -fx-font-size: 12px; -fx-cursor: hand;");
+            btnCreateFeedback.setOnAction(e -> createFeedback(interview));
+
+            actionBox.getChildren().add(btnCreateFeedback);
+        }
+
         return actionBox;
     }
 
-    private String calculateResult(InterviewFeedback feedback) {
-        // Calculate result based on overall score
-        if (feedback.getOverallScore() != null) {
-            return feedback.getOverallScore() >= 70 ? "ACCEPTED" : "REJECTED";
+    private void viewFeedback(Interview interview) {
+        var feedbacks = InterviewFeedbackService.getByInterviewId(interview.getId());
+        if (!feedbacks.isEmpty()) {
+            InterviewFeedback feedback = feedbacks.get(0);
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Interview Feedback");
+            alert.setHeaderText("Feedback for Interview #" + interview.getId());
+
+            String decision = feedback.getDecision() != null ? feedback.getDecision() : "N/A";
+            String content = "Decision: " + decision + "\n" +
+                           "Overall Score: " + (feedback.getOverallScore() != null ? feedback.getOverallScore() : "N/A") + "/100\n\n" +
+                           "Comments:\n" + (feedback.getComment() != null ? feedback.getComment() : "No comments");
+
+            alert.setContentText(content);
+            alert.showAndWait();
         }
-        return "PENDING";
     }
 
-    @FXML
-    private void handleManageFeedbackPanel() {
-        if (selectedInterview != null) {
-            showFeedbackPanelForInterview(selectedInterview);
+    private void updateFeedback(Interview interview) {
+        selectedInterview = interview;
+        showFeedbackPanelForInterview(interview);
+    }
+
+    private void createFeedback(Interview interview) {
+        selectedInterview = interview;
+
+        // Clear form for new feedback
+        if (comboFeedbackDecision != null) comboFeedbackDecision.setValue(null);
+        if (txtFeedbackScore != null) txtFeedbackScore.setText("");
+        if (txtFeedbackComments != null) txtFeedbackComments.setText("");
+
+        // Set button text for creating
+        if (btnUpdateFeedbackAction != null) {
+            btnUpdateFeedbackAction.setText("💾 Create Feedback");
         }
+
+        // Hide delete button for new feedback
+        if (btnDeleteFeedback != null) {
+            btnDeleteFeedback.setVisible(false);
+            btnDeleteFeedback.setManaged(false);
+        }
+
+        if (feedbackPanel != null) {
+            feedbackPanel.setVisible(true);
+            feedbackPanel.setManaged(true);
+        }
+    }
+
+    private void deleteFeedbackForInterview(Interview interview) {
+        var feedbacks = InterviewFeedbackService.getByInterviewId(interview.getId());
+        if (!feedbacks.isEmpty()) {
+            InterviewFeedback existing = feedbacks.get(0);
+
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Delete Feedback");
+            confirm.setHeaderText("Delete this feedback?");
+            confirm.setContentText("This action cannot be undone.");
+            confirm.showAndWait().ifPresent(r -> {
+                if (r == ButtonType.OK) {
+                    InterviewFeedbackService.deleteFeedback(existing.getId());
+                    showAlert("Success", "Feedback deleted successfully.", Alert.AlertType.INFORMATION);
+                    loadInterviews();
+                }
+            });
+        }
+    }
+
+    private String calculateResult(InterviewFeedback feedback) {
+        // Use the decision field from database
+        if (feedback.getDecision() != null) {
+            return feedback.getDecision(); // ACCEPTED or REJECTED
+        }
+        return "PENDING";
     }
 
     private void showFeedbackPanelForInterview(Interview interview) {
@@ -621,6 +710,13 @@ public class InterviewManagementController {
 
         // Pre-fill if exists
         if (existingFeedback != null) {
+            // Get decision from database field
+            String decision = existingFeedback.getDecision();
+
+            if (comboFeedbackDecision != null) {
+                comboFeedbackDecision.setValue(decision);
+            }
+
             if (existingFeedback.getOverallScore() != null) {
                 txtFeedbackScore.setText(String.valueOf(existingFeedback.getOverallScore()));
             } else {
@@ -628,14 +724,25 @@ public class InterviewManagementController {
             }
             txtFeedbackComments.setText(existingFeedback.getComment() != null ? existingFeedback.getComment() : "");
 
+            // Set button text for updating
+            if (btnUpdateFeedbackAction != null) {
+                btnUpdateFeedbackAction.setText("💾 Update Feedback");
+            }
+
             // Show delete button if feedback exists
             if (btnDeleteFeedback != null) {
                 btnDeleteFeedback.setVisible(true);
                 btnDeleteFeedback.setManaged(true);
             }
         } else {
+            if (comboFeedbackDecision != null) comboFeedbackDecision.setValue(null);
             txtFeedbackScore.setText("");
             txtFeedbackComments.setText("");
+
+            // Set button text for creating
+            if (btnUpdateFeedbackAction != null) {
+                btnUpdateFeedbackAction.setText("💾 Create Feedback");
+            }
 
             // Hide delete button for new feedback
             if (btnDeleteFeedback != null) {
@@ -649,23 +756,58 @@ public class InterviewManagementController {
     }
 
     @FXML
-    private void handleSaveFeedback() {
+    private void handleUpdateFeedbackAction() {
         if (selectedInterview == null) return;
-        saveFeedbackForInterview(selectedInterview, false);
-    }
 
-    @FXML
-    private void handleAcceptCandidate() {
-        if (selectedInterview == null) return;
-        txtFeedbackScore.setText("80"); // Auto-fill passing score
-        saveFeedbackForInterview(selectedInterview, true);
-    }
+        try {
+            // Validation - decision is required
+            if (comboFeedbackDecision == null || comboFeedbackDecision.getValue() == null || comboFeedbackDecision.getValue().trim().isEmpty()) {
+                showAlert("Validation Error", "Please select a decision (ACCEPTED or REJECTED).", Alert.AlertType.WARNING);
+                return;
+            }
 
-    @FXML
-    private void handleRejectCandidate() {
-        if (selectedInterview == null) return;
-        txtFeedbackScore.setText("40"); // Auto-fill failing score
-        saveFeedbackForInterview(selectedInterview, true);
+            // Validation - score is required
+            if (txtFeedbackScore.getText().trim().isEmpty()) {
+                showAlert("Validation Error", "Please enter a score.", Alert.AlertType.WARNING);
+                return;
+            }
+
+            int overallScore = Integer.parseInt(txtFeedbackScore.getText().trim());
+            if (overallScore < 0 || overallScore > 100) {
+                showAlert("Validation Error", "Score must be between 0 and 100.", Alert.AlertType.WARNING);
+                return;
+            }
+
+            String comment = txtFeedbackComments.getText();
+            String decision = comboFeedbackDecision.getValue(); // Get decision from combobox
+            Long recruiterId = (long) getEffectiveRecruiterIdForInterview(selectedInterview);
+
+            // Check if feedback exists
+            var feedbacks = InterviewFeedbackService.getByInterviewId(selectedInterview.getId());
+            InterviewFeedback fb = feedbacks.isEmpty() ? new InterviewFeedback() : feedbacks.get(0);
+
+            fb.setInterviewId(selectedInterview.getId());
+            fb.setRecruiterId(recruiterId);
+            fb.setOverallScore(overallScore);
+            fb.setDecision(decision); // Set decision field
+            fb.setComment(comment);
+
+            if (feedbacks.isEmpty()) {
+                InterviewFeedbackService.addFeedback(fb);
+                showAlert("Success", "Feedback created successfully.", Alert.AlertType.INFORMATION);
+            } else {
+                InterviewFeedbackService.updateFeedback(fb.getId(), fb);
+                showAlert("Success", "Feedback updated successfully.", Alert.AlertType.INFORMATION);
+            }
+
+            hideFeedbackPanel();
+            loadInterviews();
+        } catch (NumberFormatException e) {
+            showAlert("Validation Error", "Score must be a valid number.", Alert.AlertType.WARNING);
+        } catch (Exception e) {
+            showAlert("Error", "Failed to save feedback: " + e.getMessage(), Alert.AlertType.ERROR);
+            e.printStackTrace();
+        }
     }
 
     @FXML
@@ -700,52 +842,6 @@ public class InterviewManagementController {
         if (feedbackPanel != null) {
             feedbackPanel.setVisible(false);
             feedbackPanel.setManaged(false);
-        }
-    }
-
-    private void saveFeedbackForInterview(Interview interview, boolean closeAfter) {
-        try {
-            // Validation
-            if (txtFeedbackScore.getText().trim().isEmpty()) {
-                showAlert("Validation Error", "Please enter a score.", Alert.AlertType.WARNING);
-                return;
-            }
-
-            int overallScore = Integer.parseInt(txtFeedbackScore.getText().trim());
-            if (overallScore < 0 || overallScore > 100) {
-                showAlert("Validation Error", "Score must be between 0 and 100.", Alert.AlertType.WARNING);
-                return;
-            }
-
-            String comment = txtFeedbackComments.getText();
-            Long recruiterId = (long) getEffectiveRecruiterIdForInterview(interview);
-
-            // Check if feedback exists
-            var feedbacks = InterviewFeedbackService.getByInterviewId(interview.getId());
-            InterviewFeedback fb = feedbacks.isEmpty() ? new InterviewFeedback() : feedbacks.get(0);
-
-            fb.setInterviewId(interview.getId());
-            fb.setRecruiterId(recruiterId);
-            fb.setOverallScore(overallScore);
-            fb.setComment(comment);
-
-            if (feedbacks.isEmpty()) {
-                InterviewFeedbackService.addFeedback(fb);
-                showAlert("Success", "Feedback added successfully.", Alert.AlertType.INFORMATION);
-            } else {
-                InterviewFeedbackService.updateFeedback(fb.getId(), fb);
-                showAlert("Success", "Feedback updated successfully.", Alert.AlertType.INFORMATION);
-            }
-
-            if (closeAfter) {
-                hideFeedbackPanel();
-            }
-            loadInterviews();
-        } catch (NumberFormatException e) {
-            showAlert("Validation Error", "Score must be a valid number.", Alert.AlertType.WARNING);
-        } catch (Exception e) {
-            showAlert("Error", "Failed to save feedback: " + e.getMessage(), Alert.AlertType.ERROR);
-            e.printStackTrace();
         }
     }
 
@@ -815,12 +911,6 @@ public class InterviewManagementController {
         if (bottomActionButtons != null && isRecruiter) {
             bottomActionButtons.setVisible(true);
             bottomActionButtons.setManaged(true);
-
-            // Show manage feedback button for recruiters
-            if (btnManageFeedback != null) {
-                btnManageFeedback.setVisible(true);
-                btnManageFeedback.setManaged(true);
-            }
         }
     }
 

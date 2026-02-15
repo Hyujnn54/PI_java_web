@@ -48,8 +48,6 @@
                 onAction="#handleUpdateInterview"/>
         <Button fx:id="btnDelete" text="🗑️ Delete Interview" styleClass="btn-danger"
                 onAction="#handleDeleteInterview"/>
-        <Button fx:id="btnManageFeedback" text="📋 Manage Feedback" styleClass="btn-success"
-                onAction="#handleManageFeedbackPanel" visible="false" managed="false"/>
     </HBox>
 
     <!-- Feedback Panel (Hidden by default, similar to edit dialog) -->
@@ -64,25 +62,27 @@
                 <ColumnConstraints/>
             </columnConstraints>
 
+            <!-- Decision -->
+            <Label text="Decision:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="info-label"/>
+            <ComboBox fx:id="comboFeedbackDecision" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="dialog-input" promptText="Select decision"/>
+
             <!-- Overall Score -->
-            <Label text="Overall Score:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="info-label"/>
-            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="0">
+            <Label text="Overall Score:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="info-label"/>
+            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="1">
                 <TextField fx:id="txtFeedbackScore" promptText="0-100" prefWidth="100" styleClass="dialog-input"/>
                 <Label fx:id="lblScoreIndicator" style="-fx-font-size: 12px; -fx-font-weight: 600;"/>
             </HBox>
 
             <!-- Comments -->
-            <Label text="Comments:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="info-label"/>
+            <Label text="Comments:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="info-label"/>
             <TextArea fx:id="txtFeedbackComments" promptText="Enter detailed feedback, strengths, areas for improvement..."
-                     GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="dialog-input" prefRowCount="5" wrapText="true"/>
+                     GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="dialog-input" prefRowCount="5" wrapText="true"/>
         </GridPane>
 
         <!-- Feedback Action Buttons -->
         <HBox spacing="15" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
-            <Button fx:id="btnSaveFeedback" text="💾 Save Feedback" styleClass="btn-primary" onAction="#handleSaveFeedback"/>
-            <Button fx:id="btnAcceptCandidate" text="✓ Accept Candidate" styleClass="btn-success" onAction="#handleAcceptCandidate"/>
-            <Button fx:id="btnRejectCandidate" text="✗ Reject Candidate" styleClass="btn-danger" onAction="#handleRejectCandidate"/>
-            <Button fx:id="btnDeleteFeedback" text="🗑️ Delete Feedback" styleClass="btn-secondary"
+            <Button fx:id="btnUpdateFeedbackAction" text="💾 Update Feedback" styleClass="btn-primary" onAction="#handleUpdateFeedbackAction"/>
+            <Button fx:id="btnDeleteFeedback" text="🗑️ Delete Feedback" styleClass="btn-danger"
                    onAction="#handleDeleteFeedback" visible="false" managed="false"/>
             <Button fx:id="btnCancelFeedback" text="Cancel" styleClass="btn-secondary" onAction="#handleCancelFeedback"/>
         </HBox>
