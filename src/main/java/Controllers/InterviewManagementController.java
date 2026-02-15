@@ -33,13 +33,10 @@ public class InterviewManagementController {
     @FXML private Button btnScheduleNew;
     @FXML private VBox editDialog;
     @FXML private HBox bottomActionButtons;
-    @FXML private Button btnUpdate;
-    @FXML private Button btnDelete;
 
     // Search and Calendar controls
     @FXML private HBox searchBox;
     @FXML private TextField txtSearchInterview;
-    @FXML private Button btnSearchInterview;
     @FXML private Button btnCalendar;
 
     // Feedback panel controls (bottom panel like interview edit)
@@ -50,7 +47,6 @@ public class InterviewManagementController {
     @FXML private TextArea txtFeedbackComments;
     @FXML private Button btnUpdateFeedbackAction;
     @FXML private Button btnDeleteFeedback;
-    @FXML private Button btnCancelFeedback;
 
     // Modern form fields (no visible IDs)
     @FXML private DatePicker datePicker;
@@ -64,19 +60,8 @@ public class InterviewManagementController {
     @FXML private Label lblLocation;
     @FXML private Button btnSave;
 
-    // Hidden fields for service compatibility
-    @FXML private TextField txtApplicationId;
-    @FXML private TextField txtRecruiterId;
-    @FXML private ComboBox<String> comboStatus;
-
     private Interview selectedInterview = null;
-    private String userRole = "Candidate"; // Mock role
     private boolean isEditMode = false;
-
-    public void setUserRole(String role) {
-        this.userRole = role != null ? role : "Candidate";
-        updateUIForRole();
-    }
 
     @FXML
     public void initialize() {
@@ -642,12 +627,16 @@ public class InterviewManagementController {
     }
 
     private void updateFeedback(Interview interview) {
+        System.out.println("[DEBUG] updateFeedback called with interview ID: " + interview.getId());
         selectedInterview = interview;
+        System.out.println("[DEBUG] selectedInterview set to ID: " + selectedInterview.getId());
         showFeedbackPanelForInterview(interview);
     }
 
     private void createFeedback(Interview interview) {
+        System.out.println("[DEBUG] createFeedback called with interview ID: " + interview.getId());
         selectedInterview = interview;
+        System.out.println("[DEBUG] selectedInterview set to ID: " + selectedInterview.getId());
 
         // Clear form for new feedback
         if (comboFeedbackDecision != null) comboFeedbackDecision.setValue(null);
@@ -701,6 +690,10 @@ public class InterviewManagementController {
     private void showFeedbackPanelForInterview(Interview interview) {
         if (feedbackPanel == null) return;
 
+        // CRITICAL: Set the selected interview for the update handler
+        selectedInterview = interview;
+        System.out.println("[DEBUG] showFeedbackPanelForInterview - selectedInterview set to ID: " + interview.getId());
+
         // Hide edit dialog if open
         hideEditDialog();
 
@@ -728,12 +721,6 @@ public class InterviewManagementController {
             if (btnUpdateFeedbackAction != null) {
                 btnUpdateFeedbackAction.setText("💾 Update Feedback");
             }
-
-            // Show delete button if feedback exists
-            if (btnDeleteFeedback != null) {
-                btnDeleteFeedback.setVisible(true);
-                btnDeleteFeedback.setManaged(true);
-            }
         } else {
             if (comboFeedbackDecision != null) comboFeedbackDecision.setValue(null);
             txtFeedbackScore.setText("");
@@ -743,12 +730,12 @@ public class InterviewManagementController {
             if (btnUpdateFeedbackAction != null) {
                 btnUpdateFeedbackAction.setText("💾 Create Feedback");
             }
+        }
 
-            // Hide delete button for new feedback
-            if (btnDeleteFeedback != null) {
-                btnDeleteFeedback.setVisible(false);
-                btnDeleteFeedback.setManaged(false);
-            }
+        // Always hide delete button in the panel - delete is only available on the card
+        if (btnDeleteFeedback != null) {
+            btnDeleteFeedback.setVisible(false);
+            btnDeleteFeedback.setManaged(false);
         }
 
         feedbackPanel.setVisible(true);
@@ -757,56 +744,103 @@ public class InterviewManagementController {
 
     @FXML
     private void handleUpdateFeedbackAction() {
-        if (selectedInterview == null) return;
+        System.out.println("\n!!!!!!!!!!!!! UPDATE BUTTON CLICKED !!!!!!!!!!!!!");
+
+        if (selectedInterview == null) {
+            System.err.println("ERROR: No interview selected");
+            showAlert("Error", "No interview selected.", Alert.AlertType.ERROR);
+            return;
+        }
+
+        System.out.println("\n============ FEEDBACK UPDATE STARTED ============");
+        System.out.println("Interview ID: " + selectedInterview.getId());
 
         try {
             // Validation - decision is required
             if (comboFeedbackDecision == null || comboFeedbackDecision.getValue() == null || comboFeedbackDecision.getValue().trim().isEmpty()) {
+                System.err.println("VALIDATION ERROR: Decision not selected");
                 showAlert("Validation Error", "Please select a decision (ACCEPTED or REJECTED).", Alert.AlertType.WARNING);
                 return;
             }
 
             // Validation - score is required
             if (txtFeedbackScore.getText().trim().isEmpty()) {
+                System.err.println("VALIDATION ERROR: Score is empty");
                 showAlert("Validation Error", "Please enter a score.", Alert.AlertType.WARNING);
                 return;
             }
 
-            int overallScore = Integer.parseInt(txtFeedbackScore.getText().trim());
+            int overallScore;
+            try {
+                overallScore = Integer.parseInt(txtFeedbackScore.getText().trim());
+            } catch (NumberFormatException e) {
+                System.err.println("VALIDATION ERROR: Score is not a number: " + txtFeedbackScore.getText());
+                showAlert("Validation Error", "Score must be a valid number.", Alert.AlertType.WARNING);
+                return;
+            }
+
             if (overallScore < 0 || overallScore > 100) {
+                System.err.println("VALIDATION ERROR: Score out of range: " + overallScore);
                 showAlert("Validation Error", "Score must be between 0 and 100.", Alert.AlertType.WARNING);
                 return;
             }
 
             String comment = txtFeedbackComments.getText();
-            String decision = comboFeedbackDecision.getValue(); // Get decision from combobox
+            String decision = comboFeedbackDecision.getValue();
             Long recruiterId = (long) getEffectiveRecruiterIdForInterview(selectedInterview);
+
+            System.out.println("Form Values:");
+            System.out.println("  - Decision: " + decision);
+            System.out.println("  - Score: " + overallScore);
+            System.out.println("  - Comment length: " + (comment != null ? comment.length() : 0));
+            System.out.println("  - Recruiter ID: " + recruiterId);
 
             // Check if feedback exists
             var feedbacks = InterviewFeedbackService.getByInterviewId(selectedInterview.getId());
-            InterviewFeedback fb = feedbacks.isEmpty() ? new InterviewFeedback() : feedbacks.get(0);
+            boolean isUpdate = !feedbacks.isEmpty();
 
+            System.out.println("Feedback Status: " + (isUpdate ? "UPDATE MODE" : "CREATE MODE"));
+
+            InterviewFeedback fb;
+            if (isUpdate) {
+                fb = feedbacks.get(0);
+                System.out.println("Existing Feedback ID: " + fb.getId());
+                System.out.println("Current values in DB - Decision: " + fb.getDecision() + ", Score: " + fb.getOverallScore());
+            } else {
+                fb = new InterviewFeedback();
+                System.out.println("Creating new feedback object");
+            }
+
+            // Set all fields
             fb.setInterviewId(selectedInterview.getId());
             fb.setRecruiterId(recruiterId);
             fb.setOverallScore(overallScore);
-            fb.setDecision(decision); // Set decision field
+            fb.setDecision(decision);
             fb.setComment(comment);
 
-            if (feedbacks.isEmpty()) {
-                InterviewFeedbackService.addFeedback(fb);
-                showAlert("Success", "Feedback created successfully.", Alert.AlertType.INFORMATION);
-            } else {
+            System.out.println("Updated object values - Decision: " + fb.getDecision() + ", Score: " + fb.getOverallScore());
+
+            // Save to database
+            if (isUpdate) {
+                System.out.println("Calling InterviewFeedbackService.updateFeedback() with ID: " + fb.getId());
                 InterviewFeedbackService.updateFeedback(fb.getId(), fb);
+                System.out.println("✓ Update completed successfully");
                 showAlert("Success", "Feedback updated successfully.", Alert.AlertType.INFORMATION);
+            } else {
+                System.out.println("Calling InterviewFeedbackService.addFeedback()");
+                InterviewFeedbackService.addFeedback(fb);
+                System.out.println("✓ Create completed successfully");
+                showAlert("Success", "Feedback created successfully.", Alert.AlertType.INFORMATION);
             }
+
+            System.out.println("============ FEEDBACK UPDATE COMPLETED ============\n");
 
             hideFeedbackPanel();
             loadInterviews();
-        } catch (NumberFormatException e) {
-            showAlert("Validation Error", "Score must be a valid number.", Alert.AlertType.WARNING);
         } catch (Exception e) {
-            showAlert("Error", "Failed to save feedback: " + e.getMessage(), Alert.AlertType.ERROR);
+            System.err.println("ERROR during feedback save: " + e.getMessage());
             e.printStackTrace();
+            showAlert("Error", "Failed to save feedback: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
@@ -901,7 +935,8 @@ public class InterviewManagementController {
             editDialog.setVisible(false);
             editDialog.setManaged(false);
             isEditMode = false;
-            selectedInterview = null;
+            // DON'T clear selectedInterview here - it's needed for feedback operations
+            // selectedInterview will be cleared when appropriate (e.g., after saving)
         }
     }
 

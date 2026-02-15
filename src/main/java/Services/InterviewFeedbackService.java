@@ -4,9 +4,6 @@ import Models.InterviewFeedback;
 import Utils.MyDatabase;
 
 import java.sql.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,31 +44,10 @@ public class InterviewFeedbackService {
         }
     }
 
-    public static List<InterviewFeedback> getAll() {
-        List<InterviewFeedback> list = new ArrayList<>();
-        String sql = "SELECT * FROM interview_feedback ORDER BY created_at DESC";
-
-        try (Statement st = getConnection().createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-
-            while (rs.next()) {
-                InterviewFeedback f = new InterviewFeedback();
-                f.setId(rs.getLong("id"));
-                f.setInterviewId(rs.getLong("interview_id"));
-                f.setRecruiterId(rs.getLong("recruiter_id"));
-                int score = rs.getInt("overall_score");
-                f.setOverallScore(rs.wasNull() ? null : score);
-                f.setDecision(rs.getString("decision"));
-                f.setComment(rs.getString("comment"));
-                list.add(f);
-            }
-        } catch (SQLException e) {
-            System.err.println("Error retrieving feedback: " + e.getMessage());
-        }
-        return list;
-    }
-
     public static void updateFeedback(Long id, InterviewFeedback f) {
+        System.out.println("  [SERVICE] updateFeedback called with ID: " + id);
+        System.out.println("  [SERVICE] New values - Decision: " + f.getDecision() + ", Score: " + f.getOverallScore());
+
         // Validate decision enum
         if (f.getDecision() == null || (!f.getDecision().equals("ACCEPTED") && !f.getDecision().equals("REJECTED"))) {
             throw new IllegalArgumentException("Decision must be ACCEPTED or REJECTED");
@@ -95,10 +71,17 @@ public class InterviewFeedbackService {
             ps.setString(4, f.getDecision());
             ps.setString(5, f.getComment());
             ps.setLong(6, id);
-            ps.executeUpdate();
-            System.out.println("Feedback updated");
+
+            int rowsAffected = ps.executeUpdate();
+            System.out.println("  [SERVICE] Update executed. Rows affected: " + rowsAffected);
+
+            if (rowsAffected > 0) {
+                System.out.println("  [SERVICE] ✓ Feedback updated successfully in database");
+            } else {
+                System.err.println("  [SERVICE] ✗ WARNING: No rows were updated! ID may not exist: " + id);
+            }
         } catch (SQLException e) {
-            System.err.println("Error updating feedback: " + e.getMessage());
+            System.err.println("  [SERVICE] ✗ SQL Error updating feedback: " + e.getMessage());
             throw new RuntimeException("Failed to update feedback: " + e.getMessage(), e);
         }
     }
@@ -151,38 +134,6 @@ public class InterviewFeedbackService {
         } catch (SQLException e) {
             System.err.println("Error checking feedback existence: " + e.getMessage());
             return false;
-        }
-    }
-
-    public static InterviewFeedback getById(Long id) {
-        String sql = "SELECT * FROM interview_feedback WHERE id = ?";
-        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setLong(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    InterviewFeedback f = new InterviewFeedback();
-                    f.setId(rs.getLong("id"));
-                    f.setInterviewId(rs.getLong("interview_id"));
-                    f.setRecruiterId(rs.getLong("recruiter_id"));
-                    int score = rs.getInt("overall_score");
-                    f.setOverallScore(rs.wasNull() ? null : score);
-                    f.setDecision(rs.getString("decision"));
-                    f.setComment(rs.getString("comment"));
-                    return f;
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error fetching feedback by id: " + e.getMessage());
-        }
-        return null;
-    }
-
-    // Optional convenience for dialogs: create or update depending on id.
-    public static void save(InterviewFeedback f) {
-        if (f.getId() != null && f.getId() > 0) {
-            updateFeedback(f.getId(), f);
-        } else {
-            addFeedback(f);
         }
     }
 }
