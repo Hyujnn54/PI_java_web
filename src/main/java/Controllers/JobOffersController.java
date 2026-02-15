@@ -3,6 +3,7 @@ package Controllers;
 import Services.ApplicationService;
 import Services.JobOfferService;
 import Utils.UserContext;
+import Utils.ValidationUtils;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -422,29 +423,76 @@ public class JobOffersController {
         dialog.setTitle("Apply for Job");
         dialog.setHeaderText("Apply for: " + job.title());
 
+        ScrollPane scrollPane = new ScrollPane();
         VBox content = new VBox(15);
         content.setPadding(new Insets(20));
+        content.setStyle("-fx-padding: 20;");
+        scrollPane.setContent(content);
+        scrollPane.setFitToWidth(true);
 
-        // Phone field
+        // Phone field with country selection
         Label phoneLabel = new Label("Phone Number *");
         phoneLabel.setStyle("-fx-font-weight: bold;");
+
+        HBox phoneContainer = new HBox(10);
+        phoneContainer.setAlignment(Pos.CENTER_LEFT);
+
+        ComboBox<String> countryCombo = new ComboBox<>();
+        countryCombo.getItems().addAll("Tunisia (+216)", "France (+33)");
+        countryCombo.setValue("Tunisia (+216)");
+        countryCombo.setPrefWidth(150);
+        countryCombo.setStyle("-fx-font-size: 13px;");
+
         TextField phoneField = new TextField();
         phoneField.setPromptText("Enter your phone number");
-        phoneField.setPrefWidth(400);
+        phoneField.setPrefWidth(250);
+
+        Label phoneErrorLabel = new Label();
+        phoneErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px;");
+        phoneErrorLabel.setVisible(false);
+
+        phoneContainer.getChildren().addAll(countryCombo, phoneField);
 
         // Cover Letter field
-        Label letterLabel = new Label("Cover Letter *");
+        Label letterLabel = new Label("Cover Letter * (50-2000 characters)");
         letterLabel.setStyle("-fx-font-weight: bold;");
+
         TextArea letterArea = new TextArea();
         letterArea.setPromptText("Tell us why you're interested in this position...");
         letterArea.setPrefRowCount(8);
         letterArea.setWrapText(true);
+        letterArea.setStyle("-fx-font-size: 13px;");
+
+        Label letterCharCount = new Label("0/2000");
+        letterCharCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+
+        // Update character count in real-time
+        letterArea.textProperty().addListener((obs, oldVal, newVal) -> {
+            int length = newVal != null ? newVal.length() : 0;
+            letterCharCount.setText(length + "/2000");
+
+            if (length > 2000) {
+                letterCharCount.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 11px; -fx-font-weight: bold;");
+            } else if (length < 50 && length > 0) {
+                letterCharCount.setStyle("-fx-text-fill: #fd7e14; -fx-font-size: 11px;");
+            } else {
+                letterCharCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+            }
+        });
+
+        Label letterErrorLabel = new Label();
+        letterErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px;");
+        letterErrorLabel.setVisible(false);
+
+        VBox letterBox = new VBox(8);
+        letterBox.getChildren().addAll(letterLabel, letterArea, letterCharCount);
 
         // CV/PDF file selection
         Label pdfLabel = new Label("Upload CV (PDF) - Optional");
         pdfLabel.setStyle("-fx-font-weight: bold;");
 
         HBox pdfBox = new HBox(10);
+        pdfBox.setAlignment(Pos.CENTER_LEFT);
         TextField pdfPathField = new TextField();
         pdfPathField.setPromptText("No file selected");
         pdfPathField.setEditable(false);
@@ -466,33 +514,94 @@ public class JobOffersController {
 
         pdfBox.getChildren().addAll(pdfPathField, btnBrowse);
 
+        // Add validation on input change for real-time feedback
+        phoneField.textProperty().addListener((obs, oldVal, newVal) -> {
+            String country = countryCombo.getValue();
+            boolean isValid = false;
+            if ("Tunisia (+216)".equals(country)) {
+                isValid = ValidationUtils.isValidTunisianPhone(newVal);
+            } else if ("France (+33)".equals(country)) {
+                isValid = ValidationUtils.isValidFrenchPhone(newVal);
+            }
+
+            if (newVal.isEmpty()) {
+                phoneErrorLabel.setVisible(false);
+            } else if (!isValid) {
+                phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
+                    "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                phoneErrorLabel.setVisible(true);
+            } else {
+                phoneErrorLabel.setVisible(false);
+            }
+        });
+
+        countryCombo.setOnAction(e -> {
+            // Re-validate on country change
+            String newVal = phoneField.getText();
+            String country = countryCombo.getValue();
+            boolean isValid = false;
+            if ("Tunisia (+216)".equals(country)) {
+                isValid = ValidationUtils.isValidTunisianPhone(newVal);
+            } else if ("France (+33)".equals(country)) {
+                isValid = ValidationUtils.isValidFrenchPhone(newVal);
+            }
+
+            if (newVal.isEmpty()) {
+                phoneErrorLabel.setVisible(false);
+            } else if (!isValid) {
+                phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
+                    "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                phoneErrorLabel.setVisible(true);
+            } else {
+                phoneErrorLabel.setVisible(false);
+            }
+        });
+
         content.getChildren().addAll(
-            phoneLabel, phoneField,
-            letterLabel, letterArea,
+            phoneLabel, phoneContainer, phoneErrorLabel,
+            letterBox, letterErrorLabel,
             pdfLabel, pdfBox
         );
 
-        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().setContent(scrollPane);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
-                submitApplication(job, phoneField.getText(), letterArea.getText(), pdfPathField.getText());
+                String country = countryCombo.getValue();
+                String phone = phoneField.getText();
+                String coverLetter = letterArea.getText();
+                String cvPath = pdfPathField.getText();
+
+                // Validate phone based on selected country
+                boolean phoneValid = false;
+                if ("Tunisia (+216)".equals(country)) {
+                    phoneValid = ValidationUtils.isValidTunisianPhone(phone);
+                } else if ("France (+33)".equals(country)) {
+                    phoneValid = ValidationUtils.isValidFrenchPhone(phone);
+                }
+
+                if (!phoneValid) {
+                    showAlert("Validation Error",
+                        ValidationUtils.getPhoneErrorMessage(
+                            "Tunisia (+216)".equals(country) ? "TN" : "FR", phone),
+                        Alert.AlertType.ERROR);
+                    return;
+                }
+
+                if (!ValidationUtils.isValidCoverLetter(coverLetter)) {
+                    showAlert("Validation Error",
+                        ValidationUtils.getCoverLetterErrorMessage(coverLetter),
+                        Alert.AlertType.ERROR);
+                    return;
+                }
+
+                submitApplication(job, phone, coverLetter, cvPath);
             }
         });
     }
 
     private void submitApplication(JobOfferService.JobOfferRow job, String phone, String coverLetter, String cvPath) {
-        if (phone == null || phone.trim().isEmpty()) {
-            showAlert("Validation Error", "Phone number is required", Alert.AlertType.ERROR);
-            return;
-        }
-
-        if (coverLetter == null || coverLetter.trim().isEmpty()) {
-            showAlert("Validation Error", "Cover letter is required", Alert.AlertType.ERROR);
-            return;
-        }
-
         try {
             Long candidateId = UserContext.getCandidateId();
             if (candidateId == null) {

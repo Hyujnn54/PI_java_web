@@ -101,7 +101,7 @@ public class ApplicationStatusHistoryService {
         return null;
     }
 
-    // UPDATE
+    // UPDATE - note only (existing)
     public static void updateStatusHistory(Long historyId, String note) {
         String sql = "UPDATE application_status_history SET note = ? WHERE id = ?";
 
@@ -115,6 +115,42 @@ public class ApplicationStatusHistoryService {
             }
         } catch (SQLException e) {
             System.err.println("Error updating history: " + e.getMessage());
+        }
+    }
+
+    // UPDATE - note and status, also sync application current_status
+    public static void updateStatusHistory(Long historyId, String newStatus, String note) {
+        // First, load existing history to get the application_id
+        StatusHistoryRow existing = getById(historyId);
+        if (existing == null) {
+            System.err.println("History record not found: " + historyId);
+            return;
+        }
+
+        String sql = "UPDATE application_status_history SET status = ?, note = ? WHERE id = ?";
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setString(1, newStatus);
+            ps.setString(2, note);
+            ps.setLong(3, historyId);
+
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                System.out.println("History updated (status+note): " + historyId);
+                // Also update the application's current_status to keep data consistent
+                String updateApp = "UPDATE job_application SET current_status = ? WHERE id = ?";
+                try (PreparedStatement ps2 = getConnection().prepareStatement(updateApp)) {
+                    ps2.setString(1, newStatus);
+                    ps2.setLong(2, existing.applicationId());
+                    int r2 = ps2.executeUpdate();
+                    if (r2 > 0) {
+                        System.out.println("Application status synced: " + existing.applicationId() + " -> " + newStatus);
+                    }
+                } catch (SQLException e2) {
+                    System.err.println("Error syncing application status: " + e2.getMessage());
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error updating history (status+note): " + e.getMessage());
         }
     }
 
@@ -145,4 +181,3 @@ public class ApplicationStatusHistoryService {
         }
     }
 }
-

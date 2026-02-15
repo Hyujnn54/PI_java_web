@@ -5,6 +5,7 @@ import Services.ApplicationStatusHistoryService;
 import Services.FileService;
 import Services.JobOfferService;
 import Utils.UserContext;
+import Utils.ValidationUtils;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -344,20 +345,77 @@ public class ApplicationsController {
         dialog.setTitle("Edit Application");
         dialog.setHeaderText("Edit Application #" + app.id());
 
+        ScrollPane scrollPane = new ScrollPane();
         VBox content = new VBox(15);
         content.setPadding(new Insets(20));
+        content.setStyle("-fx-padding: 20;");
+        scrollPane.setContent(content);
+        scrollPane.setFitToWidth(true);
+
+        // Phone field with country selection
+        Label phoneLabel = new Label("Phone Number *");
+        phoneLabel.setStyle("-fx-font-weight: bold;");
+
+        HBox phoneContainer = new HBox(10);
+        phoneContainer.setAlignment(Pos.CENTER_LEFT);
+
+        ComboBox<String> countryCombo = new ComboBox<>();
+        countryCombo.getItems().addAll("Tunisia (+216)", "France (+33)");
+        countryCombo.setValue("Tunisia (+216)");
+        countryCombo.setPrefWidth(150);
+        countryCombo.setStyle("-fx-font-size: 13px;");
 
         TextField phoneField = new TextField(app.phone() != null ? app.phone() : "");
-        phoneField.setPromptText("Phone number");
-        phoneField.setPrefWidth(400);
+        phoneField.setPromptText("Enter your phone number");
+        phoneField.setPrefWidth(250);
 
-        TextArea coverLetterArea = new TextArea(app.coverLetter() != null ? app.coverLetter() : "");
-        coverLetterArea.setPromptText("Cover letter");
-        coverLetterArea.setPrefRowCount(8);
-        coverLetterArea.setWrapText(true);
+        Label phoneErrorLabel = new Label();
+        phoneErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px;");
+        phoneErrorLabel.setVisible(false);
+
+        phoneContainer.getChildren().addAll(countryCombo, phoneField);
+
+        // Cover Letter field
+        Label letterLabel = new Label("Cover Letter * (50-2000 characters)");
+        letterLabel.setStyle("-fx-font-weight: bold;");
+
+        TextArea letterArea = new TextArea(app.coverLetter() != null ? app.coverLetter() : "");
+        letterArea.setPromptText("Tell us why you're interested in this position...");
+        letterArea.setPrefRowCount(8);
+        letterArea.setWrapText(true);
+        letterArea.setStyle("-fx-font-size: 13px;");
+
+        String initialCoverLetter = app.coverLetter() != null ? app.coverLetter() : "";
+        Label letterCharCount = new Label(initialCoverLetter.length() + "/2000");
+        letterCharCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+
+        // Update character count in real-time
+        letterArea.textProperty().addListener((obs, oldVal, newVal) -> {
+            int length = newVal != null ? newVal.length() : 0;
+            letterCharCount.setText(length + "/2000");
+
+            if (length > 2000) {
+                letterCharCount.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 11px; -fx-font-weight: bold;");
+            } else if (length < 50 && length > 0) {
+                letterCharCount.setStyle("-fx-text-fill: #fd7e14; -fx-font-size: 11px;");
+            } else {
+                letterCharCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+            }
+        });
+
+        Label letterErrorLabel = new Label();
+        letterErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px;");
+        letterErrorLabel.setVisible(false);
+
+        VBox letterBox = new VBox(8);
+        letterBox.getChildren().addAll(letterLabel, letterArea, letterCharCount);
 
         // CV/PDF file selection
+        Label pdfLabel = new Label("Upload CV (PDF) - Optional");
+        pdfLabel.setStyle("-fx-font-weight: bold;");
+
         HBox cvBox = new HBox(10);
+        cvBox.setAlignment(Pos.CENTER_LEFT);
         TextField cvPathField = new TextField();
         cvPathField.setPromptText(app.cvPath() != null && !app.cvPath().isEmpty() ? "Current: " + app.cvPath() : "No file selected");
         cvPathField.setEditable(false);
@@ -379,21 +437,89 @@ public class ApplicationsController {
 
         cvBox.getChildren().addAll(cvPathField, btnBrowseCV);
 
+        // Add validation on input change for real-time feedback
+        phoneField.textProperty().addListener((obs, oldVal, newVal) -> {
+            String country = countryCombo.getValue();
+            boolean isValid = false;
+            if ("Tunisia (+216)".equals(country)) {
+                isValid = ValidationUtils.isValidTunisianPhone(newVal);
+            } else if ("France (+33)".equals(country)) {
+                isValid = ValidationUtils.isValidFrenchPhone(newVal);
+            }
+
+            if (newVal.isEmpty()) {
+                phoneErrorLabel.setVisible(false);
+            } else if (!isValid) {
+                phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
+                    "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                phoneErrorLabel.setVisible(true);
+            } else {
+                phoneErrorLabel.setVisible(false);
+            }
+        });
+
+        countryCombo.setOnAction(e -> {
+            // Re-validate on country change
+            String newVal = phoneField.getText();
+            String country = countryCombo.getValue();
+            boolean isValid = false;
+            if ("Tunisia (+216)".equals(country)) {
+                isValid = ValidationUtils.isValidTunisianPhone(newVal);
+            } else if ("France (+33)".equals(country)) {
+                isValid = ValidationUtils.isValidFrenchPhone(newVal);
+            }
+
+            if (newVal.isEmpty()) {
+                phoneErrorLabel.setVisible(false);
+            } else if (!isValid) {
+                phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
+                    "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                phoneErrorLabel.setVisible(true);
+            } else {
+                phoneErrorLabel.setVisible(false);
+            }
+        });
+
         content.getChildren().addAll(
-            new Label("Phone:"),
-            phoneField,
-            new Label("Cover Letter:"),
-            coverLetterArea,
-            new Label("CV/PDF (optional):"),
-            cvBox
+            phoneLabel, phoneContainer, phoneErrorLabel,
+            letterBox, letterErrorLabel,
+            pdfLabel, cvBox
         );
 
-        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().setContent(scrollPane);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
-                updateApplicationWithTracking(app, phoneField.getText(), coverLetterArea.getText(), cvPathField.getText());
+                String country = countryCombo.getValue();
+                String phone = phoneField.getText();
+                String coverLetter = letterArea.getText();
+                String cvPath = cvPathField.getText();
+
+                // Validate phone based on selected country
+                boolean phoneValid = false;
+                if ("Tunisia (+216)".equals(country)) {
+                    phoneValid = ValidationUtils.isValidTunisianPhone(phone);
+                } else if ("France (+33)".equals(country)) {
+                    phoneValid = ValidationUtils.isValidFrenchPhone(phone);
+                }
+
+                if (!phoneValid) {
+                    showAlert("Validation Error",
+                        ValidationUtils.getPhoneErrorMessage(
+                            "Tunisia (+216)".equals(country) ? "TN" : "FR", phone),
+                        Alert.AlertType.ERROR);
+                    return;
+                }
+
+                if (!ValidationUtils.isValidCoverLetter(coverLetter)) {
+                    showAlert("Validation Error",
+                        ValidationUtils.getCoverLetterErrorMessage(coverLetter),
+                        Alert.AlertType.ERROR);
+                    return;
+                }
+
+                updateApplicationWithTracking(app, phone, coverLetter, cvPath);
             }
         });
     }
@@ -571,12 +697,14 @@ public class ApplicationsController {
         VBox content = new VBox(15);
         content.setPadding(new Insets(20));
 
-        // Status field (read-only)
+        // Status field (editable for admin)
         Label statusLabel = new Label("Status:");
         statusLabel.setStyle("-fx-font-weight: bold;");
-        TextField statusField = new TextField(record.status());
-        statusField.setEditable(false);
-        statusField.setStyle("-fx-opacity: 0.7;");
+
+        ComboBox<String> statusCombo = new ComboBox<>();
+        statusCombo.getItems().addAll("SUBMITTED", "IN_REVIEW", "SHORTLISTED", "REJECTED", "INTERVIEW", "HIRED");
+        statusCombo.setValue(record.status() != null ? record.status() : "SUBMITTED");
+        statusCombo.setPrefWidth(240);
 
         // Date field (read-only)
         Label dateLabel = new Label("Changed At:");
@@ -586,18 +714,57 @@ public class ApplicationsController {
         dateField.setEditable(false);
         dateField.setStyle("-fx-opacity: 0.7;");
 
-        // Note field (editable)
-        Label noteLabel = new Label("Note:");
+        // Note field (editable) with validation
+        Label noteLabel = new Label("Note * (Min 5 - Max 255 characters)");
         noteLabel.setStyle("-fx-font-weight: bold;");
         TextArea noteArea = new TextArea(record.note() != null ? record.note() : "");
-        noteArea.setPromptText("Edit note...");
+        noteArea.setPromptText("Edit note... (min 5, max 255 characters)");
         noteArea.setPrefRowCount(6);
         noteArea.setWrapText(true);
+        noteArea.setStyle("-fx-font-size: 13px;");
+
+        String initialNote = record.note() != null ? record.note() : "";
+        Label noteCharCount = new Label(initialNote.length() + "/255");
+        noteCharCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+
+        Label noteErrorLabel = new Label();
+        noteErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px;");
+        noteErrorLabel.setVisible(false);
+
+        // Update character count in real-time
+        noteArea.textProperty().addListener((obs, oldVal, newVal) -> {
+            int length = newVal != null ? newVal.length() : 0;
+            noteCharCount.setText(length + "/255");
+
+            if (length > 255) {
+                noteCharCount.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 11px; -fx-font-weight: bold;");
+                noteErrorLabel.setText(ValidationUtils.getNoteErrorMessage(newVal));
+                noteErrorLabel.setVisible(true);
+            } else if (length > 0 && length < 5) {
+                noteCharCount.setStyle("-fx-text-fill: #fd7e14; -fx-font-size: 11px;");
+                noteErrorLabel.setText(ValidationUtils.getNoteErrorMessage(newVal));
+                noteErrorLabel.setVisible(true);
+            } else if (length == 0) {
+                noteCharCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+                noteErrorLabel.setText(ValidationUtils.getNoteErrorMessage(newVal));
+                noteErrorLabel.setVisible(true);
+            } else {
+                noteCharCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+                noteErrorLabel.setVisible(false);
+            }
+        });
+
+        VBox noteBox = new VBox(8);
+        noteBox.getChildren().addAll(noteLabel, noteArea, noteCharCount, noteErrorLabel);
+
+        HBox statusRow = new HBox(12);
+        statusRow.getChildren().addAll(statusLabel, statusCombo);
+        statusRow.setAlignment(Pos.CENTER_LEFT);
 
         content.getChildren().addAll(
-            statusLabel, statusField,
+            statusRow,
             dateLabel, dateField,
-            noteLabel, noteArea
+            noteBox
         );
 
         dialog.getDialogPane().setContent(content);
@@ -605,8 +772,20 @@ public class ApplicationsController {
 
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
+                String noteText = noteArea.getText();
+                String selectedStatus = statusCombo.getValue();
+
+                // Validate note before saving
+                if (!ValidationUtils.isValidNote(noteText)) {
+                    showAlert("Validation Error",
+                        ValidationUtils.getNoteErrorMessage(noteText),
+                        Alert.AlertType.ERROR);
+                    return;
+                }
+
                 try {
-                    ApplicationStatusHistoryService.updateStatusHistory(record.id(), noteArea.getText());
+                    // Use the new service method to update both status and note (which also syncs application current_status)
+                    ApplicationStatusHistoryService.updateStatusHistory(record.id(), selectedStatus, noteText);
                     loadApplications();
                     showAlert("Success", "Status history updated!", Alert.AlertType.INFORMATION);
                 } catch (Exception e) {
