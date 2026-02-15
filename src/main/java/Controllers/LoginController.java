@@ -7,6 +7,8 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
+import Services.LoggedUser;
+
 
 public class LoginController {
 
@@ -18,7 +20,6 @@ public class LoginController {
 
     @FXML
     private void handleLogin(ActionEvent event) {
-
         String email = txtEmail.getText();
         String password = txtPassword.getText();
 
@@ -28,19 +29,26 @@ public class LoginController {
         }
 
         try {
-            boolean success = authService.login(email, password);
+            LoggedUser logged = authService.login(email, password);
 
-            if (success) {
-                showAlert("Success", "Login successful ✅");
+            if (logged != null) {
+                // start session
+                utils.Session.start(logged.id, logged.role, logged.email);
+
+                // go to main shell (or dashboard)
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));
+                Stage stage = (Stage) txtEmail.getScene().getWindow();
+                stage.setScene(new Scene(loader.load()));
             } else {
                 showAlert("Error", "Invalid email or password.");
             }
-
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Error", "Database error.");
+            showAlert("Login failed", "Error: " + e.getMessage());
         }
     }
+
+
 
     @FXML
     private void handleShowSignUp(ActionEvent event) {

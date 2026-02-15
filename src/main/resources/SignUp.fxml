@@ -84,6 +84,21 @@
                 <CheckBox fx:id="cbTerms" text="I agree to the Terms and Conditions"
                           style="-fx-text-fill: #6c757d; -fx-font-size: 13px;" wrapText="true"/>
 
+                <VBox fx:id="recruiterBlock" spacing="10" visible="false" managed="false">
+                    <Label text="Recruiter Information"/>
+                    <TextField fx:id="txtCompanyName" promptText="Company Name"/>
+                    <TextField fx:id="txtCompanyLocation" promptText="Company Location"/>
+                </VBox>
+
+                <VBox fx:id="candidateBlock" spacing="10" visible="false" managed="false">
+                    <Label text="Candidate Information"/>
+                    <TextField fx:id="txtCandidateLocation" promptText="Location"/>
+                    <TextField fx:id="txtEducationLevel" promptText="Education Level"/>
+                    <TextField fx:id="txtExperienceYears" promptText="Experience Years (number)"/>
+                    <TextField fx:id="txtCvPath" promptText="CV Path (optional)"/>
+                </VBox>
+
+
                 <!-- Sign Up Button -->
                 <Button fx:id="btnSignUp" text="Sign Up" onAction="#handleSignUp" maxWidth="Infinity"
                         style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: 700; -fx-padding: 14; -fx-background-radius: 8; -fx-cursor: hand;">

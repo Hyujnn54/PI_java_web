@@ -1,0 +1,32 @@
+package utils;
+
+import Models.Role;
+
+/**
+ * Simple wrapper around Session.
+ * Useful if your UI/controllers prefer "UserContext" naming.
+ */
+public final class UserContext {
+
+    private UserContext() {}
+
+    public static boolean isLoggedIn() {
+        return Session.isLoggedIn();
+    }
+
+    public static Long getUserId() {
+        return Session.getUserId();
+    }
+
+    public static String getEmail() {
+        return Session.getEmail();
+    }
+
+    public static Role getRole() {
+        return Session.getRole();
+    }
+
+    public static void clear() {
+        Session.clear();
+    }
+}

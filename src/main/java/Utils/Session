@@ -1,0 +1,29 @@
+package utils;
+
+import Models.Role;
+
+public class Session {
+    private static Long userId;
+    private static Role role;
+    private static String email;
+
+    private Session() {}
+
+    public static void start(Long id, Role r, String em) {
+        userId = id;
+        role = r;
+        email = em;
+    }
+
+    public static void clear() {
+        userId = null;
+        role = null;
+        email = null;
+    }
+
+    public static boolean isLoggedIn() { return userId != null; }
+
+    public static Long getUserId() { return userId; }
+    public static Role getRole() { return role; }
+    public static String getEmail() { return email; }
+}

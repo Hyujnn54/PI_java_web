@@ -1,0 +1,424 @@
+package Controllers;
+
+import Models.Role;
+import javafx.beans.property.*;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.PieChart;
+import javafx.scene.chart.XYChart;
+import javafx.scene.control.*;
+import javafx.scene.layout.GridPane;
+import utils.MyDatabase;
+
+import java.sql.*;
+import java.util.Locale;
+
+public class AdminDashboardController {
+
+    // ===== Cards =====
+    @FXML private Label lblTotalUsers;
+    @FXML private Label lblRecruiters;
+    @FXML private Label lblCandidates;
+    @FXML private Label lblAdmins;
+
+    // ===== Charts =====
+    @FXML private PieChart pieChart;
+    @FXML private BarChart<String, Number> barChart;
+
+    // ===== Management =====
+    @FXML private Label lblRecordCount;
+    @FXML private Label statusLabel;
+
+    @FXML private TextField searchField;
+    @FXML private ComboBox<Role> roleFilter;
+
+    @FXML private TableView<UserRow> userTable;
+    @FXML private TableColumn<UserRow, String> colEmail;
+    @FXML private TableColumn<UserRow, String> colRole;
+    @FXML private TableColumn<UserRow, String> colPhone;
+    @FXML private TableColumn<UserRow, String> colActive;
+
+    @FXML private Button btnEdit;
+    @FXML private Button btnDelete;
+
+    private final ObservableList<UserRow> rows = FXCollections.observableArrayList();
+
+    private boolean hasPhoneColumn = false;
+
+    private Connection cnx() {
+        return MyDatabase.getInstance().getConnection();
+    }
+
+    // ===== Table row model =====
+    public static class UserRow {
+        private final LongProperty id = new SimpleLongProperty();
+        private final StringProperty firstName = new SimpleStringProperty();
+        private final StringProperty lastName = new SimpleStringProperty();
+        private final StringProperty email = new SimpleStringProperty();
+        private final StringProperty role = new SimpleStringProperty();
+        private final StringProperty phone = new SimpleStringProperty();
+        private final BooleanProperty active = new SimpleBooleanProperty();
+
+        public UserRow(long id, String firstName, String lastName, String email, String role, String phone, boolean active) {
+            this.id.set(id);
+            this.firstName.set(firstName == null ? "" : firstName);
+            this.lastName.set(lastName == null ? "" : lastName);
+            this.email.set(email == null ? "" : email);
+            this.role.set(role == null ? "" : role);
+            this.phone.set(phone == null ? "" : phone);
+            this.active.set(active);
+        }
+
+        public long getId() { return id.get(); }
+        public String getFirstName() { return firstName.get(); }
+        public String getLastName() { return lastName.get(); }
+        public String getName() { return (getFirstName() + " " + getLastName()).trim(); }
+        public String getEmail() { return email.get(); }
+        public String getRole() { return role.get(); }
+        public String getPhone() { return phone.get(); }
+        public boolean isActive() { return active.get(); }
+    }
+
+    @FXML
+    public void initialize() {
+        // Detect optional phone column
+        hasPhoneColumn = columnExists("users", "phone");
+
+        // Bind table columns
+        colName.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getName()));
+        colEmail.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getEmail()));
+        colRole.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getRole()));
+        colPhone.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getPhone()));
+        colActive.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().isActive() ? "Active" : "Inactive"));
+
+        userTable.setItems(rows);
+
+        // Enable buttons only when selection exists
+        userTable.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
+            boolean has = newV != null;
+            btnEdit.setDisable(!has);
+            btnDelete.setDisable(!has);
+        });
+
+        roleFilter.setItems(FXCollections.observableArrayList(Role.values()));
+
+        refreshAll();
+    }
+
+    // ===== UI handlers =====
+    @FXML public void handleRefresh(ActionEvent e) { refreshAll(); }
+
+    @FXML
+    public void handleSearch(ActionEvent e) {
+        loadUsers(searchField.getText(), roleFilter.getValue());
+        updateCardsAndCharts();
+        statusLabel.setText("Search applied ✅");
+    }
+
+    @FXML public void handleShowAll(ActionEvent e) { roleFilter.setValue(null); loadUsers(searchField.getText(), null); updateCardsAndCharts(); }
+    @FXML public void handleShowRecruiters(ActionEvent e) { roleFilter.setValue(Role.RECRUITER); loadUsers(searchField.getText(), Role.RECRUITER); updateCardsAndCharts(); }
+    @FXML public void handleShowCandidates(ActionEvent e) { roleFilter.setValue(Role.CANDIDATE); loadUsers(searchField.getText(), Role.CANDIDATE); updateCardsAndCharts(); }
+    @FXML public void handleShowAdmins(ActionEvent e) { roleFilter.setValue(Role.ADMIN); loadUsers(searchField.getText(), Role.ADMIN); updateCardsAndCharts(); }
+
+    @FXML
+    public void handleAddUser(ActionEvent e) {
+        UserForm form = showUserDialog("Add User", null);
+        if (form == null) return;
+
+        try {
+            String sql;
+            if (hasPhoneColumn) {
+                sql = "INSERT INTO users (email, password, role, first_name, last_name, phone, is_active) VALUES (?,?,?,?,?,?,?)";
+            } else {
+                sql = "INSERT INTO users (email, password, role, first_name, last_name, is_active) VALUES (?,?,?,?,?,?)";
+            }
+
+            try (PreparedStatement ps = cnx().prepareStatement(sql)) {
+                int i = 1;
+                ps.setString(i++, form.email);
+                ps.setString(i++, form.password); // later: hash it
+                ps.setString(i++, form.role.name());
+                ps.setString(i++, form.firstName);
+                ps.setString(i++, form.lastName);
+                if (hasPhoneColumn) ps.setString(i++, form.phone);
+                ps.setInt(i, form.active ? 1 : 0);
+                ps.executeUpdate();
+            }
+
+            refreshAll();
+            statusLabel.setText("User added ✅");
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            statusLabel.setText("Add failed: " + ex.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleEdit(ActionEvent e) {
+        UserRow selected = userTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        UserForm form = showUserDialog("Update User", selected);
+        if (form == null) return;
+
+        try {
+            boolean changePassword = form.password != null && !form.password.isBlank();
+
+            String sql;
+            if (hasPhoneColumn) {
+                sql = changePassword
+                        ? "UPDATE users SET email=?, role=?, first_name=?, last_name=?, phone=?, is_active=?, password=? WHERE id=?"
+                        : "UPDATE users SET email=?, role=?, first_name=?, last_name=?, phone=?, is_active=? WHERE id=?";
+            } else {
+                sql = changePassword
+                        ? "UPDATE users SET email=?, role=?, first_name=?, last_name=?, is_active=?, password=? WHERE id=?"
+                        : "UPDATE users SET email=?, role=?, first_name=?, last_name=?, is_active=? WHERE id=?";
+            }
+
+            try (PreparedStatement ps = cnx().prepareStatement(sql)) {
+                int i = 1;
+                ps.setString(i++, form.email);
+                ps.setString(i++, form.role.name());
+                ps.setString(i++, form.firstName);
+                ps.setString(i++, form.lastName);
+
+                if (hasPhoneColumn) ps.setString(i++, form.phone);
+
+                ps.setInt(i++, form.active ? 1 : 0);
+
+                if (changePassword) ps.setString(i++, form.password);
+
+                ps.setLong(i, selected.getId());
+                ps.executeUpdate();
+            }
+
+            refreshAll();
+            statusLabel.setText("User updated ✅");
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            statusLabel.setText("Update failed: " + ex.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleDelete(ActionEvent e) {
+        UserRow selected = userTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirm delete");
+        confirm.setHeaderText("Delete this user permanently?");
+        confirm.setContentText(selected.getEmail());
+
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+
+        try (PreparedStatement ps = cnx().prepareStatement("DELETE FROM users WHERE id=?")) {
+            ps.setLong(1, selected.getId());
+            int affected = ps.executeUpdate();
+
+            if (affected == 0) {
+                statusLabel.setText("Nothing deleted (user not found).");
+                return;
+            }
+
+            refreshAll();
+            statusLabel.setText("User deleted ✅");
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+            // VERY common: FK constraint prevents deleting user
+            statusLabel.setText("Delete failed: user is referenced in another table (FK constraint).");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            statusLabel.setText("Delete failed: " + ex.getMessage());
+        }
+    }
+
+
+    // ===== Data loading =====
+    private void refreshAll() {
+        loadUsers(null, null);
+        updateCardsAndCharts();
+        statusLabel.setText("Loaded ✅");
+    }
+
+    private void loadUsers(String search, Role role) {
+        rows.clear();
+
+        boolean hasSearch = search != null && !search.trim().isEmpty();
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT id, first_name, last_name, email, role, is_active");
+        if (hasPhoneColumn) sql.append(", phone");
+        sql.append(" FROM users WHERE 1=1");
+
+        if (hasSearch) {
+            sql.append(" AND (LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ? OR LOWER(email) LIKE ?)");
+        }
+        if (role != null) {
+            sql.append(" AND UPPER(role)=?");
+        }
+
+        try (PreparedStatement ps = cnx().prepareStatement(sql.toString())) {
+            int idx = 1;
+
+            if (hasSearch) {
+                String s = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
+                ps.setString(idx++, s);
+                ps.setString(idx++, s);
+                ps.setString(idx++, s);
+            }
+            if (role != null) {
+                ps.setString(idx++, role.name());
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new UserRow(
+                            rs.getLong("id"),
+                            rs.getString("first_name"),
+                            rs.getString("last_name"),
+                            rs.getString("email"),
+                            rs.getString("role"),
+                            hasPhoneColumn ? rs.getString("phone") : "",
+                            rs.getInt("is_active") == 1
+                    ));
+                }
+            }
+
+            lblRecordCount.setText("Records: " + rows.size());
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            statusLabel.setText("Load failed: " + ex.getMessage());
+        }
+    }
+
+    private void updateCardsAndCharts() {
+        int total = 0, recruiters = 0, candidates = 0, admins = 0;
+        int active = 0, inactive = 0;
+
+        for (UserRow u : rows) {
+            total++;
+            String r = u.getRole() == null ? "" : u.getRole().trim().toUpperCase(Locale.ROOT);
+            if (r.equals("RECRUITER")) recruiters++;
+            else if (r.equals("CANDIDATE")) candidates++;
+            else if (r.equals("ADMIN")) admins++;
+
+            if (u.isActive()) active++; else inactive++;
+        }
+
+        lblTotalUsers.setText(String.valueOf(total));
+        lblRecruiters.setText(String.valueOf(recruiters));
+        lblCandidates.setText(String.valueOf(candidates));
+        lblAdmins.setText(String.valueOf(admins));
+
+        pieChart.setData(FXCollections.observableArrayList(
+                new PieChart.Data("Recruiters", recruiters),
+                new PieChart.Data("Candidates", candidates),
+                new PieChart.Data("Admins", admins)
+        ));
+
+        barChart.getData().clear();
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("Users");
+        series.getData().add(new XYChart.Data<>("Active", active));
+        series.getData().add(new XYChart.Data<>("Inactive", inactive));
+        barChart.getData().add(series);
+    }
+
+    // ===== Dialog form =====
+    private static class UserForm {
+        String firstName;
+        String lastName;
+        String email;
+        String password; // required on add; optional on update
+        String phone;
+        Role role;
+        boolean active;
+    }
+
+    private UserForm showUserDialog(String title, UserRow existing) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(title);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        TextField tfFirst = new TextField(existing == null ? "" : existing.getFirstName());
+        TextField tfLast  = new TextField(existing == null ? "" : existing.getLastName());
+        TextField tfEmail = new TextField(existing == null ? "" : existing.getEmail());
+        PasswordField pfPass = new PasswordField();
+        pfPass.setPromptText(existing == null ? "Password (required)" : "Leave blank to keep password");
+        TextField tfPhone = new TextField(existing == null ? "" : existing.getPhone());
+
+        ComboBox<Role> cbRole = new ComboBox<>(FXCollections.observableArrayList(Role.values()));
+        cbRole.setValue(existing == null ? Role.CANDIDATE : Role.valueOf(existing.getRole().trim().toUpperCase(Locale.ROOT)));
+
+        CheckBox cbActive = new CheckBox("Active");
+        cbActive.setSelected(existing == null || existing.isActive());
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+
+        grid.addRow(0, new Label("First name:"), tfFirst);
+        grid.addRow(1, new Label("Last name:"), tfLast);
+        grid.addRow(2, new Label("Email:"), tfEmail);
+        grid.addRow(3, new Label("Password:"), pfPass);
+
+        if (hasPhoneColumn) {
+            grid.addRow(4, new Label("Phone:"), tfPhone);
+            grid.addRow(5, new Label("Role:"), cbRole);
+            grid.addRow(6, new Label(""), cbActive);
+        } else {
+            grid.addRow(4, new Label("Role:"), cbRole);
+            grid.addRow(5, new Label(""), cbActive);
+        }
+
+        dialog.getDialogPane().setContent(grid);
+
+        Button okBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okBtn.addEventFilter(ActionEvent.ACTION, ev -> {
+            if (tfFirst.getText().trim().isEmpty() ||
+                    tfLast.getText().trim().isEmpty() ||
+                    tfEmail.getText().trim().isEmpty() ||
+                    cbRole.getValue() == null) {
+                ev.consume();
+                new Alert(Alert.AlertType.WARNING, "First name, Last name, Email, Role are required.").showAndWait();
+                return;
+            }
+            if (existing == null && pfPass.getText().trim().isEmpty()) {
+                ev.consume();
+                new Alert(Alert.AlertType.WARNING, "Password is required for new users.").showAndWait();
+            }
+        });
+
+        if (dialog.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return null;
+
+        UserForm form = new UserForm();
+        form.firstName = tfFirst.getText().trim();
+        form.lastName  = tfLast.getText().trim();
+        form.email     = tfEmail.getText().trim();
+        form.password  = pfPass.getText(); // can be blank on update
+        form.phone     = tfPhone.getText().trim();
+        form.role      = cbRole.getValue();
+        form.active    = cbActive.isSelected();
+        return form;
+    }
+
+    private boolean columnExists(String table, String column) {
+        try {
+            DatabaseMetaData md = cnx().getMetaData();
+            try (ResultSet rs = md.getColumns(null, null, table, column)) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
