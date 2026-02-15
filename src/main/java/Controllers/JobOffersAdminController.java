@@ -2,6 +2,7 @@ package Controllers;
 
 import Models.JobOffer;
 import Models.OfferSkill;
+import Models.Status;
 import Services.JobOfferService;
 import Services.OfferSkillService;
 import javafx.fxml.FXML;
@@ -218,7 +219,7 @@ public class JobOffersAdminController {
         metaRow.getChildren().addAll(location, recruiterInfo);
 
         Label statusLabel = new Label(job.getStatus().name());
-        String statusColor = job.getStatus() == JobOffer.Status.OPEN ? "#28a745" : "#dc3545";
+        String statusColor = job.getStatus() == Status.OPEN ? "#28a745" : "#dc3545";
         statusLabel.setStyle("-fx-background-color: " + statusColor + "; -fx-text-fill: white; " +
                             "-fx-padding: 2 6; -fx-background-radius: 4; -fx-font-size: 10px;");
 
@@ -262,7 +263,7 @@ public class JobOffersAdminController {
         Label location = new Label("📍 " + (job.getLocation() != null ? job.getLocation() : "Not specified"));
         location.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 14px; -fx-font-weight: 600;");
 
-        String statusColor = job.getStatus() == JobOffer.Status.OPEN ? "#28a745" : "#dc3545";
+        String statusColor = job.getStatus() == Status.OPEN ? "#28a745" : "#dc3545";
         Label status = new Label("📊 " + job.getStatus().name());
         status.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-size: 14px; -fx-font-weight: 700;");
 

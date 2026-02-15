@@ -6,9 +6,6 @@ public class OfferSkill {
     private String skillName;
     private SkillLevel levelRequired;
 
-    public enum SkillLevel {
-        BEGINNER, INTERMEDIATE, ADVANCED
-    }
 
     // Constructors
     public OfferSkill() {

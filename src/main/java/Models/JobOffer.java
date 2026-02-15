@@ -13,13 +13,6 @@ public class JobOffer {
     private LocalDateTime deadline;
     private Status status;
 
-    public enum ContractType {
-        CDI, CDD, INTERNSHIP, FREELANCE, PART_TIME, FULL_TIME
-    }
-
-    public enum Status {
-        OPEN, CLOSED
-    }
 
     // Constructors
     public JobOffer() {

@@ -1,6 +1,8 @@
 package Services;
 
 import Models.JobOffer;
+import Models.ContractType;
+import Models.Status;
 import Utils.MyDatabase;
 
 import java.sql.*;
@@ -74,7 +76,7 @@ public class JobOfferService {
     }
 
     // READ - Get by Status
-    public List<JobOffer> getJobOffersByStatus(JobOffer.Status status) throws SQLException {
+    public List<JobOffer> getJobOffersByStatus(Status status) throws SQLException {
         List<JobOffer> jobOffers = new ArrayList<>();
         String query = "SELECT * FROM job_offer WHERE status = ? ORDER BY created_at DESC";
 
@@ -151,7 +153,7 @@ public class JobOfferService {
     }
 
     // UPDATE - Change Status
-    public boolean updateJobOfferStatus(Long id, JobOffer.Status status) throws SQLException {
+    public boolean updateJobOfferStatus(Long id, Status status) throws SQLException {
         String query = "UPDATE job_offer SET status = ? WHERE id = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -169,7 +171,7 @@ public class JobOfferService {
         jobOffer.setTitle(rs.getString("title"));
         jobOffer.setDescription(rs.getString("description"));
         jobOffer.setLocation(rs.getString("location"));
-        jobOffer.setContractType(JobOffer.ContractType.valueOf(rs.getString("contract_type")));
+        jobOffer.setContractType(ContractType.valueOf(rs.getString("contract_type")));
 
         Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {
@@ -181,7 +183,7 @@ public class JobOfferService {
             jobOffer.setDeadline(deadline.toLocalDateTime());
         }
 
-        jobOffer.setStatus(JobOffer.Status.valueOf(rs.getString("status")));
+        jobOffer.setStatus(Status.valueOf(rs.getString("status")));
 
         return jobOffer;
     }

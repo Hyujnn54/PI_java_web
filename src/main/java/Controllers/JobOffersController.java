@@ -2,6 +2,9 @@ package Controllers;
 
 import Models.JobOffer;
 import Models.OfferSkill;
+import Models.ContractType;
+import Models.Status;
+import Models.SkillLevel;
 import Services.JobOfferService;
 import Services.OfferSkillService;
 import Utils.UserContext;
@@ -36,9 +39,16 @@ public class JobOffersController {
     private TextField formTitleField;
     private TextArea formDescription;
     private TextField formLocation;
-    private ComboBox<JobOffer.ContractType> formContractType;
+    private ComboBox<ContractType> formContractType;
     private DatePicker formDeadline;
-    private ComboBox<JobOffer.Status> formStatus;
+    private ComboBox<Status> formStatus;
+
+    // Error labels for each field
+    private Label titleErrorLabel;
+    private Label descriptionErrorLabel;
+    private Label locationErrorLabel;
+    private Label deadlineErrorLabel;
+    private Label skillsErrorLabel;
 
     // Skills management
     private VBox skillsContainer;
@@ -229,7 +239,7 @@ public class JobOffersController {
         location.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 13px;");
 
         Label statusLabel = new Label(job.getStatus().name());
-        String statusColor = job.getStatus() == JobOffer.Status.OPEN ? "#28a745" : "#dc3545";
+        String statusColor = job.getStatus() == Status.OPEN ? "#28a745" : "#dc3545";
         statusLabel.setStyle("-fx-background-color: " + statusColor + "; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 4; -fx-font-size: 10px;");
 
         card.getChildren().addAll(header, location, statusLabel);
@@ -271,7 +281,7 @@ public class JobOffersController {
         Label location = new Label("📍 " + (job.getLocation() != null ? job.getLocation() : "Not specified"));
         location.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 14px; -fx-font-weight: 600;");
 
-        String statusColor = job.getStatus() == JobOffer.Status.OPEN ? "#28a745" : "#dc3545";
+        String statusColor = job.getStatus() == Status.OPEN ? "#28a745" : "#dc3545";
         Label status = new Label("📊 " + job.getStatus().name());
         status.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-size: 14px; -fx-font-weight: 700;");
 
@@ -356,7 +366,7 @@ public class JobOffersController {
                           "-fx-font-size: 14px; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
         btnDelete.setOnAction(e -> handleDeleteJobOffer(job));
 
-        Button btnToggleStatus = new Button(job.getStatus() == JobOffer.Status.OPEN ? "🔒 Close" : "🔓 Open");
+        Button btnToggleStatus = new Button(job.getStatus() == Status.OPEN ? "🔒 Close" : "🔓 Open");
         btnToggleStatus.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-weight: 600; " +
                                 "-fx-font-size: 14px; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
         btnToggleStatus.setOnAction(e -> handleToggleStatus(job));
@@ -398,33 +408,80 @@ public class JobOffersController {
         VBox formContainer = new VBox(15);
         formContainer.setStyle("-fx-padding: 20;");
 
-        // Basic fields
+        // Title field with help and error labels
+        Label titleLabel = new Label("Job Title *");
+        titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+
         formTitleField = new TextField();
         formTitleField.setPromptText("Job Title");
         formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
+
+        Label titleHelpLabel = new Label("ℹ️ 3-100 characters. Letters, numbers, spaces, and basic punctuation only.");
+        titleHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 2 0 0 5;");
+
+        titleErrorLabel = new Label();
+        titleErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 2 0 0 5;");
+        titleErrorLabel.setVisible(false);
+        titleErrorLabel.setManaged(false);
+
+        // Description field with help and error labels
+        Label descLabel = new Label("Job Description *");
+        descLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
         formDescription = new TextArea();
         formDescription.setPromptText("Job Description");
         formDescription.setPrefRowCount(6);
         formDescription.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
 
+        Label descHelpLabel = new Label("ℹ️ 20-2000 characters. Provide detailed job requirements and responsibilities.");
+        descHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 2 0 0 5;");
+
+        descriptionErrorLabel = new Label();
+        descriptionErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 2 0 0 5;");
+        descriptionErrorLabel.setVisible(false);
+        descriptionErrorLabel.setManaged(false);
+
+        // Location field with help and error labels
+        Label locationLabel = new Label("Location *");
+        locationLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+
         formLocation = new TextField();
         formLocation.setPromptText("Location");
         formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
 
+        Label locationHelpLabel = new Label("ℹ️ 2-100 characters. City, country, or 'Remote'.");
+        locationHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 2 0 0 5;");
+
+        locationErrorLabel = new Label();
+        locationErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 2 0 0 5;");
+        locationErrorLabel.setVisible(false);
+        locationErrorLabel.setManaged(false);
+
+        // Contract Type
+        Label contractLabel = new Label("Contract Type *");
+        contractLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+
         formContractType = new ComboBox<>();
-        formContractType.getItems().addAll(JobOffer.ContractType.values());
+        formContractType.getItems().addAll(ContractType.values());
         formContractType.setPromptText("Select Contract Type");
         formContractType.setStyle("-fx-font-size: 14px;");
 
         formStatus = new ComboBox<>();
-        formStatus.getItems().addAll(JobOffer.Status.values());
-        formStatus.setValue(JobOffer.Status.OPEN);
+        formStatus.getItems().addAll(Status.values());
+        formStatus.setValue(Status.OPEN);
         formStatus.setStyle("-fx-font-size: 14px;");
 
         formDeadline = new DatePicker();
         formDeadline.setPromptText("Deadline (optional)");
         formDeadline.setStyle("-fx-font-size: 14px;");
+
+        Label deadlineHelpLabel = new Label("ℹ️ Must be a future date. Leave empty if no specific deadline.");
+        deadlineHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 2 0 0 5;");
+
+        deadlineErrorLabel = new Label();
+        deadlineErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 2 0 0 5;");
+        deadlineErrorLabel.setVisible(false);
+        deadlineErrorLabel.setManaged(false);
 
         // Add real-time validation listeners
         addValidationListeners();
@@ -433,8 +490,16 @@ public class JobOffersController {
         VBox skillsSection = new VBox(10);
         skillsSection.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 15; -fx-background-radius: 8;");
 
-        Label skillsLabel = new Label("Required Skills");
+        Label skillsLabel = new Label("Required Skills *");
         skillsLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: #2c3e50;");
+
+        Label skillsHelpLabel = new Label("ℹ️ Add at least one skill. Skill name: 2-50 chars. Only letters, numbers, spaces, -, +, #, . allowed.");
+        skillsHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 5 0 10 0;");
+
+        skillsErrorLabel = new Label();
+        skillsErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 5 0 0 0;");
+        skillsErrorLabel.setVisible(false);
+        skillsErrorLabel.setManaged(false);
 
         skillsContainer = new VBox(10);
         skillRows = new ArrayList<>();
@@ -443,7 +508,7 @@ public class JobOffersController {
         btnAddSkill.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 6; -fx-cursor: hand;");
         btnAddSkill.setOnAction(e -> addSkillRow(null));
 
-        skillsSection.getChildren().addAll(skillsLabel, skillsContainer, btnAddSkill);
+        skillsSection.getChildren().addAll(skillsLabel, skillsHelpLabel, skillsErrorLabel, skillsContainer, btnAddSkill);
 
         // If editing, populate form with existing data
         if (isEditMode && editingJob != null) {
@@ -482,12 +547,12 @@ public class JobOffersController {
         });
 
         formContainer.getChildren().addAll(
-                new Label("Title *"), formTitleField,
-                new Label("Description *"), formDescription,
-                new Label("Location *"), formLocation,
-                new Label("Contract Type *"), formContractType,
+                titleLabel, formTitleField, titleHelpLabel, titleErrorLabel,
+                descLabel, formDescription, descHelpLabel, descriptionErrorLabel,
+                locationLabel, formLocation, locationHelpLabel, locationErrorLabel,
+                contractLabel, formContractType,
                 new Label("Status *"), formStatus,
-                new Label("Deadline"), formDeadline,
+                new Label("Deadline (Optional)"), formDeadline, deadlineHelpLabel, deadlineErrorLabel,
                 skillsSection,
                 btnSubmit
         );
@@ -500,13 +565,47 @@ public class JobOffersController {
         skillRow.setAlignment(Pos.CENTER_LEFT);
         skillRow.setStyle("-fx-padding: 5;");
 
+        VBox skillNameContainer = new VBox(3);
+        HBox.setHgrow(skillNameContainer, Priority.ALWAYS);
+
         TextField skillName = new TextField();
         skillName.setPromptText("Skill name (e.g., Java, JavaScript)");
         skillName.setStyle("-fx-padding: 8; -fx-font-size: 13px;");
-        HBox.setHgrow(skillName, Priority.ALWAYS);
 
-        ComboBox<OfferSkill.SkillLevel> skillLevel = new ComboBox<>();
-        skillLevel.getItems().addAll(OfferSkill.SkillLevel.values());
+        Label skillErrorLabel = new Label();
+        skillErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 11px; -fx-font-weight: bold;");
+        skillErrorLabel.setVisible(false);
+        skillErrorLabel.setManaged(false);
+
+        // Validation for skill name
+        skillName.textProperty().addListener((obs, oldVal, newVal) -> {
+            skillErrorLabel.setVisible(false);
+            skillErrorLabel.setManaged(false);
+
+            if (newVal.length() > 50) {
+                skillName.setText(oldVal);
+            }
+            if (!newVal.isEmpty() && newVal.length() < 2) {
+                skillName.setStyle("-fx-padding: 8; -fx-font-size: 13px; -fx-border-color: #ffc107; -fx-border-width: 2;");
+                skillErrorLabel.setText("⚠️ Min 2 characters");
+                skillErrorLabel.setVisible(true);
+                skillErrorLabel.setManaged(true);
+            } else if (!newVal.isEmpty() && !newVal.matches("^[a-zA-Z0-9\\s\\-+#.]+$")) {
+                skillName.setStyle("-fx-padding: 8; -fx-font-size: 13px; -fx-border-color: #dc3545; -fx-border-width: 2;");
+                skillErrorLabel.setText("❌ Only letters, numbers, -, +, #, . allowed");
+                skillErrorLabel.setVisible(true);
+                skillErrorLabel.setManaged(true);
+            } else if (!newVal.isEmpty()) {
+                skillName.setStyle("-fx-padding: 8; -fx-font-size: 13px; -fx-border-color: #28a745; -fx-border-width: 2;");
+            } else {
+                skillName.setStyle("-fx-padding: 8; -fx-font-size: 13px;");
+            }
+        });
+
+        skillNameContainer.getChildren().addAll(skillName, skillErrorLabel);
+
+        ComboBox<SkillLevel> skillLevel = new ComboBox<>();
+        skillLevel.getItems().addAll(SkillLevel.values());
         skillLevel.setPromptText("Level");
         skillLevel.setPrefWidth(150);
         skillLevel.setStyle("-fx-font-size: 13px;");
@@ -515,7 +614,7 @@ public class JobOffersController {
             skillName.setText(existingSkill.getSkillName());
             skillLevel.setValue(existingSkill.getLevelRequired());
         } else {
-            skillLevel.setValue(OfferSkill.SkillLevel.INTERMEDIATE);
+            skillLevel.setValue(SkillLevel.INTERMEDIATE);
         }
 
         Button btnRemove = new Button("✕");
@@ -525,7 +624,7 @@ public class JobOffersController {
             skillRows.removeIf(row -> row.nameField == skillName);
         });
 
-        skillRow.getChildren().addAll(skillName, skillLevel, btnRemove);
+        skillRow.getChildren().addAll(skillNameContainer, skillLevel, btnRemove);
         skillsContainer.getChildren().add(skillRow);
         skillRows.add(new SkillRow(skillName, skillLevel));
     }
@@ -655,9 +754,9 @@ public class JobOffersController {
         }
 
         try {
-            JobOffer.Status newStatus = job.getStatus() == JobOffer.Status.OPEN
-                ? JobOffer.Status.CLOSED
-                : JobOffer.Status.OPEN;
+            Status newStatus = job.getStatus() == Status.OPEN
+                ? Status.CLOSED
+                : Status.OPEN;
 
             boolean updated = jobOfferService.updateJobOfferStatus(job.getId(), newStatus);
             if (updated) {
@@ -803,13 +902,24 @@ public class JobOffersController {
     private void addValidationListeners() {
         // Title validation - max 100 chars
         formTitleField.textProperty().addListener((obs, oldVal, newVal) -> {
+            titleErrorLabel.setVisible(false);
+            titleErrorLabel.setManaged(false);
+
             if (newVal.length() > 100) {
                 formTitleField.setText(oldVal);
             }
             if (!newVal.isEmpty() && newVal.length() < 3) {
                 formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #ffc107; -fx-border-width: 2;");
-            } else if (!newVal.isEmpty() && !newVal.matches("^[a-zA-Z0-9\\s\\-\\/&,.]+$")) {
+                titleErrorLabel.setText("⚠️ Title must be at least 3 characters");
+                titleErrorLabel.setVisible(true);
+                titleErrorLabel.setManaged(true);
+            } else if (!newVal.isEmpty() && !newVal.matches("^[a-zA-Z0-9\\s\\-/&,.]+$")) {
                 formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #dc3545; -fx-border-width: 2;");
+                titleErrorLabel.setText("❌ Invalid characters. Use only letters, numbers, spaces, and -, /, &, , .");
+                titleErrorLabel.setVisible(true);
+                titleErrorLabel.setManaged(true);
+            } else if (!newVal.isEmpty()) {
+                formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #28a745; -fx-border-width: 2;");
             } else {
                 formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
             }
@@ -817,11 +927,19 @@ public class JobOffersController {
 
         // Description validation - max 2000 chars
         formDescription.textProperty().addListener((obs, oldVal, newVal) -> {
+            descriptionErrorLabel.setVisible(false);
+            descriptionErrorLabel.setManaged(false);
+
             if (newVal.length() > 2000) {
                 formDescription.setText(oldVal);
             }
             if (!newVal.isEmpty() && newVal.length() < 20) {
                 formDescription.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #ffc107; -fx-border-width: 2;");
+                descriptionErrorLabel.setText("⚠️ Description must be at least 20 characters (currently " + newVal.length() + ")");
+                descriptionErrorLabel.setVisible(true);
+                descriptionErrorLabel.setManaged(true);
+            } else if (!newVal.isEmpty()) {
+                formDescription.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #28a745; -fx-border-width: 2;");
             } else {
                 formDescription.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
             }
@@ -829,13 +947,24 @@ public class JobOffersController {
 
         // Location validation - max 100 chars
         formLocation.textProperty().addListener((obs, oldVal, newVal) -> {
+            locationErrorLabel.setVisible(false);
+            locationErrorLabel.setManaged(false);
+
             if (newVal.length() > 100) {
                 formLocation.setText(oldVal);
             }
             if (!newVal.isEmpty() && newVal.length() < 2) {
                 formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #ffc107; -fx-border-width: 2;");
+                locationErrorLabel.setText("⚠️ Location must be at least 2 characters");
+                locationErrorLabel.setVisible(true);
+                locationErrorLabel.setManaged(true);
             } else if (!newVal.isEmpty() && !newVal.matches("^[a-zA-Z0-9\\s\\-,./]+$")) {
                 formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #dc3545; -fx-border-width: 2;");
+                locationErrorLabel.setText("❌ Invalid characters. Use only letters, numbers, spaces, and -, , . /");
+                locationErrorLabel.setVisible(true);
+                locationErrorLabel.setManaged(true);
+            } else if (!newVal.isEmpty()) {
+                formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #28a745; -fx-border-width: 2;");
             } else {
                 formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
             }
@@ -843,8 +972,16 @@ public class JobOffersController {
 
         // Deadline validation - not in the past
         formDeadline.valueProperty().addListener((obs, oldVal, newVal) -> {
+            deadlineErrorLabel.setVisible(false);
+            deadlineErrorLabel.setManaged(false);
+
             if (newVal != null && newVal.isBefore(java.time.LocalDate.now())) {
                 formDeadline.setStyle("-fx-font-size: 14px; -fx-border-color: #dc3545; -fx-border-width: 2;");
+                deadlineErrorLabel.setText("❌ Deadline cannot be in the past");
+                deadlineErrorLabel.setVisible(true);
+                deadlineErrorLabel.setManaged(true);
+            } else if (newVal != null) {
+                formDeadline.setStyle("-fx-font-size: 14px; -fx-border-color: #28a745; -fx-border-width: 2;");
             } else {
                 formDeadline.setStyle("-fx-font-size: 14px;");
             }
@@ -855,7 +992,7 @@ public class JobOffersController {
         List<OfferSkill> skills = new ArrayList<>();
         for (SkillRow row : skillRows) {
             String skillName = row.nameField.getText().trim();
-            OfferSkill.SkillLevel level = row.levelCombo.getValue();
+            SkillLevel level = row.levelCombo.getValue();
 
             if (!skillName.isEmpty() && level != null) {
                 skills.add(new OfferSkill(offerId, skillName, level));
@@ -917,9 +1054,9 @@ public class JobOffersController {
     // Helper class to store skill row components
     private static class SkillRow {
         TextField nameField;
-        ComboBox<OfferSkill.SkillLevel> levelCombo;
+        ComboBox<SkillLevel> levelCombo;
 
-        SkillRow(TextField nameField, ComboBox<OfferSkill.SkillLevel> levelCombo) {
+        SkillRow(TextField nameField, ComboBox<SkillLevel> levelCombo) {
             this.nameField = nameField;
             this.levelCombo = levelCombo;
         }

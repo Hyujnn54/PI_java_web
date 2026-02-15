@@ -2,6 +2,7 @@ package Controllers;
 
 import Models.JobOffer;
 import Models.OfferSkill;
+import Models.Status;
 import Services.JobOfferService;
 import Services.OfferSkillService;
 import javafx.fxml.FXML;
@@ -165,7 +166,7 @@ public class JobOffersBrowseController {
 
         try {
             // Only load OPEN job offers for candidates
-            List<JobOffer> jobs = jobOfferService.getJobOffersByStatus(JobOffer.Status.OPEN);
+            List<JobOffer> jobs = jobOfferService.getJobOffersByStatus(Status.OPEN);
 
             if (jobs.isEmpty()) {
                 Label empty = new Label("No job offers available");
@@ -358,7 +359,7 @@ public class JobOffersBrowseController {
             }
 
             // Filter only OPEN jobs
-            results.removeIf(job -> job.getStatus() != JobOffer.Status.OPEN);
+            results.removeIf(job -> job.getStatus() != Status.OPEN);
 
             jobListContainer.getChildren().clear();
             if (results.isEmpty()) {

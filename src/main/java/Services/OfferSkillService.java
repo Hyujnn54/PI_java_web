@@ -1,6 +1,7 @@
 package Services;
 
 import Models.OfferSkill;
+import Models.SkillLevel;
 import Utils.MyDatabase;
 
 import java.sql.*;
@@ -178,7 +179,7 @@ public class OfferSkillService {
         offerSkill.setId(rs.getLong("id"));
         offerSkill.setOfferId(rs.getLong("offer_id"));
         offerSkill.setSkillName(rs.getString("skill_name"));
-        offerSkill.setLevelRequired(OfferSkill.SkillLevel.valueOf(rs.getString("level_required")));
+        offerSkill.setLevelRequired(SkillLevel.valueOf(rs.getString("level_required")));
 
         return offerSkill;
     }
