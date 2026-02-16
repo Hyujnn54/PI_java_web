@@ -245,20 +245,43 @@ public class ApplicationsController {
                     historyItem.getChildren().add(noteLabel);
                 }
 
-                // Edit and Delete buttons for admin
+                // Determine if current user can edit/delete this history record
+                boolean canEditHistory = false;
+                boolean canDeleteHistory = false;
+
                 if (role == UserContext.Role.ADMIN) {
+                    canEditHistory = true;
+                    canDeleteHistory = true;
+                } else if (role == UserContext.Role.RECRUITER) {
+                    try {
+                        var offer = JobOfferService.getById(app.offerId());
+                        if (offer != null && offer.recruiterId() != null && UserContext.getRecruiterId() != null
+                                && offer.recruiterId().equals(UserContext.getRecruiterId())) {
+                            canEditHistory = true; // recruiter owning the offer may edit history
+                        }
+                    } catch (Exception ignored) {
+                        // If any issue, default to not allowing edit
+                    }
+                }
+
+                if (canEditHistory || canDeleteHistory) {
                     HBox adminButtonBox = new HBox(10);
                     adminButtonBox.setAlignment(Pos.CENTER_RIGHT);
 
-                    Button btnEdit = new Button("Edit");
-                    btnEdit.setStyle("-fx-padding: 4 8; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
-                    btnEdit.setOnAction(e -> editStatusHistory(record));
+                    if (canEditHistory) {
+                        Button btnEdit = new Button("Edit");
+                        btnEdit.setStyle("-fx-padding: 4 8; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
+                        btnEdit.setOnAction(e -> editStatusHistory(record));
+                        adminButtonBox.getChildren().add(btnEdit);
+                    }
 
-                    Button btnDelete = new Button("Delete");
-                    btnDelete.setStyle("-fx-padding: 4 8; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
-                    btnDelete.setOnAction(e -> deleteStatusHistory(record, app));
+                    if (canDeleteHistory) {
+                        Button btnDelete = new Button("Delete");
+                        btnDelete.setStyle("-fx-padding: 4 8; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
+                        btnDelete.setOnAction(e -> deleteStatusHistory(record, app));
+                        adminButtonBox.getChildren().add(btnDelete);
+                    }
 
-                    adminButtonBox.getChildren().addAll(btnEdit, btnDelete);
                     historyItem.getChildren().add(adminButtonBox);
                 }
 
