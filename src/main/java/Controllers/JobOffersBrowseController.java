@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Controller for Job Offers Browse page (Candidate view - Read-only)
+ *  (Candidate view - Read-only)
  */
 public class JobOffersBrowseController {
 

@@ -31,13 +31,13 @@ public class UserContext {
         }
     }
 
-    // Private constructor for Singleton
+
     private UserContext() {
-        // Default values - start as Recruiter with ID 1
+        //  Recruiter with ID 1
         this.currentRole = Role.RECRUITER;
         this.userName = "Demo Recruiter";
         this.userEmail = "recruiter@talentbridge.com";
-        this.userId = 1L; // Recruiter ID
+        this.userId = 1L;
     }
 
     // Get singleton instance
