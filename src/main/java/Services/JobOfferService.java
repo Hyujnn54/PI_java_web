@@ -8,7 +8,9 @@ import Utils.MyDatabase;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class JobOfferService {
     private Connection connection;
@@ -186,6 +188,165 @@ public class JobOfferService {
         jobOffer.setStatus(Status.valueOf(rs.getString("status")));
 
         return jobOffer;
+    }
+
+    // ==================== STATISTIQUES ====================
+
+    /**
+     * Statistiques globales : Nombre d'offres par type de contrat (POUR ADMIN)
+     * @return Map avec ContractType en clé et le nombre d'offres en valeur
+     */
+    public Map<ContractType, Integer> statsGlobal() throws SQLException {
+        Map<ContractType, Integer> stats = new HashMap<>();
+
+        // Initialiser toutes les valeurs à 0
+        for (ContractType type : ContractType.values()) {
+            stats.put(type, 0);
+        }
+
+        String query = "SELECT contract_type, COUNT(*) as total FROM job_offer GROUP BY contract_type";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+
+            while (rs.next()) {
+                String contractTypeStr = rs.getString("contract_type");
+                int total = rs.getInt("total");
+
+                try {
+                    ContractType type = ContractType.valueOf(contractTypeStr);
+                    stats.put(type, total);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Type de contrat inconnu : " + contractTypeStr);
+                }
+            }
+        }
+
+        return stats;
+    }
+
+    /**
+     * Statistiques par recruteur : Nombre d'offres par type de contrat (POUR RECRUITER)
+     * @param recruiterId L'ID du recruteur
+     * @return Map avec ContractType en clé et le nombre d'offres en valeur
+     */
+    public Map<ContractType, Integer> statsByRecruiter(Long recruiterId) throws SQLException {
+        Map<ContractType, Integer> stats = new HashMap<>();
+
+        // Initialiser toutes les valeurs à 0
+        for (ContractType type : ContractType.values()) {
+            stats.put(type, 0);
+        }
+
+        String query = "SELECT contract_type, COUNT(*) as total FROM job_offer WHERE recruiter_id = ? GROUP BY contract_type";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setLong(1, recruiterId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String contractTypeStr = rs.getString("contract_type");
+                int total = rs.getInt("total");
+
+                try {
+                    ContractType type = ContractType.valueOf(contractTypeStr);
+                    stats.put(type, total);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Type de contrat inconnu : " + contractTypeStr);
+                }
+            }
+        }
+
+        return stats;
+    }
+
+    /**
+     * Statistiques : Nombre d'offres par type de contrat (DEPRECATED - utiliser statsGlobal ou statsByRecruiter)
+     * @return Map avec ContractType en clé et le nombre d'offres en valeur
+     */
+    @Deprecated
+    public Map<ContractType, Integer> statsOffresParContractType() throws SQLException {
+        return statsGlobal();
+    }
+
+    /**
+     * Statistiques globales : Nombre total d'offres (POUR ADMIN)
+     */
+    public int getTotalOffresGlobal() throws SQLException {
+        String query = "SELECT COUNT(*) as total FROM job_offer";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Statistiques par recruteur : Nombre total d'offres (POUR RECRUITER)
+     * @param recruiterId L'ID du recruteur
+     */
+    public int getTotalOffresByRecruiter(Long recruiterId) throws SQLException {
+        String query = "SELECT COUNT(*) as total FROM job_offer WHERE recruiter_id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setLong(1, recruiterId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Statistiques : Nombre total d'offres (DEPRECATED - utiliser getTotalOffresGlobal ou getTotalOffresByRecruiter)
+     */
+    @Deprecated
+    public int getTotalOffres() throws SQLException {
+        return getTotalOffresGlobal();
+    }
+
+    /**
+     * Statistiques globales : Nombre d'offres expirées (deadline < CURRENT_DATE) (POUR ADMIN)
+     */
+    public int getExpiredOffresGlobal() throws SQLException {
+        String query = "SELECT COUNT(*) as total FROM job_offer WHERE deadline < NOW()";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Statistiques par recruteur : Nombre d'offres expirées (deadline < CURRENT_DATE) (POUR RECRUITER)
+     * @param recruiterId L'ID du recruteur
+     */
+    public int getExpiredOffresByRecruiter(Long recruiterId) throws SQLException {
+        String query = "SELECT COUNT(*) as total FROM job_offer WHERE recruiter_id = ? AND deadline < NOW()";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setLong(1, recruiterId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        }
+
+        return 0;
     }
 
     // Inner class for displaying job offers with additional info (optional)

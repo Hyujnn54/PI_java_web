@@ -21,6 +21,7 @@ public class MainShellController {
     @FXML private Button btnInterviews;
     @FXML private Button btnApplications;
     @FXML private Button btnJobOffers;
+    @FXML private Button btnStatistics;
     @FXML private Button btnFullscreenToggle;
 
     @FXML private Button btnDisconnect;
@@ -72,6 +73,13 @@ public class MainShellController {
 
         loadContentView(activePage);
         highlightActiveButton(btnJobOffers);
+    }
+
+    @FXML
+    private void handleStatistics() {
+        activePage = "/Statistics.fxml";
+        loadContentView(activePage);
+        highlightActiveButton(btnStatistics);
     }
 
     @FXML private void handleDisconnect() {
@@ -154,7 +162,7 @@ public class MainShellController {
     }
 
     private void resetButtonStyles() {
-        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers};
+        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers, btnStatistics};
         for (Button btn : navButtons) {
             if (btn != null) {
                 btn.getStyleClass().removeAll("sidebar-button-active");

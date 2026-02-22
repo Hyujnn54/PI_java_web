@@ -1,0 +1,175 @@
+/* ==================== STYLES POUR LE PIECHART ==================== */
+
+/* Style général du PieChart */
+.chart {
+    -fx-padding: 10px;
+    -fx-background-color: transparent;
+}
+
+.chart-content {
+    -fx-padding: 20px;
+}
+
+/* Titre du graphique */
+.chart-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 0 0 15 0;
+}
+
+/* Légende du graphique */
+.chart-legend {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 8px;
+    -fx-padding: 15px;
+    -fx-border-color: #e9ecef;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+}
+
+.chart-legend-item {
+    -fx-padding: 5px 0;
+}
+
+.chart-legend-item-symbol {
+    -fx-padding: 8px;
+    -fx-border-radius: 4px;
+}
+
+.chart-legend-item-text {
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+    -fx-text-fill: #495057;
+}
+
+/* Sections du PieChart */
+.chart-pie {
+    -fx-border-color: white;
+    -fx-border-width: 2px;
+}
+
+/* Hover effect sur les sections */
+.chart-pie:hover {
+    -fx-opacity: 0.9;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 3);
+}
+
+/* Labels des sections */
+.chart-pie-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-fill: #2c3e50;
+}
+
+.chart-pie-label-line {
+    -fx-stroke: #adb5bd;
+    -fx-stroke-width: 1px;
+}
+
+/* Couleurs personnalisées pour chaque section */
+.default-color0.chart-pie { -fx-pie-color: #5BA3F5; } /* Bleu - CDI */
+.default-color1.chart-pie { -fx-pie-color: #28a745; } /* Vert - CDD */
+.default-color2.chart-pie { -fx-pie-color: #ffc107; } /* Jaune - Stage */
+.default-color3.chart-pie { -fx-pie-color: #dc3545; } /* Rouge - Freelance */
+.default-color4.chart-pie { -fx-pie-color: #6f42c1; } /* Violet - Temps Partiel */
+.default-color5.chart-pie { -fx-pie-color: #fd7e14; } /* Orange - Temps Plein */
+.default-color6.chart-pie { -fx-pie-color: #20c997; } /* Teal */
+.default-color7.chart-pie { -fx-pie-color: #e83e8c; } /* Rose */
+
+/* Légende - Correspondance des couleurs */
+.default-color0.chart-legend-item-symbol { -fx-background-color: #5BA3F5; }
+.default-color1.chart-legend-item-symbol { -fx-background-color: #28a745; }
+.default-color2.chart-legend-item-symbol { -fx-background-color: #ffc107; }
+.default-color3.chart-legend-item-symbol { -fx-background-color: #dc3545; }
+.default-color4.chart-legend-item-symbol { -fx-background-color: #6f42c1; }
+.default-color5.chart-legend-item-symbol { -fx-background-color: #fd7e14; }
+.default-color6.chart-legend-item-symbol { -fx-background-color: #20c997; }
+.default-color7.chart-legend-item-symbol { -fx-background-color: #e83e8c; }
+
+/* Animation des sections au clic */
+.chart-pie:pressed {
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ==================== TOOLTIPS PERSONNALISÉS ==================== */
+.tooltip {
+    -fx-background-color: rgba(0, 0, 0, 0.9);
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-padding: 12px 16px;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 10, 0, 0, 2);
+}
+
+/* ==================== CARTES STATISTIQUES ==================== */
+.stats-card {
+    -fx-background-color: white;
+    -fx-background-radius: 12px;
+    -fx-padding: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 2);
+}
+
+.stats-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 3);
+    -fx-cursor: hand;
+}
+
+.stats-card-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #2c3e50;
+}
+
+.stats-card-value {
+    -fx-font-size: 32px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #5BA3F5;
+}
+
+.stats-card-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #6c757d;
+}
+
+/* ==================== BOUTON RAFRAÎCHIR ==================== */
+.refresh-button {
+    -fx-background-color: #5BA3F5;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-padding: 12px 24px;
+    -fx-background-radius: 8px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);
+}
+
+.refresh-button:hover {
+    -fx-background-color: #4a93e5;
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.refresh-button:pressed {
+    -fx-background-color: #3883d5;
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 800px) {
+    .chart-title {
+        -fx-font-size: 16px;
+    }
+
+    .chart-pie-label {
+        -fx-font-size: 11px;
+    }
+
+    .stats-card-value {
+        -fx-font-size: 24px;
+    }
+}
+
