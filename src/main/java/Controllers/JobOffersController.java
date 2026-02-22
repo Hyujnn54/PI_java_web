@@ -40,8 +40,8 @@ public class JobOffersController {
 
     private void setupComboBoxes() {
         if (cbSearchCriteria != null) {
-            cbSearchCriteria.getItems().addAll("Title", "Location", "Contract Type");
-            cbSearchCriteria.setValue("Title");
+            cbSearchCriteria.getItems().addAll("Titre", "Lieu", "Type de Contrat");
+            cbSearchCriteria.setValue("Titre");
         }
     }
 
@@ -56,14 +56,14 @@ public class JobOffersController {
         searchBar.setStyle("-fx-padding: 0 0 20 0;");
 
         if (cbSearchCriteria != null) {
-            cbSearchCriteria.setPromptText("Search by...");
+            cbSearchCriteria.setPromptText("Rechercher par...");
             cbSearchCriteria.setStyle("-fx-pref-width: 150px;");
             cbSearchCriteria.setVisible(true);
             cbSearchCriteria.setManaged(true);
         }
 
         if (txtSearch != null) {
-            txtSearch.setPromptText("Search job offers...");
+            txtSearch.setPromptText("Rechercher des offres d'emploi...");
             txtSearch.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 10 15; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;");
             HBox.setHgrow(txtSearch, Priority.ALWAYS);
             txtSearch.setVisible(true);

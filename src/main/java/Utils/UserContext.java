@@ -36,8 +36,8 @@ public final class UserContext {
 
     public static String getRoleLabel() {
         return switch (currentRole) {
-            case RECRUITER -> "Recruiter";
-            case CANDIDATE -> "Candidate";
+            case RECRUITER -> "Recruteur";
+            case CANDIDATE -> "Candidat";
         };
     }
 

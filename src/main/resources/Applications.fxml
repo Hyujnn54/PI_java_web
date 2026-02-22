@@ -15,20 +15,20 @@
     <!-- Header Section -->
     <HBox alignment="CENTER_LEFT" spacing="20">
         <VBox spacing="5" HBox.hgrow="ALWAYS">
-            <Label text="Candidate Applications" styleClass="page-title"/>
-            <Label fx:id="lblSubtitle" text="Review and manage candidate applications" styleClass="page-subtitle"/>
+            <Label text="Candidatures" styleClass="page-title"/>
+            <Label fx:id="lblSubtitle" text="Examiner et gérer les candidatures" styleClass="page-subtitle"/>
         </VBox>
     </HBox>
 
     <!-- Search Bar Section -->
     <HBox spacing="15" alignment="CENTER_LEFT" styleClass="search-bar-container">
-        <ComboBox fx:id="cbSearchCriteria" promptText="Search by..." prefWidth="180" styleClass="modern-combo"/>
+        <ComboBox fx:id="cbSearchCriteria" promptText="Rechercher par..." prefWidth="180" styleClass="modern-combo"/>
 
-        <TextField fx:id="txtSearch" promptText="Search candidates..." HBox.hgrow="ALWAYS"
+        <TextField fx:id="txtSearch" promptText="Rechercher candidats..." HBox.hgrow="ALWAYS"
                    styleClass="modern-search-field"/>
 
-        <Button text="Search" styleClass="btn-primary"/>
-        <Button text="Clear" styleClass="btn-secondary"/>
+        <Button text="Rechercher" styleClass="btn-primary"/>
+        <Button text="Effacer" styleClass="btn-secondary"/>
     </HBox>
 
     <!-- Main Content Area: Split View -->
@@ -36,7 +36,7 @@
 
         <!-- LEFT SIDE: Candidate List (30%) -->
         <VBox spacing="12" prefWidth="400" styleClass="candidate-list-container">
-            <Label text="Candidates" styleClass="section-title"/>
+            <Label text="Candidats" styleClass="section-title"/>
 
             <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
                 <VBox fx:id="candidateListContainer" spacing="12" style="-fx-padding: 5;">
@@ -174,7 +174,7 @@
 
                     <!-- Skills -->
                     <VBox spacing="12" styleClass="detail-section-card">
-                        <Label text="Skills" styleClass="detail-section-title"/>
+                        <Label text="Compétences" styleClass="detail-section-title"/>
                         <FlowPane hgap="10" vgap="10">
                             <Label text="React" styleClass="skill-tag"/>
                             <Label text="TypeScript" styleClass="skill-tag"/>
@@ -186,18 +186,18 @@
 
                     <!-- Application Status -->
                     <VBox spacing="15" styleClass="detail-section-card">
-                        <Label text="Application Status" styleClass="detail-section-title"/>
+                        <Label text="Statut de la Candidature" styleClass="detail-section-title"/>
 
-                        <ComboBox fx:id="cbApplicationStatus" promptText="Select status..." prefWidth="300" styleClass="modern-combo"/>
+                        <ComboBox fx:id="cbApplicationStatus" promptText="Sélectionner statut..." prefWidth="300" styleClass="modern-combo"/>
                     </VBox>
 
                     <!-- Action Buttons -->
                     <HBox spacing="15" alignment="CENTER_LEFT" styleClass="action-buttons-container">
-                        <Button text="✓ Accept Candidate" styleClass="btn-success action-button"/>
-                        <Button text="📅 Schedule Interview" styleClass="btn-primary action-button"/>
-                        <Button text="📥 Download CV" styleClass="btn-secondary action-button"/>
+                        <Button text="✓ Accepter Candidat" styleClass="btn-success action-button"/>
+                        <Button text="📅 Planifier Entretien" styleClass="btn-primary action-button"/>
+                        <Button text="📥 Télécharger CV" styleClass="btn-secondary action-button"/>
                         <Region HBox.hgrow="ALWAYS"/>
-                        <Button text="✕ Reject" styleClass="btn-danger action-button"/>
+                        <Button text="✕ Rejeter" styleClass="btn-danger action-button"/>
                     </HBox>
 
                 </VBox>

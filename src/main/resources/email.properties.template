@@ -1,0 +1,19 @@
+# Email Configuration Template
+# Copier ce fichier vers 'email.properties' et remplir avec vos vraies valeurs
+
+# Gmail SMTP Configuration
+email.smtp.host=smtp.gmail.com
+email.smtp.port=587
+email.sender.email=YOUR_EMAIL@gmail.com
+
+# Gmail App Password
+# Pour obtenir un App Password:
+# 1. Aller sur https://myaccount.google.com/security
+# 2. Activer la validation en 2 étapes
+# 3. Générer un "App Password" pour "Mail"
+# 4. Coller le mot de passe ci-dessous (16 caractères sans espaces)
+email.sender.password=YOUR_APP_PASSWORD_HERE
+
+# Test Email (pour les tests en développement)
+email.test.recipient=YOUR_TEST_EMAIL@gmail.com
+

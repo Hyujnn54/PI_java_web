@@ -53,6 +53,12 @@
             <version>17</version>
             <classifier>win</classifier>
         </dependency>
+        <!-- JavaMail API for sending emails -->
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>1.6.2</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

@@ -1,6 +1,7 @@
 package org.example;
 
 import Utils.SceneManager;
+import Services.InterviewReminderScheduler;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -48,6 +49,9 @@ public class MainFX extends Application {
             stage.setResizable(false);
             stage.centerOnScreen();
             stage.show();
+
+            // Start the interview reminder scheduler
+            InterviewReminderScheduler.start();
 
             System.out.println("Application started successfully");
 

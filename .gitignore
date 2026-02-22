@@ -37,3 +37,10 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Email Configuration (Sensitive) ###
+src/main/resources/email.properties
+email.properties
+
+src/main/resources/email.properties
+src/main/resources/email.properties

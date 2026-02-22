@@ -2,6 +2,7 @@ package Controllers;
 
 import Services.ApplicationService;
 import Services.InterviewService;
+import Services.EmailService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -42,13 +43,13 @@ public class ApplicationsController {
 
     private void setupComboBoxes() {
         if (cbSearchCriteria != null) {
-            cbSearchCriteria.getItems().addAll("Name", "Email", "Position", "Status", "Date");
-            cbSearchCriteria.setValue("Name");
+            cbSearchCriteria.getItems().addAll("Nom", "Email", "Poste", "Statut", "Date");
+            cbSearchCriteria.setValue("Nom");
         }
 
         if (cbApplicationStatus != null) {
-            cbApplicationStatus.getItems().addAll("New", "Reviewing", "Shortlisted",
-                                                  "Interview Scheduled", "Accepted", "Rejected");
+            cbApplicationStatus.getItems().addAll("Nouveau", "En révision", "Présélectionné",
+                                                  "Entretien planifié", "Accepté", "Rejeté");
         }
     }
 
@@ -73,7 +74,7 @@ public class ApplicationsController {
         }
 
         if (apps.isEmpty()) {
-            Label empty = new Label(isRecruiter ? "No applications found" : "You haven't applied to any positions yet");
+            Label empty = new Label(isRecruiter ? "Aucune candidature trouvée" : "Vous n'avez postulé à aucun poste pour le moment");
             empty.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 14px; -fx-padding: 30;");
             candidateListContainer.getChildren().add(empty);
             return;
@@ -445,14 +446,14 @@ public class ApplicationsController {
 
     private void handleAcceptCandidate(ApplicationService.ApplicationRow app) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Accept Candidate");
-        confirm.setHeaderText("Accept this candidate?");
-        confirm.setContentText("This will change the application status to 'Accepted'.");
+        confirm.setTitle("Accepter le Candidat");
+        confirm.setHeaderText("Accepter ce candidat?");
+        confirm.setContentText("Cela changera le statut de la candidature à 'Accepté'.");
 
         confirm.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 // Update application status
-                showAlert("Success", "Candidate accepted successfully!", Alert.AlertType.INFORMATION);
+                showAlert("Succès", "Candidat accepté avec succès!", Alert.AlertType.INFORMATION);
                 loadApplications();
             }
         });
@@ -464,13 +465,13 @@ public class ApplicationsController {
 
     private void handleRejectCandidate(ApplicationService.ApplicationRow app) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Reject Candidate");
-        confirm.setHeaderText("Reject this candidate?");
-        confirm.setContentText("This action cannot be undone.");
+        confirm.setTitle("Rejeter le Candidat");
+        confirm.setHeaderText("Rejeter ce candidat?");
+        confirm.setContentText("Cette action ne peut pas être annulée.");
 
         confirm.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                showAlert("Success", "Candidate rejected.", Alert.AlertType.INFORMATION);
+                showAlert("Succès", "Candidat rejeté.", Alert.AlertType.INFORMATION);
                 loadApplications();
             }
         });
@@ -478,8 +479,8 @@ public class ApplicationsController {
 
     private void showInterviewScheduleDialog(ApplicationService.ApplicationRow app) {
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Schedule Interview");
-        dialog.setHeaderText("Schedule interview for Application #" + app.id());
+        dialog.setTitle("Planifier un Entretien");
+        dialog.setHeaderText("Planifier un entretien pour la candidature #" + app.id());
 
         // Modern styled content
         VBox content = new VBox(18);
@@ -488,7 +489,7 @@ public class ApplicationsController {
 
         // Date picker with label
         VBox dateBox = new VBox(8);
-        Label dateLabel = new Label("Interview Date *");
+        Label dateLabel = new Label("Date de l'entretien *");
         dateLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         DatePicker datePicker = new DatePicker();
         datePicker.setValue(java.time.LocalDate.now().plusDays(7));
@@ -497,25 +498,25 @@ public class ApplicationsController {
 
         // Time field with label
         VBox timeBox = new VBox(8);
-        Label timeLabel = new Label("Time (HH:mm) *");
+        Label timeLabel = new Label("Heure (HH:mm) *");
         timeLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         TextField timeField = new TextField("14:00");
-        timeField.setPromptText("e.g., 14:00");
+        timeField.setPromptText("ex: 14:00");
         timeField.setStyle("-fx-pref-width: 350px;");
         timeBox.getChildren().addAll(timeLabel, timeField);
 
         // Duration with label
         VBox durationBox = new VBox(8);
-        Label durationLabel = new Label("Duration (minutes) *");
+        Label durationLabel = new Label("Durée (minutes) *");
         durationLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         TextField durationField = new TextField("60");
-        durationField.setPromptText("e.g., 60");
+        durationField.setPromptText("ex: 60");
         durationField.setStyle("-fx-pref-width: 350px;");
         durationBox.getChildren().addAll(durationLabel, durationField);
 
         // Mode selection with label
         VBox modeBox = new VBox(8);
-        Label modeLabel = new Label("Interview Mode *");
+        Label modeLabel = new Label("Mode d'entretien *");
         modeLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         ComboBox<String> modeCombo = new ComboBox<>();
         modeCombo.getItems().addAll("ONLINE", "ON_SITE");
@@ -525,28 +526,28 @@ public class ApplicationsController {
 
         // Meeting Link (for ONLINE)
         VBox linkBox = new VBox(8);
-        Label linkLabel = new Label("Meeting Link (for ONLINE interviews)");
+        Label linkLabel = new Label("Lien de réunion (pour entretiens ONLINE)");
         linkLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         TextField linkField = new TextField();
-        linkField.setPromptText("e.g., https://zoom.us/j/123456789");
+        linkField.setPromptText("ex: https://zoom.us/j/123456789");
         linkField.setStyle("-fx-pref-width: 350px;");
         linkBox.getChildren().addAll(linkLabel, linkField);
 
         // Location (for ON_SITE)
         VBox locationBox = new VBox(8);
-        Label locationLabel = new Label("Location (for ON_SITE interviews)");
+        Label locationLabel = new Label("Lieu (pour entretiens ON_SITE)");
         locationLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         TextField locationField = new TextField();
-        locationField.setPromptText("e.g., Office Building A, Room 301");
+        locationField.setPromptText("ex: Bâtiment A, Salle 301");
         locationField.setStyle("-fx-pref-width: 350px;");
         locationBox.getChildren().addAll(locationLabel, locationField);
 
         // Notes section
         VBox notesBox = new VBox(8);
-        Label notesLabel = new Label("Additional Notes (Optional)");
+        Label notesLabel = new Label("Notes supplémentaires (Optionnel)");
         notesLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
         TextArea notesArea = new TextArea();
-        notesArea.setPromptText("Enter any additional notes for the interview...");
+        notesArea.setPromptText("Entrez des notes supplémentaires pour l'entretien...");
         notesArea.setPrefRowCount(3);
         notesArea.setStyle("-fx-pref-width: 350px;");
         notesBox.getChildren().addAll(notesLabel, notesArea);
@@ -586,7 +587,7 @@ public class ApplicationsController {
                 try {
                     // Validation
                     if (datePicker.getValue() == null) {
-                        showAlert("Validation Error", "Please select a date.", Alert.AlertType.WARNING);
+                        showAlert("Erreur de Validation", "Veuillez sélectionner une date.", Alert.AlertType.WARNING);
                         return;
                     }
 
@@ -599,12 +600,12 @@ public class ApplicationsController {
 
                     // Validate required fields based on mode
                     if ("ONLINE".equals(mode) && (linkField.getText() == null || linkField.getText().trim().isEmpty())) {
-                        showAlert("Validation Error", "Meeting link is required for ONLINE interviews.", Alert.AlertType.WARNING);
+                        showAlert("Erreur de Validation", "Le lien de réunion est requis pour les entretiens ONLINE.", Alert.AlertType.WARNING);
                         return;
                     }
 
                     if ("ON_SITE".equals(mode) && (locationField.getText() == null || locationField.getText().trim().isEmpty())) {
-                        showAlert("Validation Error", "Location is required for ON_SITE interviews.", Alert.AlertType.WARNING);
+                        showAlert("Erreur de Validation", "Le lieu est requis pour les entretiens ON_SITE.", Alert.AlertType.WARNING);
                         return;
                     }
 
@@ -628,12 +629,15 @@ public class ApplicationsController {
 
                     InterviewService.addInterview(interview);
 
-                    showAlert("Success", "Interview scheduled successfully!", Alert.AlertType.INFORMATION);
+                    // Email reminder will be sent automatically by InterviewReminderScheduler
+                    // (24 hours before the interview)
+
+                    showAlert("Succès", "Entretien planifié avec succès! Un rappel par email sera envoyé 24h avant.", Alert.AlertType.INFORMATION);
                     loadApplications();
                 } catch (NumberFormatException e) {
-                    showAlert("Validation Error", "Duration must be a valid number.", Alert.AlertType.WARNING);
+                    showAlert("Erreur de Validation", "La durée doit être un nombre valide.", Alert.AlertType.WARNING);
                 } catch (Exception e) {
-                    showAlert("Error", "Failed to schedule interview: " + e.getMessage(), Alert.AlertType.ERROR);
+                    showAlert("Erreur", "Échec de la planification de l'entretien: " + e.getMessage(), Alert.AlertType.ERROR);
                 }
             }
         });
@@ -649,7 +653,7 @@ public class ApplicationsController {
         if (selectedApplication != null) {
             handleScheduleInterview(selectedApplication);
         } else {
-            showAlert("No Selection", "Please select an application first.", Alert.AlertType.WARNING);
+            showAlert("Aucune Sélection", "Veuillez d'abord sélectionner une candidature.", Alert.AlertType.WARNING);
         }
     }
 
@@ -658,7 +662,7 @@ public class ApplicationsController {
         if (selectedApplication != null) {
             handleRejectCandidate(selectedApplication);
         } else {
-            showAlert("No Selection", "Please select an application first.", Alert.AlertType.WARNING);
+            showAlert("Aucune Sélection", "Veuillez d'abord sélectionner une candidature.", Alert.AlertType.WARNING);
         }
     }
 

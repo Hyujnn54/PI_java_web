@@ -38,7 +38,7 @@ public class MainShellController {
 
     @FXML
     private void initialize() {
-        if (lblUserName != null) lblUserName.setText("User"); // Will be updated dynamically
+        if (lblUserName != null) lblUserName.setText("Utilisateur"); // Will be updated dynamically
         if (lblUserRole != null) lblUserRole.setText(Utils.UserContext.getRoleLabel());
 
         applyRoleToShell();
@@ -80,9 +80,9 @@ public class MainShellController {
 
     @FXML private void handleDisconnect() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Disconnect");
-        alert.setHeaderText("Logout Feature");
-        alert.setContentText("Login/logout functionality has been removed. Restart the application to reset.");
+        alert.setTitle("Déconnexion");
+        alert.setHeaderText("Fonctionnalité de Déconnexion");
+        alert.setContentText("La fonctionnalité de connexion/déconnexion a été supprimée. Redémarrez l'application pour réinitialiser.");
         alert.showAndWait();
     }
 
@@ -99,8 +99,8 @@ public class MainShellController {
     @FXML private void handleNotifications() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Notifications");
-        alert.setHeaderText("You have 3 new notifications");
-        alert.setContentText("• Interview scheduled for tomorrow\n• Feedback request pending\n• New job application received");
+        alert.setHeaderText("Vous avez 3 nouvelles notifications");
+        alert.setContentText("• Entretien planifié pour demain\n• Demande de retour en attente\n• Nouvelle candidature reçue");
         alert.showAndWait();
     }
 
@@ -110,8 +110,8 @@ public class MainShellController {
             org.example.MainFX.toggleFullscreen();
         } catch (Exception e) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Fullscreen");
-            alert.setHeaderText("Could not toggle fullscreen");
+            alert.setTitle("Plein Écran");
+            alert.setHeaderText("Impossible d'activer le plein écran");
             alert.setContentText(String.valueOf(e.getMessage()));
             alert.showAndWait();
         }

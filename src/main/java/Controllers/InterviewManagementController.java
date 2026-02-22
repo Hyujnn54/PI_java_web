@@ -4,6 +4,7 @@ import Models.Interview;
 import Models.InterviewFeedback;
 import Services.InterviewFeedbackService;
 import Services.InterviewService;
+import Services.EmailService;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -36,6 +37,7 @@ public class InterviewManagementController {
 
     // Search and Calendar controls
     @FXML private HBox searchBox;
+    @FXML private ComboBox<String> comboSearchCriteria;
     @FXML private TextField txtSearchInterview;
     @FXML private Button btnCalendar;
 
@@ -77,8 +79,8 @@ public class InterviewManagementController {
 
     private void setupComboBoxes() {
         if (comboMode != null) {
-            // Use exact database enum values: ONLINE and ON_SITE
-            comboMode.setItems(FXCollections.observableArrayList("ONLINE", "ON_SITE"));
+            // Database enum values mapped to French display names
+            comboMode.setItems(FXCollections.observableArrayList("En Ligne", "Sur Site"));
 
             // Add listener to toggle meeting link/location visibility based on mode
             comboMode.valueProperty().addListener((obs, oldVal, newVal) -> toggleModeFields(newVal));
@@ -86,7 +88,15 @@ public class InterviewManagementController {
 
         // Setup feedback decision combobox
         if (comboFeedbackDecision != null) {
-            comboFeedbackDecision.setItems(FXCollections.observableArrayList("ACCEPTED", "REJECTED"));
+            comboFeedbackDecision.setItems(FXCollections.observableArrayList("Accepté", "Rejeté"));
+        }
+
+        // Setup search criteria combobox
+        if (comboSearchCriteria != null) {
+            comboSearchCriteria.setItems(FXCollections.observableArrayList(
+                "Nom", "Date", "Mode", "Statut", "Lieu"
+            ));
+            comboSearchCriteria.setValue("Nom"); // Default criterion
         }
 
         // Setup feedback score live indicator
@@ -96,20 +106,20 @@ public class InterviewManagementController {
                     if (!newVal.trim().isEmpty()) {
                         int score = Integer.parseInt(newVal);
                         if (score >= 70) {
-                            lblScoreIndicator.setText("✓ HIGH");
+                            lblScoreIndicator.setText("✓ ÉLEVÉ");
                             lblScoreIndicator.setStyle("-fx-text-fill: #28a745; -fx-font-size: 12px; -fx-font-weight: 600;");
                         } else if (score >= 50) {
-                            lblScoreIndicator.setText("⚠ MEDIUM");
+                            lblScoreIndicator.setText("⚠ MOYEN");
                             lblScoreIndicator.setStyle("-fx-text-fill: #f0ad4e; -fx-font-size: 12px; -fx-font-weight: 600;");
                         } else {
-                            lblScoreIndicator.setText("✗ LOW");
+                            lblScoreIndicator.setText("✗ FAIBLE");
                             lblScoreIndicator.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: 600;");
                         }
                     } else {
                         lblScoreIndicator.setText("");
                     }
                 } catch (NumberFormatException e) {
-                    lblScoreIndicator.setText("Invalid");
+                    lblScoreIndicator.setText("Invalide");
                     lblScoreIndicator.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: 600;");
                 }
             });
@@ -121,7 +131,8 @@ public class InterviewManagementController {
     private void toggleModeFields(String mode) {
         if (mode == null) return;
 
-        boolean isOnline = "ONLINE".equals(mode);
+        // Handle both French ("En Ligne") and database ("ONLINE") values
+        boolean isOnline = "En Ligne".equals(mode) || "ONLINE".equals(mode);
 
         // Show meeting link for ONLINE, hide location
         if (txtMeetingLink != null) {
@@ -178,16 +189,38 @@ public class InterviewManagementController {
         }
 
         String keyword = txtSearchInterview.getText().trim().toLowerCase();
+        String criteria = comboSearchCriteria != null ? comboSearchCriteria.getValue() : "Nom";
         List<Interview> allInterviews = InterviewService.getAll();
 
         List<Interview> filtered = allInterviews.stream()
             .filter(interview -> {
-                // Search by ID, mode, status, or date
-                String searchText = String.valueOf(interview.getId()) + " " +
-                                  (interview.getMode() != null ? interview.getMode() : "") + " " +
-                                  (interview.getStatus() != null ? interview.getStatus() : "") + " " +
-                                  formatDateTime(interview.getScheduledAt());
-                return searchText.toLowerCase().contains(keyword);
+                switch (criteria) {
+                    case "Nom":
+                        // Search by candidate name (from application)
+                        return searchByName(interview, keyword);
+                    case "Date":
+                        // Search by date
+                        String dateStr = interview.getScheduledAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                        return dateStr.contains(keyword);
+                    case "Mode":
+                        // Search by mode (ONLINE or ON_SITE)
+                        return interview.getMode() != null && interview.getMode().toLowerCase().contains(keyword);
+                    case "Statut":
+                        // Search by status
+                        return interview.getStatus() != null && interview.getStatus().toLowerCase().contains(keyword);
+                    case "Lieu":
+                        // Search by location or meeting link
+                        String location = interview.getLocation() != null ? interview.getLocation().toLowerCase() : "";
+                        String meetingLink = interview.getMeetingLink() != null ? interview.getMeetingLink().toLowerCase() : "";
+                        return location.contains(keyword) || meetingLink.contains(keyword);
+                    default:
+                        // Default: search all fields
+                        String searchText = String.valueOf(interview.getId()) + " " +
+                                          (interview.getMode() != null ? interview.getMode() : "") + " " +
+                                          (interview.getStatus() != null ? interview.getStatus() : "") + " " +
+                                          formatDateTime(interview.getScheduledAt());
+                        return searchText.toLowerCase().contains(keyword);
+                }
             })
             .toList();
 
@@ -195,16 +228,42 @@ public class InterviewManagementController {
     }
 
     @FXML
+    private void handleClearSearch() {
+        if (txtSearchInterview != null) {
+            txtSearchInterview.clear();
+        }
+        if (comboSearchCriteria != null) {
+            comboSearchCriteria.setValue("Nom");
+        }
+        loadInterviews();
+    }
+
+    private boolean searchByName(Interview interview, String keyword) {
+        // Try to get candidate name from application
+        // This is a simplified version - you may need to enhance based on your data structure
+        try {
+            if (interview.getApplicationId() != null) {
+                // You might need to fetch application details to get candidate name
+                // For now, we'll just return false if not found
+                return false;
+            }
+        } catch (Exception e) {
+            System.err.println("Error searching by name: " + e.getMessage());
+        }
+        return false;
+    }
+
+    @FXML
     private void handleShowCalendar() {
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Interview Calendar");
+        dialog.setTitle("Calendrier des Entretiens");
         dialog.setHeaderText(null);
 
         VBox content = new VBox(20);
         content.setStyle("-fx-padding: 25; -fx-background-color: white;");
 
         // Header
-        Label title = new Label("📅 Interview Calendar");
+        Label title = new Label("📅 Calendrier des Entretiens");
         title.setStyle("-fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
 
         // Calendar grid
@@ -249,7 +308,7 @@ public class InterviewManagementController {
         calendar.add(monthHeader, 0, 0, 7, 1);
 
         // Day headers (Sun-Sat)
-        String[] dayNames = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+        String[] dayNames = {"Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"};
         for (int i = 0; i < 7; i++) {
             Label dayLabel = new Label(dayNames[i]);
             dayLabel.setStyle("-fx-font-weight: 700; -fx-text-fill: #6c757d; -fx-font-size: 13px; -fx-alignment: center;");
@@ -280,7 +339,7 @@ public class InterviewManagementController {
                 dayCell.setStyle("-fx-background-color: #FFF9E6; -fx-border-color: #FFD700; -fx-border-width: 2; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 8;");
 
                 // Show interview count
-                Label countLabel = new Label(dayInterviews.size() + " interview" + (dayInterviews.size() > 1 ? "s" : ""));
+                Label countLabel = new Label(dayInterviews.size() + " entretien" + (dayInterviews.size() > 1 ? "s" : ""));
                 countLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #856404; -fx-font-weight: 600;");
 
                 dayCell.getChildren().addAll(dayNum, countLabel);
@@ -312,8 +371,8 @@ public class InterviewManagementController {
 
     private void showDayInterviews(LocalDate date, List<Interview> interviews) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Interviews on " + date.format(DateTimeFormatter.ofPattern("MMMM dd, yyyy")));
-        alert.setHeaderText(interviews.size() + " interview(s) scheduled");
+        alert.setTitle("Entretiens du " + date.format(DateTimeFormatter.ofPattern("dd MMMM yyyy")));
+        alert.setHeaderText(interviews.size() + " entretien(s) planifié(s)");
 
         VBox content = new VBox(12);
         content.setStyle("-fx-padding: 15;");
@@ -325,10 +384,10 @@ public class InterviewManagementController {
             Label timeLabel = new Label("⏰ " + interview.getScheduledAt().format(DateTimeFormatter.ofPattern("HH:mm")));
             timeLabel.setStyle("-fx-font-weight: 700; -fx-font-size: 14px; -fx-text-fill: #2c3e50;");
 
-            Label modeLabel = new Label("Mode: " + interview.getMode() + " | Duration: " + interview.getDurationMinutes() + " min");
+            Label modeLabel = new Label("Mode: " + interview.getMode() + " | Durée: " + interview.getDurationMinutes() + " min");
             modeLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px;");
 
-            Label statusLabel = new Label(interview.getStatus() != null ? interview.getStatus() : "SCHEDULED");
+            Label statusLabel = new Label(interview.getStatus() != null ? interview.getStatus() : "PLANIFIÉ");
             statusLabel.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-padding: 3 8; -fx-background-radius: 4; -fx-font-size: 11px; -fx-font-weight: 600;");
 
             interviewCard.getChildren().addAll(timeLabel, modeLabel, statusLabel);
@@ -346,7 +405,7 @@ public class InterviewManagementController {
         interviewsListContainer.getChildren().clear();
 
         if (interviews.isEmpty()) {
-            Label emptyLabel = new Label("No matching interviews found");
+            Label emptyLabel = new Label("Aucun entretien correspondant trouvé");
             emptyLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 16px; -fx-padding: 50;");
             interviewsListContainer.getChildren().add(emptyLabel);
             return;
@@ -368,7 +427,7 @@ public class InterviewManagementController {
         // New flow: interviews are created from Applications.
         // Keep Update only for existing interviews.
         if (!isEditMode) {
-            showAlert("Not allowed", "Interviews are created from Applications. Select an application and schedule from there.", Alert.AlertType.INFORMATION);
+            showAlert("Non autorisé", "Les entretiens sont créés à partir des candidatures. Sélectionnez une candidature et planifiez à partir de là.", Alert.AlertType.INFORMATION);
             hideEditDialog();
             return;
         }
@@ -389,13 +448,16 @@ public class InterviewManagementController {
             int duration = Integer.parseInt(txtDuration.getText().trim());
             String mode = comboMode.getValue();
 
+            // Convert French display names to database enum values
+            String dbMode = convertModeToDatabase(mode);
+
             if (selectedInterview != null) {
                 selectedInterview.setScheduledAt(scheduledAt);
                 selectedInterview.setDurationMinutes(duration);
-                selectedInterview.setMode(mode);
+                selectedInterview.setMode(dbMode);
 
                 // Update meeting link or location based on mode
-                if ("ONLINE".equals(mode)) {
+                if ("ONLINE".equals(dbMode)) {
                     selectedInterview.setMeetingLink(txtMeetingLink.getText() != null ? txtMeetingLink.getText().trim() : "");
                     selectedInterview.setLocation(null);
                 } else {
@@ -408,18 +470,22 @@ public class InterviewManagementController {
 
                 try {
                     InterviewService.updateInterview(selectedInterview.getId(), selectedInterview);
+
+                    // Email reminder will be sent automatically by InterviewReminderScheduler
+                    // (24 hours before the interview, if not already sent)
+
                 } catch (RuntimeException e) {
-                    showAlert("Database Error", "Failed to update interview: " + e.getMessage(), Alert.AlertType.ERROR);
+                    showAlert("Erreur de Base de Données", "Échec de la mise à jour de l'entretien: " + e.getMessage(), Alert.AlertType.ERROR);
                     return;
                 }
 
                 hideEditDialog();
                 loadInterviews();
-                showAlert("Success", "Interview updated successfully!", Alert.AlertType.INFORMATION);
+                showAlert("Succès", "Entretien mis à jour avec succès! Un rappel par email sera envoyé 24h avant.", Alert.AlertType.INFORMATION);
             }
 
         } catch (Exception e) {
-            showAlert("Error", "Failed to save interview: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec de l'enregistrement de l'entretien: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
@@ -430,7 +496,7 @@ public class InterviewManagementController {
         List<Interview> interviews = InterviewService.getAll();
 
         if (interviews.isEmpty()) {
-            Label emptyLabel = new Label("No interviews scheduled yet");
+            Label emptyLabel = new Label("Aucun entretien planifié pour le moment");
             emptyLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 16px; -fx-padding: 50;");
             interviewsListContainer.getChildren().add(emptyLabel);
             return;
@@ -453,13 +519,13 @@ public class InterviewManagementController {
         HBox header = new HBox(15);
         header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
-        Label title = new Label(isRecruiter ? "Interview #" + interview.getId() : "Your Upcoming Interview");
+        Label title = new Label(isRecruiter ? "Entretien #" + interview.getId() : "Votre Prochain Entretien");
         title.getStyleClass().add("card-title");
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
 
-        Label statusTag = new Label(interview.getStatus() != null ? interview.getStatus() : "SCHEDULED");
+        Label statusTag = new Label(interview.getStatus() != null ? interview.getStatus() : "PLANIFIÉ");
         statusTag.getStyleClass().addAll("status-tag", getStatusClass(interview.getStatus()));
 
         header.getChildren().addAll(title, spacer, statusTag);
@@ -570,7 +636,7 @@ public class InterviewManagementController {
                     actionBox.getChildren().add(resultLabel);
                 }
             } else {
-                Label candidateMsg = new Label("Pending Review");
+                Label candidateMsg = new Label("En Attente de Révision");
                 candidateMsg.setStyle("-fx-text-fill: #f0ad4e; -fx-font-size: 12px; -fx-font-weight: 600;");
                 actionBox.getChildren().add(candidateMsg);
             }
@@ -582,22 +648,22 @@ public class InterviewManagementController {
 
         if (hasFeedback) {
             // If feedback exists: show View, Update, Delete buttons
-            Button btnViewFeedback = new Button("👁 View");
+            Button btnViewFeedback = new Button("👁 Voir");
             btnViewFeedback.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6; -fx-font-weight: 600; -fx-font-size: 12px; -fx-cursor: hand;");
             btnViewFeedback.setOnAction(e -> viewFeedback(interview));
 
-            Button btnUpdateFeedback = new Button("✏ Update");
+            Button btnUpdateFeedback = new Button("✏ Modifier");
             btnUpdateFeedback.setStyle("-fx-background-color: #f0ad4e; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6; -fx-font-weight: 600; -fx-font-size: 12px; -fx-cursor: hand;");
             btnUpdateFeedback.setOnAction(e -> updateFeedback(interview));
 
-            Button btnDeleteFeedback = new Button("🗑 Delete");
+            Button btnDeleteFeedback = new Button("🗑 Supprimer");
             btnDeleteFeedback.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6; -fx-font-weight: 600; -fx-font-size: 12px; -fx-cursor: hand;");
             btnDeleteFeedback.setOnAction(e -> deleteFeedbackForInterview(interview));
 
             actionBox.getChildren().addAll(btnViewFeedback, btnUpdateFeedback, btnDeleteFeedback);
         } else {
             // If no feedback: show Create button
-            Button btnCreateFeedback = new Button("📋 Create Feedback");
+            Button btnCreateFeedback = new Button("📋 Créer Retour");
             btnCreateFeedback.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6; -fx-font-weight: 600; -fx-font-size: 12px; -fx-cursor: hand;");
             btnCreateFeedback.setOnAction(e -> createFeedback(interview));
 
@@ -613,13 +679,13 @@ public class InterviewManagementController {
             InterviewFeedback feedback = feedbacks.get(0);
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Interview Feedback");
-            alert.setHeaderText("Feedback for Interview #" + interview.getId());
+            alert.setTitle("Retour d'Entretien");
+            alert.setHeaderText("Retour pour l'entretien #" + interview.getId());
 
             String decision = feedback.getDecision() != null ? feedback.getDecision() : "N/A";
-            String content = "Decision: " + decision + "\n" +
-                           "Overall Score: " + (feedback.getOverallScore() != null ? feedback.getOverallScore() : "N/A") + "/100\n\n" +
-                           "Comments:\n" + (feedback.getComment() != null ? feedback.getComment() : "No comments");
+            String content = "Décision: " + decision + "\n" +
+                           "Score Global: " + (feedback.getOverallScore() != null ? feedback.getOverallScore() : "N/A") + "/100\n\n" +
+                           "Commentaires:\n" + (feedback.getComment() != null ? feedback.getComment() : "Aucun commentaire");
 
             alert.setContentText(content);
             alert.showAndWait();
@@ -719,7 +785,7 @@ public class InterviewManagementController {
 
             // Set button text for updating
             if (btnUpdateFeedbackAction != null) {
-                btnUpdateFeedbackAction.setText("💾 Update Feedback");
+                btnUpdateFeedbackAction.setText("💾 Mettre à Jour Retour");
             }
         } else {
             if (comboFeedbackDecision != null) comboFeedbackDecision.setValue(null);
@@ -728,7 +794,7 @@ public class InterviewManagementController {
 
             // Set button text for creating
             if (btnUpdateFeedbackAction != null) {
-                btnUpdateFeedbackAction.setText("💾 Create Feedback");
+                btnUpdateFeedbackAction.setText("💾 Créer Retour");
             }
         }
 
@@ -748,7 +814,7 @@ public class InterviewManagementController {
 
         if (selectedInterview == null) {
             System.err.println("ERROR: No interview selected");
-            showAlert("Error", "No interview selected.", Alert.AlertType.ERROR);
+            showAlert("Erreur", "Aucun entretien sélectionné.", Alert.AlertType.ERROR);
             return;
         }
 
@@ -759,14 +825,14 @@ public class InterviewManagementController {
             // Validation - decision is required
             if (comboFeedbackDecision == null || comboFeedbackDecision.getValue() == null || comboFeedbackDecision.getValue().trim().isEmpty()) {
                 System.err.println("VALIDATION ERROR: Decision not selected");
-                showAlert("Validation Error", "Please select a decision (ACCEPTED or REJECTED).", Alert.AlertType.WARNING);
+                showAlert("Erreur de Validation", "Veuillez sélectionner une décision (Accepté ou Rejeté).", Alert.AlertType.WARNING);
                 return;
             }
 
             // Validation - score is required
             if (txtFeedbackScore.getText().trim().isEmpty()) {
                 System.err.println("VALIDATION ERROR: Score is empty");
-                showAlert("Validation Error", "Please enter a score.", Alert.AlertType.WARNING);
+                showAlert("Erreur de Validation", "Veuillez entrer un score.", Alert.AlertType.WARNING);
                 return;
             }
 
@@ -775,13 +841,13 @@ public class InterviewManagementController {
                 overallScore = Integer.parseInt(txtFeedbackScore.getText().trim());
             } catch (NumberFormatException e) {
                 System.err.println("VALIDATION ERROR: Score is not a number: " + txtFeedbackScore.getText());
-                showAlert("Validation Error", "Score must be a valid number.", Alert.AlertType.WARNING);
+                showAlert("Erreur de Validation", "Le score doit être un nombre valide.", Alert.AlertType.WARNING);
                 return;
             }
 
             if (overallScore < 0 || overallScore > 100) {
                 System.err.println("VALIDATION ERROR: Score out of range: " + overallScore);
-                showAlert("Validation Error", "Score must be between 0 and 100.", Alert.AlertType.WARNING);
+                showAlert("Erreur de Validation", "Le score doit être entre 0 et 100.", Alert.AlertType.WARNING);
                 return;
             }
 
@@ -825,12 +891,12 @@ public class InterviewManagementController {
                 System.out.println("Calling InterviewFeedbackService.updateFeedback() with ID: " + fb.getId());
                 InterviewFeedbackService.updateFeedback(fb.getId(), fb);
                 System.out.println("✓ Update completed successfully");
-                showAlert("Success", "Feedback updated successfully.", Alert.AlertType.INFORMATION);
+                showAlert("Succès", "Retour mis à jour avec succès.", Alert.AlertType.INFORMATION);
             } else {
                 System.out.println("Calling InterviewFeedbackService.addFeedback()");
                 InterviewFeedbackService.addFeedback(fb);
                 System.out.println("✓ Create completed successfully");
-                showAlert("Success", "Feedback created successfully.", Alert.AlertType.INFORMATION);
+                showAlert("Succès", "Retour créé avec succès.", Alert.AlertType.INFORMATION);
             }
 
             System.out.println("============ FEEDBACK UPDATE COMPLETED ============\n");
@@ -840,7 +906,7 @@ public class InterviewManagementController {
         } catch (Exception e) {
             System.err.println("ERROR during feedback save: " + e.getMessage());
             e.printStackTrace();
-            showAlert("Error", "Failed to save feedback: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec de la sauvegarde du retour: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
@@ -853,13 +919,13 @@ public class InterviewManagementController {
             InterviewFeedback existing = feedbacks.get(0);
 
             Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-            confirm.setTitle("Delete Feedback");
-            confirm.setHeaderText("Delete this feedback?");
-            confirm.setContentText("This action cannot be undone.");
+            confirm.setTitle("Supprimer le Retour");
+            confirm.setHeaderText("Supprimer ce retour?");
+            confirm.setContentText("Cette action ne peut pas être annulée.");
             confirm.showAndWait().ifPresent(r -> {
                 if (r == ButtonType.OK) {
                     InterviewFeedbackService.deleteFeedback(existing.getId());
-                    showAlert("Success", "Feedback deleted successfully.", Alert.AlertType.INFORMATION);
+                    showAlert("Succès", "Retour supprimé avec succès.", Alert.AlertType.INFORMATION);
                     hideFeedbackPanel();
                     loadInterviews();
                 }
@@ -961,32 +1027,32 @@ public class InterviewManagementController {
         if (selectedInterview != null) {
             showEditDialog(selectedInterview);
         } else {
-            showAlert("Warning", "Please select an interview to update", Alert.AlertType.WARNING);
+            showAlert("Attention", "Veuillez sélectionner un entretien à mettre à jour", Alert.AlertType.WARNING);
         }
     }
 
     @FXML
     private void handleDeleteInterview() {
         if (selectedInterview == null) {
-            showAlert("Warning", "Please select an interview to delete", Alert.AlertType.WARNING);
+            showAlert("Attention", "Veuillez sélectionner un entretien à supprimer", Alert.AlertType.WARNING);
             return;
         }
 
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmAlert.setTitle("Confirm Delete");
-        confirmAlert.setHeaderText("Delete Interview");
-        confirmAlert.setContentText("Are you sure you want to delete this interview? This action cannot be undone.");
+        confirmAlert.setTitle("Confirmer la Suppression");
+        confirmAlert.setHeaderText("Supprimer l'Entretien");
+        confirmAlert.setContentText("Êtes-vous sûr de vouloir supprimer cet entretien? Cette action ne peut pas être annulée.");
 
         confirmAlert.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
                 try {
                     InterviewService.delete(selectedInterview.getId());
-                    showAlert("Success", "Interview deleted successfully!", Alert.AlertType.INFORMATION);
+                    showAlert("Succès", "Entretien supprimé avec succès!", Alert.AlertType.INFORMATION);
                     selectedInterview = null;
                     hideBottomActionButtons();
                     loadInterviews();
                 } catch (Exception e) {
-                    showAlert("Error", "Failed to delete interview: " + e.getMessage(), Alert.AlertType.ERROR);
+                    showAlert("Erreur", "Échec de la suppression de l'entretien: " + e.getMessage(), Alert.AlertType.ERROR);
                 }
             }
         });
@@ -998,45 +1064,45 @@ public class InterviewManagementController {
         // Check if form fields are properly initialized
         if (datePicker == null) {
             System.out.println("DatePicker is null!");
-            showAlert("Error", "Form not properly initialized. Please try again.", Alert.AlertType.ERROR);
+            showAlert("Erreur", "Formulaire non correctement initialisé. Veuillez réessayer.", Alert.AlertType.ERROR);
             return false;
         }
 
         if (datePicker.getValue() == null) {
-            showAlert("Validation Error", "Please select a date", Alert.AlertType.WARNING);
+            showAlert("Erreur de Validation", "Veuillez sélectionner une date", Alert.AlertType.WARNING);
             return false;
         }
 
         if (txtTime == null || txtTime.getText().trim().isEmpty()) {
-            showAlert("Validation Error", "Please enter a time", Alert.AlertType.WARNING);
+            showAlert("Erreur de Validation", "Veuillez entrer une heure", Alert.AlertType.WARNING);
             return false;
         }
 
         try {
             LocalTime.parse(txtTime.getText().trim(), DateTimeFormatter.ofPattern("HH:mm"));
         } catch (Exception e) {
-            showAlert("Validation Error", "Time must be in HH:mm format (e.g., 14:30)", Alert.AlertType.WARNING);
+            showAlert("Erreur de Validation", "L'heure doit être au format HH:mm (ex: 14:30)", Alert.AlertType.WARNING);
             return false;
         }
 
         if (txtDuration == null || txtDuration.getText().trim().isEmpty()) {
-            showAlert("Validation Error", "Please enter duration in minutes", Alert.AlertType.WARNING);
+            showAlert("Erreur de Validation", "Veuillez entrer la durée en minutes", Alert.AlertType.WARNING);
             return false;
         }
 
         try {
             int duration = Integer.parseInt(txtDuration.getText().trim());
             if (duration <= 0 || duration > 480) {
-                showAlert("Validation Error", "Duration must be between 1 and 480 minutes", Alert.AlertType.WARNING);
+                showAlert("Erreur de Validation", "La durée doit être entre 1 et 480 minutes", Alert.AlertType.WARNING);
                 return false;
             }
         } catch (NumberFormatException e) {
-            showAlert("Validation Error", "Duration must be a valid number", Alert.AlertType.WARNING);
+            showAlert("Erreur de Validation", "La durée doit être un nombre valide", Alert.AlertType.WARNING);
             return false;
         }
 
         if (comboMode == null || comboMode.getValue() == null) {
-            showAlert("Validation Error", "Please select an interview mode", Alert.AlertType.WARNING);
+            showAlert("Erreur de Validation", "Veuillez sélectionner un mode d'entretien", Alert.AlertType.WARNING);
             return false;
         }
 
@@ -1075,5 +1141,47 @@ public class InterviewManagementController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * Convert French display mode to database enum value
+     */
+    private String convertModeToDatabase(String displayMode) {
+        if (displayMode == null) return "ONLINE";
+        if ("En Ligne".equals(displayMode)) return "ONLINE";
+        if ("Sur Site".equals(displayMode)) return "ON_SITE";
+        // If already a database value, return as-is
+        return displayMode;
+    }
+
+    /**
+     * Convert database mode value to French display name
+     */
+    private String convertModeToDisplay(String dbMode) {
+        if (dbMode == null) return "En Ligne";
+        if ("ONLINE".equals(dbMode)) return "En Ligne";
+        if ("ON_SITE".equals(dbMode)) return "Sur Site";
+        // If already a display value, return as-is
+        return dbMode;
+    }
+
+    /**
+     * Convert French feedback decision to database value
+     */
+    private String convertDecisionToDatabase(String displayDecision) {
+        if (displayDecision == null) return "ACCEPTED";
+        if ("Accepté".equals(displayDecision)) return "ACCEPTED";
+        if ("Rejeté".equals(displayDecision)) return "REJECTED";
+        return displayDecision;
+    }
+
+    /**
+     * Convert database decision value to French display name
+     */
+    private String convertDecisionToDisplay(String dbDecision) {
+        if (dbDecision == null) return "Accepté";
+        if ("ACCEPTED".equals(dbDecision)) return "Accepté";
+        if ("REJECTED".equals(dbDecision)) return "Rejeté";
+        return dbDecision;
     }
 }
