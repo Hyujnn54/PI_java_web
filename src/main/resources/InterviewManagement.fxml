@@ -18,8 +18,25 @@
         <HBox fx:id="searchBox" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
             <ComboBox fx:id="comboSearchCriteria" promptText="Critère"
                      style="-fx-pref-width: 150px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 8 12; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
-            <TextField fx:id="txtSearchInterview" promptText="Rechercher entretiens..."
+
+            <!-- Default text search -->
+            <TextField fx:id="txtSearchInterview" promptText="Rechercher..."
                       style="-fx-pref-width: 250px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 8 12; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
+            <!-- Mode search input (shown only when Critère=Mode) -->
+            <ComboBox fx:id="comboSearchMode" promptText="Mode"
+                      visible="false" managed="false"
+                      style="-fx-pref-width: 180px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 8 12; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
+            <!-- Date search input (shown only when Critère=Date) -->
+            <DatePicker fx:id="dateSearchPicker" visible="false" managed="false"
+                        style="-fx-pref-width: 170px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 6 10; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
+            <!-- Status search input (shown only when Critère=Statut) -->
+            <ComboBox fx:id="comboSearchStatus" promptText="Statut"
+                      visible="false" managed="false"
+                      style="-fx-pref-width: 200px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 8 12; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
             <Button fx:id="btnSearchInterview" text="🔍"
                    style="-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 6 12; -fx-background-radius: 8; -fx-cursor: hand;"
                    onAction="#handleSearchInterview"/>

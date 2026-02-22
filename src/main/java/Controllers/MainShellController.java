@@ -157,23 +157,23 @@ public class MainShellController {
     private void applyRoleToShell() {
         boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
 
-        // Update button labels for interviews
+        // Entretiens
         if (btnInterviews != null) {
-            btnInterviews.setText(isRecruiter ? "📋  Interviews" : "📋  Upcoming Interviews");
+            btnInterviews.setText(isRecruiter ? "📅  Entretiens" : "📅  Entretiens à venir");
             btnInterviews.setVisible(true);
             btnInterviews.setManaged(true);
         }
 
-        // Applications button
+        // Candidatures
         if (btnApplications != null) {
-            btnApplications.setText("📨  Applications");
+            btnApplications.setText(isRecruiter ? "📋  Candidatures" : "📋  Mes candidatures");
             btnApplications.setVisible(true);
             btnApplications.setManaged(true);
         }
 
-        // Job Offers button
+        // Offres d'emploi
         if (btnJobOffers != null) {
-            btnJobOffers.setText("💼  Job Offers");
+            btnJobOffers.setText("💼  Offres d'emploi");
             btnJobOffers.setVisible(true);
             btnJobOffers.setManaged(true);
         }

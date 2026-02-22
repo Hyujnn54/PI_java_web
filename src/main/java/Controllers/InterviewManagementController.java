@@ -41,6 +41,10 @@ public class InterviewManagementController {
     @FXML private TextField txtSearchInterview;
     @FXML private Button btnCalendar;
 
+    @FXML private ComboBox<String> comboSearchMode;
+    @FXML private DatePicker dateSearchPicker;
+    @FXML private ComboBox<String> comboSearchStatus;
+
     // Feedback panel controls (bottom panel like interview edit)
     @FXML private VBox feedbackPanel;
     @FXML private ComboBox<String> comboFeedbackDecision;
@@ -91,13 +95,28 @@ public class InterviewManagementController {
             comboFeedbackDecision.setItems(FXCollections.observableArrayList("Accepté", "Rejeté"));
         }
 
-        // Setup search criteria combobox
+        // Setup search criteria combobox (recruiter)
         if (comboSearchCriteria != null) {
             comboSearchCriteria.setItems(FXCollections.observableArrayList(
-                "Nom", "Date", "Mode", "Statut", "Lieu"
+                "Date", "Mode", "Statut", "Lieu"
             ));
-            comboSearchCriteria.setValue("Nom"); // Default criterion
+            comboSearchCriteria.setValue("Date");
+
+            comboSearchCriteria.valueProperty().addListener((obs, oldVal, newVal) -> updateSearchInputForCriteria(newVal));
         }
+
+        if (comboSearchMode != null) {
+            comboSearchMode.setItems(FXCollections.observableArrayList("En Ligne", "Sur Site"));
+        }
+
+        if (comboSearchStatus != null) {
+            comboSearchStatus.setItems(FXCollections.observableArrayList(
+                "En attente", "Accepté", "Rejeté"
+            ));
+        }
+
+        // Initialize search input state
+        updateSearchInputForCriteria(comboSearchCriteria != null ? comboSearchCriteria.getValue() : null);
 
         // Setup feedback score live indicator
         if (txtFeedbackScore != null && lblScoreIndicator != null) {
@@ -181,45 +200,84 @@ public class InterviewManagementController {
         showEditDialog(null);
     }
 
-    @FXML
-    private void handleSearchInterview() {
-        if (txtSearchInterview == null || txtSearchInterview.getText().trim().isEmpty()) {
-            loadInterviews();
-            return;
+    private void updateSearchInputForCriteria(String criteria) {
+        if (txtSearchInterview == null) return;
+
+        boolean mode = "Mode".equals(criteria);
+        boolean date = "Date".equals(criteria);
+        boolean status = "Statut".equals(criteria);
+
+        if (comboSearchMode != null) {
+            comboSearchMode.setVisible(mode);
+            comboSearchMode.setManaged(mode);
+        }
+        if (dateSearchPicker != null) {
+            dateSearchPicker.setVisible(date);
+            dateSearchPicker.setManaged(date);
+        }
+        if (comboSearchStatus != null) {
+            comboSearchStatus.setVisible(status);
+            comboSearchStatus.setManaged(status);
         }
 
-        String keyword = txtSearchInterview.getText().trim().toLowerCase();
-        String criteria = comboSearchCriteria != null ? comboSearchCriteria.getValue() : "Nom";
+        txtSearchInterview.setVisible(!mode && !date && !status);
+        txtSearchInterview.setManaged(!mode && !date && !status);
+
+        if (!mode && !date && !status) {
+            txtSearchInterview.setPromptText("Rechercher...");
+        }
+    }
+
+    @FXML
+    private void handleSearchInterview() {
+        String criteria = comboSearchCriteria != null ? comboSearchCriteria.getValue() : "Date";
         List<Interview> allInterviews = InterviewService.getAll();
 
         List<Interview> filtered = allInterviews.stream()
             .filter(interview -> {
                 switch (criteria) {
-                    case "Nom":
-                        // Search by candidate name (from application)
-                        return searchByName(interview, keyword);
-                    case "Date":
-                        // Search by date
-                        String dateStr = interview.getScheduledAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                        return dateStr.contains(keyword);
-                    case "Mode":
-                        // Search by mode (ONLINE or ON_SITE)
-                        return interview.getMode() != null && interview.getMode().toLowerCase().contains(keyword);
-                    case "Statut":
-                        // Search by status
-                        return interview.getStatus() != null && interview.getStatus().toLowerCase().contains(keyword);
-                    case "Lieu":
-                        // Search by location or meeting link
+                    case "Date" -> {
+                        if (dateSearchPicker == null || dateSearchPicker.getValue() == null) return true;
+                        return interview.getScheduledAt() != null && interview.getScheduledAt().toLocalDate().equals(dateSearchPicker.getValue());
+                    }
+                    case "Mode" -> {
+                        if (comboSearchMode == null || comboSearchMode.getValue() == null) return true;
+                        String dbMode = convertModeToDatabase(comboSearchMode.getValue());
+                        return interview.getMode() != null && interview.getMode().equalsIgnoreCase(dbMode);
+                    }
+                    case "Statut" -> {
+                        if (comboSearchStatus == null || comboSearchStatus.getValue() == null) return true;
+                        String selected = comboSearchStatus.getValue();
+
+                        // Map dropdown values to DB fields
+                        if ("En attente".equals(selected)) {
+                            // Interview status: scheduled and no feedback
+                            return (interview.getStatus() == null || "SCHEDULED".equalsIgnoreCase(interview.getStatus()))
+                                   && !InterviewFeedbackService.existsForInterview(interview.getId());
+                        }
+
+                        // Accepted/Rejected come from feedback decision
+                        var feedbacks = InterviewFeedbackService.getByInterviewId(interview.getId());
+                        if (feedbacks.isEmpty()) return false;
+
+                        String decision = feedbacks.get(0).getDecision();
+                        if (decision == null) return false;
+
+                        if ("Accepté".equals(selected)) return "ACCEPTED".equalsIgnoreCase(decision);
+                        if ("Rejeté".equals(selected)) return "REJECTED".equalsIgnoreCase(decision);
+
+                        return true;
+                    }
+                    case "Lieu" -> {
+                        String keyword = txtSearchInterview != null ? txtSearchInterview.getText().trim().toLowerCase() : "";
+                        if (keyword.isEmpty()) return true;
                         String location = interview.getLocation() != null ? interview.getLocation().toLowerCase() : "";
                         String meetingLink = interview.getMeetingLink() != null ? interview.getMeetingLink().toLowerCase() : "";
                         return location.contains(keyword) || meetingLink.contains(keyword);
-                    default:
-                        // Default: search all fields
-                        String searchText = String.valueOf(interview.getId()) + " " +
-                                          (interview.getMode() != null ? interview.getMode() : "") + " " +
-                                          (interview.getStatus() != null ? interview.getStatus() : "") + " " +
-                                          formatDateTime(interview.getScheduledAt());
-                        return searchText.toLowerCase().contains(keyword);
+                    }
+                    default -> {
+                        return true;
+                    }
                 }
             })
             .toList();
@@ -229,12 +287,13 @@ public class InterviewManagementController {
 
     @FXML
     private void handleClearSearch() {
-        if (txtSearchInterview != null) {
-            txtSearchInterview.clear();
-        }
-        if (comboSearchCriteria != null) {
-            comboSearchCriteria.setValue("Nom");
-        }
+        if (txtSearchInterview != null) txtSearchInterview.clear();
+        if (comboSearchMode != null) comboSearchMode.setValue(null);
+        if (comboSearchStatus != null) comboSearchStatus.setValue(null);
+        if (dateSearchPicker != null) dateSearchPicker.setValue(null);
+        if (comboSearchCriteria != null) comboSearchCriteria.setValue("Date");
+
+        updateSearchInputForCriteria("Date");
         loadInterviews();
     }
 
@@ -534,7 +593,7 @@ public class InterviewManagementController {
         VBox statusBox = new VBox(10);
         statusBox.setStyle("-fx-background-color: rgba(91, 163, 245, 0.1); -fx-padding: 15; -fx-background-radius: 8;");
 
-        Label statusLabel = new Label("Interview Status");
+        Label statusLabel = new Label("Statut de l'entretien");
         statusLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;");
 
         Label statusValue = new Label(getStatusDescription(interview.getStatus()));
@@ -546,19 +605,19 @@ public class InterviewManagementController {
         // Interview details (no raw IDs shown)
         HBox detailsRow = new HBox(30);
         detailsRow.getChildren().addAll(
-            createInfoBox("📅 Date & Time", formatDateTime(interview.getScheduledAt())),
-            createInfoBox("⏱ Duration", interview.getDurationMinutes() + " min"),
-            createInfoBox("🎯 Mode", interview.getMode())
+            createInfoBox("📅 Date & Heure", formatDateTime(interview.getScheduledAt())),
+            createInfoBox("⏱ Durée", interview.getDurationMinutes() + " min"),
+            createInfoBox("🎯 Mode", convertModeToDisplay(interview.getMode()))
         );
 
         // Add meeting link or location info
         if ("ONLINE".equals(interview.getMode()) && interview.getMeetingLink() != null && !interview.getMeetingLink().trim().isEmpty()) {
-            Label linkLabel = new Label("🔗 Meeting Link: " + interview.getMeetingLink());
+            Label linkLabel = new Label("🔗 Lien de réunion: " + interview.getMeetingLink());
             linkLabel.setWrapText(true);
             linkLabel.setStyle("-fx-text-fill: #5BA3F5; -fx-font-size: 12px; -fx-padding: 5 0;");
             card.getChildren().add(linkLabel);
         } else if ("ON_SITE".equals(interview.getMode()) && interview.getLocation() != null && !interview.getLocation().trim().isEmpty()) {
-            Label locLabel = new Label("📍 Location: " + interview.getLocation());
+            Label locLabel = new Label("📍 Lieu: " + interview.getLocation());
             locLabel.setWrapText(true);
             locLabel.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 12px; -fx-padding: 5 0;");
             card.getChildren().add(locLabel);
@@ -587,14 +646,14 @@ public class InterviewManagementController {
     }
 
     private String getStatusDescription(String status) {
-        if (status == null) return "Pending Confirmation";
+        if (status == null) return "En attente de confirmation";
 
         return switch (status.toUpperCase()) {
-            case "SCHEDULED" -> "✓ Confirmed - Interview is scheduled and confirmed";
-            case "COMPLETED" -> "✓ Completed - Interview has been conducted";
-            case "CANCELLED" -> "✕ Cancelled - Interview has been cancelled";
-            case "RESCHEDULED" -> "🔄 Rescheduled - New time has been set";
-            default -> "Pending Confirmation";
+            case "SCHEDULED" -> "✓ Confirmé - L'entretien est planifié";
+            case "DONE", "COMPLETED" -> "✓ Terminé - L'entretien a eu lieu";
+            case "CANCELLED" -> "✕ Annulé - L'entretien a été annulé";
+            case "RESCHEDULED" -> "🔄 Replanifié - Un nouvel horaire a été défini";
+            default -> "En attente de confirmation";
         };
     }
 
@@ -970,24 +1029,24 @@ public class InterviewManagementController {
                 datePicker.setValue(interview.getScheduledAt().toLocalDate());
                 txtTime.setText(interview.getScheduledAt().format(DateTimeFormatter.ofPattern("HH:mm")));
                 txtDuration.setText(String.valueOf(interview.getDurationMinutes()));
-                comboMode.setValue(interview.getMode());
+                comboMode.setValue(convertModeToDisplay(interview.getMode()));
                 txtMeetingLink.setText(interview.getMeetingLink());
                 txtLocation.setText(interview.getLocation());
                 txtNotes.setText(interview.getNotes());
-                btnSave.setText("Update Interview");
-                toggleModeFields(interview.getMode()); // Set visibility based on mode
+                btnSave.setText("Mettre à jour");
+                toggleModeFields(comboMode.getValue());
                 System.out.println("Edit dialog opened for update - Interview ID: " + interview.getId());
             } else {
                 // Clear form for new interview with some default values
                 datePicker.setValue(LocalDate.now().plusDays(1));
                 txtTime.setText("14:00"); // Default to 2 PM
                 txtDuration.setText("60"); // Default to 60 minutes
-                comboMode.setValue("ON_SITE"); // Default to ON_SITE (matches database enum)
+                comboMode.setValue("Sur Site"); // Default to ON_SITE (matches database enum)
                 txtMeetingLink.setText("");
                 txtLocation.setText("");
                 txtNotes.setText("");
-                btnSave.setText("Create Interview");
-                toggleModeFields("ON_SITE"); // Set visibility for default mode
+                btnSave.setText("Créer");
+                toggleModeFields(comboMode.getValue());
                 System.out.println("Edit dialog opened for new interview");
             }
 
@@ -1106,8 +1165,12 @@ public class InterviewManagementController {
             return false;
         }
 
-        System.out.println("Validation passed successfully");
+        System.out.println("Validation réussie");
         return true;
+    }
+
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy - HH:mm"));
     }
 
     private void highlightSelectedCard(VBox card) {
@@ -1131,9 +1194,6 @@ public class InterviewManagementController {
         };
     }
 
-    private String formatDateTime(LocalDateTime dateTime) {
-        return dateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy - HH:mm"));
-    }
 
     private void showAlert(String title, String message, Alert.AlertType type) {
         Alert alert = new Alert(type);
