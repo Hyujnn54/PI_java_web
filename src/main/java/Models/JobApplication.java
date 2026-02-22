@@ -11,6 +11,7 @@ public class JobApplication {
     private String cvPath;
     private LocalDateTime appliedAt;
     private String currentStatus;
+    private boolean isArchived;
 
     public JobApplication() {
     }
@@ -23,10 +24,11 @@ public class JobApplication {
         this.cvPath = cvPath;
         this.currentStatus = "SUBMITTED";
         this.appliedAt = LocalDateTime.now();
+        this.isArchived = false;
     }
 
     public JobApplication(Long id, Long offerId, Long candidateId, String phone, String coverLetter,
-                         String cvPath, LocalDateTime appliedAt, String currentStatus) {
+                         String cvPath, LocalDateTime appliedAt, String currentStatus, boolean isArchived) {
         this.id = id;
         this.offerId = offerId;
         this.candidateId = candidateId;
@@ -35,6 +37,7 @@ public class JobApplication {
         this.cvPath = cvPath;
         this.appliedAt = appliedAt;
         this.currentStatus = currentStatus;
+        this.isArchived = isArchived;
     }
 
     public Long getId() {
@@ -101,6 +104,14 @@ public class JobApplication {
         this.currentStatus = currentStatus;
     }
 
+    public boolean isArchived() {
+        return isArchived;
+    }
+
+    public void setArchived(boolean archived) {
+        isArchived = archived;
+    }
+
     @Override
     public String toString() {
         return "JobApplication{" +
@@ -112,7 +123,7 @@ public class JobApplication {
                 ", cvPath='" + cvPath + '\'' +
                 ", appliedAt=" + appliedAt +
                 ", currentStatus='" + currentStatus + '\'' +
+                ", isArchived=" + isArchived +
                 '}';
     }
 }
-

@@ -72,6 +72,13 @@ public class ApplicationsController {
                 .toList();
         }
 
+        // Hide archived applications for non-admins
+        if (role != UserContext.Role.ADMIN) {
+            applications = applications.stream()
+                .filter(app -> !app.isArchived())
+                .toList();
+        }
+
         if (applications.isEmpty()) {
             Label empty = new Label("No applications found");
             empty.setStyle("-fx-text-fill: #999; -fx-font-size: 14px; -fx-padding: 30;");
@@ -109,12 +116,21 @@ public class ApplicationsController {
         Label statusBadge = new Label(app.currentStatus());
         statusBadge.setStyle("-fx-padding: 4 8; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-border-radius: 3; -fx-font-size: 11;");
 
+        // Archived badge
+        if (app.isArchived()) {
+            Label archivedBadge = new Label("ARCHIVED");
+            archivedBadge.setStyle("-fx-padding: 4 8; -fx-background-color: #6c757d; -fx-text-fill: white; -fx-border-radius: 3; -fx-font-size: 11;");
+            statusBox.getChildren().addAll(statusBadge, archivedBadge);
+        } else {
+            statusBox.getChildren().addAll(statusBadge);
+        }
+
         Label appliedDate = new Label(app.appliedAt() != null
             ? app.appliedAt().format(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
             : "N/A");
         appliedDate.setStyle("-fx-text-fill: #999; -fx-font-size: 11;");
 
-        statusBox.getChildren().addAll(statusBadge, appliedDate);
+        statusBox.getChildren().add(appliedDate);
 
         card.getChildren().addAll(candidateName, jobTitle, statusBox);
         card.setOnMouseClicked(e -> selectApplication(app, card));
@@ -356,7 +372,17 @@ public class ApplicationsController {
             btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
             btnDelete.setOnAction(e -> deleteApplication(app));
 
-            buttonBox.getChildren().add(btnDelete);
+            // Archive / Unarchive button
+            Button btnArchive = new Button(app.isArchived() ? "Unarchive" : "Archive");
+            btnArchive.setStyle("-fx-padding: 6 12; -fx-background-color: #6c757d; -fx-text-fill: white; -fx-cursor: hand;");
+            btnArchive.setOnAction(e -> {
+                boolean toArchive = !app.isArchived();
+                ApplicationService.setArchived(app.id(), toArchive, UserContext.getAdminId());
+                loadApplications();
+                showAlert("Success", toArchive ? "Application archived." : "Application unarchived.", Alert.AlertType.INFORMATION);
+            });
+
+            buttonBox.getChildren().addAll(btnArchive, btnDelete);
             actionsBox.getChildren().add(buttonBox);
         }
 

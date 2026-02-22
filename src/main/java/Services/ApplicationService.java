@@ -21,7 +21,8 @@ public class ApplicationService {
         String currentStatus,
         String candidateName,
         String candidateEmail,
-        String jobTitle
+        String jobTitle,
+        boolean isArchived
     ) {}
 
     private static FileService fileService = new FileService();
@@ -92,7 +93,7 @@ public class ApplicationService {
     public static List<ApplicationRow> getAll() {
         List<ApplicationRow> list = new ArrayList<>();
         String sql = "SELECT ja.id, ja.offer_id, ja.candidate_id, ja.phone, ja.cover_letter, ja.cv_path, " +
-                     "ja.applied_at, ja.current_status, " +
+                     "ja.applied_at, ja.current_status, ja.is_archived, " +
                      "CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as candidate_name, " +
                      "u.email as candidate_email, jo.title as job_title " +
                      "FROM job_application ja " +
@@ -115,7 +116,8 @@ public class ApplicationService {
                     rs.getString("current_status"),
                     rs.getString("candidate_name"),
                     rs.getString("candidate_email"),
-                    rs.getString("job_title")
+                    rs.getString("job_title"),
+                    rs.getBoolean("is_archived")
                 ));
             }
         } catch (SQLException e) {
@@ -128,7 +130,7 @@ public class ApplicationService {
     // READ - By ID
     public static ApplicationRow getById(Long id) {
         String sql = "SELECT ja.id, ja.offer_id, ja.candidate_id, ja.phone, ja.cover_letter, ja.cv_path, " +
-                     "ja.applied_at, ja.current_status, " +
+                     "ja.applied_at, ja.current_status, ja.is_archived, " +
                      "CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as candidate_name, " +
                      "u.email as candidate_email, jo.title as job_title " +
                      "FROM job_application ja " +
@@ -150,7 +152,8 @@ public class ApplicationService {
                         rs.getString("current_status"),
                         rs.getString("candidate_name"),
                         rs.getString("candidate_email"),
-                        rs.getString("job_title")
+                        rs.getString("job_title"),
+                        rs.getBoolean("is_archived")
                     );
                 }
             }
@@ -164,7 +167,7 @@ public class ApplicationService {
     public static List<ApplicationRow> getByCandidateId(Long candidateId) {
         List<ApplicationRow> list = new ArrayList<>();
         String sql = "SELECT ja.id, ja.offer_id, ja.candidate_id, ja.phone, ja.cover_letter, ja.cv_path, " +
-                     "ja.applied_at, ja.current_status, " +
+                     "ja.applied_at, ja.current_status, ja.is_archived, " +
                      "CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as candidate_name, " +
                      "u.email as candidate_email, jo.title as job_title " +
                      "FROM job_application ja " +
@@ -188,7 +191,8 @@ public class ApplicationService {
                         rs.getString("current_status"),
                         rs.getString("candidate_name"),
                         rs.getString("candidate_email"),
-                        rs.getString("job_title")
+                        rs.getString("job_title"),
+                        rs.getBoolean("is_archived")
                     ));
                 }
             }
@@ -203,7 +207,7 @@ public class ApplicationService {
     public static List<ApplicationRow> getByOfferId(Long offerId) {
         List<ApplicationRow> list = new ArrayList<>();
         String sql = "SELECT ja.id, ja.offer_id, ja.candidate_id, ja.phone, ja.cover_letter, ja.cv_path, " +
-                     "ja.applied_at, ja.current_status, " +
+                     "ja.applied_at, ja.current_status, ja.is_archived, " +
                      "CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as candidate_name, " +
                      "u.email as candidate_email, jo.title as job_title " +
                      "FROM job_application ja " +
@@ -227,7 +231,8 @@ public class ApplicationService {
                         rs.getString("current_status"),
                         rs.getString("candidate_name"),
                         rs.getString("candidate_email"),
-                        rs.getString("job_title")
+                        rs.getString("job_title"),
+                        rs.getBoolean("is_archived")
                     ));
                 }
             }
@@ -275,6 +280,26 @@ public class ApplicationService {
         }
     }
 
+    // Archive / Unarchive
+    public static void setArchived(Long applicationId, boolean archived, Long changedBy) {
+        String sql = "UPDATE job_application SET is_archived = ? WHERE id = ?";
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setInt(1, archived ? 1 : 0);
+            ps.setLong(2, applicationId);
+
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                String status = archived ? "ARCHIVED" : "UNARCHIVED";
+                String note = archived ? "Application archived by admin" : "Application unarchived by admin";
+                // Add a history entry to record the archive action
+                ApplicationStatusHistoryService.addStatusHistory(applicationId, status, changedBy, note);
+                System.out.println("Application archive flag updated: " + applicationId + " -> " + archived);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error setting archive flag: " + e.getMessage());
+        }
+    }
+
     // DELETE
     public static void delete(Long applicationId) {
         // First, get the application to retrieve PDF path
@@ -304,4 +329,3 @@ public class ApplicationService {
         }
     }
 }
-
