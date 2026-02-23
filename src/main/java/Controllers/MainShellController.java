@@ -73,7 +73,7 @@ public class MainShellController {
     }
 
     @FXML private void handleDashboardNav() {
-        activePage = "/AdminDashboard.fxml";
+        activePage = "/AdminApplicationStatistics.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnDashboard);
     }
@@ -218,7 +218,7 @@ public class MainShellController {
         // Dashboard button - only show for admin
         if (btnDashboard != null) {
             if (isAdmin) {
-                btnDashboard.setText("👨‍💼  Dashboard");
+                btnDashboard.setText("📊  Application Statistics");
                 btnDashboard.setVisible(true);
                 btnDashboard.setManaged(true);
             } else {

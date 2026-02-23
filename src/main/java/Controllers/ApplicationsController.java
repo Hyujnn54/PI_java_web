@@ -30,6 +30,8 @@ public class ApplicationsController {
 
     private VBox detailContainer;
     private ApplicationService.ApplicationRow selectedApplication;
+    private List<Long> selectedApplicationIds = new ArrayList<>();
+    private VBox bulkActionPanel;
 
     @FXML
     public void initialize() {
@@ -49,6 +51,7 @@ public class ApplicationsController {
     private void loadApplications() {
         if (candidateListContainer == null) return;
         candidateListContainer.getChildren().clear();
+        selectedApplicationIds.clear();
 
         List<ApplicationService.ApplicationRow> applications = ApplicationService.getAll();
         UserContext.Role role = UserContext.getRole();
@@ -86,6 +89,11 @@ public class ApplicationsController {
             return;
         }
 
+        // Create bulk action panel for recruiters (shown at top)
+        if (role == UserContext.Role.RECRUITER) {
+            createAndShowBulkActionPanel(candidateListContainer);
+        }
+
         // Add applications to list
         boolean first = true;
         for (ApplicationService.ApplicationRow app : applications) {
@@ -99,10 +107,90 @@ public class ApplicationsController {
         }
     }
 
+    private void createAndShowBulkActionPanel(VBox container) {
+        bulkActionPanel = new VBox(12);
+        bulkActionPanel.setStyle("-fx-border-color: #007bff; -fx-border-radius: 4; -fx-padding: 15; -fx-background-color: #e7f3ff; -fx-border-width: 2;");
+        bulkActionPanel.setVisible(false);
+        bulkActionPanel.setManaged(false);
+
+        Label titleLabel = new Label("Bulk Actions");
+        titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #004085;");
+
+        HBox selectionInfo = new HBox(10);
+        Label selectionText = new Label("No applications selected");
+        selectionText.setStyle("-fx-text-fill: #004085;");
+
+        // Update selection text dynamically
+        selectedApplicationIds.stream();
+
+        selectionInfo.getChildren().add(selectionText);
+
+        HBox actionRow = new HBox(10);
+        actionRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label statusLabel = new Label("Change Status:");
+        statusLabel.setStyle("-fx-font-weight: bold;");
+
+        ComboBox<String> statusCombo = new ComboBox<>();
+        statusCombo.getItems().addAll("SUBMITTED", "IN_REVIEW", "SHORTLISTED", "REJECTED", "INTERVIEW", "HIRED");
+        statusCombo.setPrefWidth(180);
+        statusCombo.setPromptText("Select status...");
+
+        TextArea noteArea = new TextArea();
+        noteArea.setPromptText("Add note (optional)");
+        noteArea.setPrefRowCount(2);
+        noteArea.setWrapText(true);
+        noteArea.setStyle("-fx-font-size: 12px;");
+
+        Button btnBulkUpdate = new Button("Update");
+        btnBulkUpdate.setStyle("-fx-padding: 6 12; -fx-background-color: #007bff; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+        btnBulkUpdate.setOnAction(e -> {
+            if (selectedApplicationIds.isEmpty()) {
+                showAlert("Warning", "No applications selected", Alert.AlertType.WARNING);
+                return;
+            }
+            if (statusCombo.getValue() == null) {
+                showAlert("Warning", "Please select a status", Alert.AlertType.WARNING);
+                return;
+            }
+            bulkUpdateStatus(new ArrayList<>(selectedApplicationIds), statusCombo.getValue(), noteArea.getText());
+        });
+
+        actionRow.getChildren().addAll(statusLabel, statusCombo, btnBulkUpdate);
+        VBox.setVgrow(actionRow, Priority.NEVER);
+
+        bulkActionPanel.getChildren().addAll(titleLabel, selectionInfo, actionRow);
+        container.getChildren().add(0, bulkActionPanel);
+    }
+
     private VBox createApplicationCard(ApplicationService.ApplicationRow app) {
         VBox card = new VBox(8);
         card.setStyle("-fx-border-color: #ddd; -fx-border-radius: 4; -fx-padding: 12; -fx-background-color: white; -fx-cursor: hand;");
         card.setUserData(app);
+
+        HBox cardContent = new HBox(10);
+        cardContent.setAlignment(Pos.CENTER_LEFT);
+
+        // Checkbox for recruiter bulk select
+        if (UserContext.getRole() == UserContext.Role.RECRUITER) {
+            CheckBox selectCheckbox = new CheckBox();
+            selectCheckbox.setStyle("-fx-font-size: 14px;");
+            selectCheckbox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal) {
+                    if (!selectedApplicationIds.contains(app.id())) {
+                        selectedApplicationIds.add(app.id());
+                    }
+                } else {
+                    selectedApplicationIds.remove(app.id());
+                }
+                updateBulkActionPanel();
+            });
+            cardContent.getChildren().add(selectCheckbox);
+            card.setUserData(new Object[]{app, selectCheckbox});
+        }
+
+        VBox infoBox = new VBox(4);
+        HBox.setHgrow(infoBox, Priority.ALWAYS);
 
         Label candidateName = new Label(app.candidateName() != null && !app.candidateName().trim().isEmpty()
             ? app.candidateName()
@@ -132,8 +220,15 @@ public class ApplicationsController {
 
         statusBox.getChildren().add(appliedDate);
 
-        card.getChildren().addAll(candidateName, jobTitle, statusBox);
-        card.setOnMouseClicked(e -> selectApplication(app, card));
+        infoBox.getChildren().addAll(candidateName, jobTitle, statusBox);
+        cardContent.getChildren().add(infoBox);
+        card.getChildren().add(cardContent);
+        card.setOnMouseClicked(e -> {
+            // Only select if not clicking on checkbox
+            if (!(e.getTarget() instanceof CheckBox)) {
+                selectApplication(app, card);
+            }
+        });
 
         return card;
     }
@@ -863,5 +958,36 @@ public class ApplicationsController {
                 }
             }
         });
+    }
+
+    private void updateBulkActionPanel() {
+        if (bulkActionPanel == null) return;
+
+        if (selectedApplicationIds.isEmpty()) {
+            bulkActionPanel.setVisible(false);
+            bulkActionPanel.setManaged(false);
+        } else {
+            bulkActionPanel.setVisible(true);
+            bulkActionPanel.setManaged(true);
+        }
+    }
+
+    private void bulkUpdateStatus(List<Long> applicationIds, String newStatus, String note) {
+        try {
+            Long recruiterId = UserContext.getRecruiterId();
+
+            // Generate automatic note if empty
+            String finalNote = note;
+            if (note == null || note.trim().isEmpty()) {
+                finalNote = generateStatusChangeNote("MULTIPLE", newStatus);
+            }
+
+            ApplicationService.bulkUpdateStatus(applicationIds, newStatus, recruiterId, finalNote);
+            selectedApplicationIds.clear();
+            loadApplications();
+            showAlert("Success", "Updated " + applicationIds.size() + " application(s) to: " + newStatus, Alert.AlertType.INFORMATION);
+        } catch (Exception e) {
+            showAlert("Error", "Failed to update statuses: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
     }
 }

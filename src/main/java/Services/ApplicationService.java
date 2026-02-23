@@ -300,6 +300,39 @@ public class ApplicationService {
         }
     }
 
+    // BULK UPDATE Status
+    public static void bulkUpdateStatus(List<Long> applicationIds, String status, Long changedBy, String note) {
+        if (applicationIds == null || applicationIds.isEmpty()) {
+            System.err.println("No applications to update");
+            return;
+        }
+
+        String sql = "UPDATE job_application SET current_status = ? WHERE id = ?";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            for (Long applicationId : applicationIds) {
+                ps.setString(1, status);
+                ps.setLong(2, applicationId);
+                ps.addBatch();
+            }
+
+            int[] results = ps.executeBatch();
+            int updatedCount = 0;
+
+            // Add history entries for each updated application
+            for (int i = 0; i < results.length; i++) {
+                if (results[i] > 0) {
+                    updatedCount++;
+                    ApplicationStatusHistoryService.addStatusHistory(applicationIds.get(i), status, changedBy, note);
+                }
+            }
+
+            System.out.println("Bulk status update completed: " + updatedCount + " applications updated to " + status);
+        } catch (SQLException e) {
+            System.err.println("Error in bulk status update: " + e.getMessage());
+        }
+    }
+
     // DELETE
     public static void delete(Long applicationId) {
         // First, get the application to retrieve PDF path

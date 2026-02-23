@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.AdminDashboardController" spacing="20" styleClass="page"
+      stylesheets="@styles.css" style="-fx-background-color: #f8f9fa;">
+
+    <padding>
+        <Insets top="25" left="25" right="25" bottom="25"/>
+    </padding>
+
+    <!-- Header Section -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox spacing="5" HBox.hgrow="ALWAYS">
+            <Label text="Application Statistics" styleClass="page-title"/>
+            <Label text="Overview of all job applications and offers" styleClass="page-subtitle"/>
+        </VBox>
+        <Button text="Refresh" fx:id="btnRefresh" styleClass="btn-primary"/>
+    </HBox>
+
+    <!-- Global Statistics Section -->
+    <VBox spacing="15" style="-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 20; -fx-background-color: white;">
+        <Label text="Overall Statistics" style="-fx-font-weight: bold; -fx-font-size: 16;"/>
+
+        <HBox spacing="20" fx:id="globalStatsContainer">
+            <!-- Stats cards will be added dynamically -->
+        </HBox>
+    </VBox>
+
+    <!-- Per-Offer Statistics Section -->
+    <VBox spacing="15" VBox.vgrow="ALWAYS" style="-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 20; -fx-background-color: white;">
+        <Label text="Per-Offer Statistics" style="-fx-font-weight: bold; -fx-font-size: 16;"/>
+
+        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
+            <VBox fx:id="offerStatsContainer" spacing="15" style="-fx-padding: 5;"/>
+        </ScrollPane>
+    </VBox>
+
+</VBox>
+
