@@ -418,12 +418,20 @@ public class ApplicationsController {
             btnEdit.setStyle("-fx-padding: 6 12; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
             btnEdit.setOnAction(e -> showEditApplicationDialog(app));
 
+            // Only enable edit if status is SUBMITTED
+            boolean canEdit = "SUBMITTED".equals(app.currentStatus());
+            btnEdit.setDisable(!canEdit);
+            if (!canEdit) {
+                btnEdit.setStyle("-fx-padding: 6 12; -fx-background-color: #ccc; -fx-text-fill: #666; -fx-cursor: not-allowed;");
+            }
+
             Button btnDelete = new Button("Delete");
             btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
             btnDelete.setOnAction(e -> deleteApplication(app));
 
             buttonBox.getChildren().addAll(btnEdit, btnDelete);
             actionsBox.getChildren().add(buttonBox);
+
         } else if (role == UserContext.Role.RECRUITER) {
             VBox statusUpdateBox = new VBox(8);
 
@@ -448,6 +456,10 @@ public class ApplicationsController {
             HBox quickActionsBox = new HBox(10);
             quickActionsBox.setStyle("-fx-padding: 10 0; -fx-border-top: 1px solid #ddd; -fx-padding: 10;");
 
+            Button btnInReview = new Button("📋 In Review");
+            btnInReview.setStyle("-fx-padding: 8 15; -fx-background-color: #17a2b8; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+            btnInReview.setOnAction(e -> startReviewApplication(app));
+
             Button btnAccept = new Button("✓ Accept (Shortlist)");
             btnAccept.setStyle("-fx-padding: 8 15; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
             btnAccept.setOnAction(e -> acceptApplication(app));
@@ -456,7 +468,7 @@ public class ApplicationsController {
             btnReject.setStyle("-fx-padding: 8 15; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
             btnReject.setOnAction(e -> rejectApplication(app));
 
-            quickActionsBox.getChildren().addAll(btnAccept, btnReject);
+            quickActionsBox.getChildren().addAll(btnInReview, btnAccept, btnReject);
 
             statusUpdateBox.getChildren().addAll(statusLabel, statusCombo, new Label("Note:"), noteArea, btnUpdate, quickActionsBox);
             actionsBox.getChildren().add(statusUpdateBox);
@@ -779,6 +791,19 @@ public class ApplicationsController {
             showAlert("Success", "Application accepted!\n\nCandidate has been shortlisted", Alert.AlertType.INFORMATION);
         } catch (Exception e) {
             showAlert("Error", "Failed to accept application: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    private void startReviewApplication(ApplicationService.ApplicationRow app) {
+        try {
+            Long recruiterId = UserContext.getRecruiterId();
+            String note = "Recruiter has started reviewing this application";
+
+            ApplicationService.updateStatus(app.id(), "IN_REVIEW", recruiterId, note);
+            loadApplications();
+            showAlert("Success", "Application status changed to In Review", Alert.AlertType.INFORMATION);
+        } catch (Exception e) {
+            showAlert("Error", "Failed to change status: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
