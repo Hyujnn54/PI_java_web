@@ -349,6 +349,122 @@ public class JobOfferService {
         return 0;
     }
 
+    // ==================== FILTRAGE AVANCÉ ====================
+
+    /**
+     * Filtrage avancé des offres par ville, type de contrat et statut
+     * @param location La ville (null ou vide pour ignorer)
+     * @param contractType Le type de contrat (null pour ignorer)
+     * @param status Le statut (null pour ignorer)
+     * @return Liste des offres correspondant aux critères
+     */
+    public List<JobOffer> filterJobOffers(String location, ContractType contractType, Status status) throws SQLException {
+        List<JobOffer> jobOffers = new ArrayList<>();
+        StringBuilder queryBuilder = new StringBuilder("SELECT * FROM job_offer WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        // Filtre par ville (location)
+        if (location != null && !location.trim().isEmpty()) {
+            queryBuilder.append(" AND location LIKE ?");
+            params.add("%" + location.trim() + "%");
+        }
+
+        // Filtre par type de contrat
+        if (contractType != null) {
+            queryBuilder.append(" AND contract_type = ?");
+            params.add(contractType.name());
+        }
+
+        // Filtre par statut
+        if (status != null) {
+            queryBuilder.append(" AND status = ?");
+            params.add(status.name());
+        }
+
+        queryBuilder.append(" ORDER BY created_at DESC");
+
+        try (PreparedStatement ps = connection.prepareStatement(queryBuilder.toString())) {
+            // Définir les paramètres
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                jobOffers.add(mapResultSetToJobOffer(rs));
+            }
+        }
+
+        return jobOffers;
+    }
+
+    /**
+     * Filtrage avancé des offres pour un recruteur spécifique
+     * @param recruiterId L'ID du recruteur
+     * @param location La ville (null ou vide pour ignorer)
+     * @param contractType Le type de contrat (null pour ignorer)
+     * @param status Le statut (null pour ignorer)
+     * @return Liste des offres correspondant aux critères
+     */
+    public List<JobOffer> filterJobOffersByRecruiter(Long recruiterId, String location, ContractType contractType, Status status) throws SQLException {
+        List<JobOffer> jobOffers = new ArrayList<>();
+        StringBuilder queryBuilder = new StringBuilder("SELECT * FROM job_offer WHERE recruiter_id = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(recruiterId);
+
+        // Filtre par ville (location)
+        if (location != null && !location.trim().isEmpty()) {
+            queryBuilder.append(" AND location LIKE ?");
+            params.add("%" + location.trim() + "%");
+        }
+
+        // Filtre par type de contrat
+        if (contractType != null) {
+            queryBuilder.append(" AND contract_type = ?");
+            params.add(contractType.name());
+        }
+
+        // Filtre par statut
+        if (status != null) {
+            queryBuilder.append(" AND status = ?");
+            params.add(status.name());
+        }
+
+        queryBuilder.append(" ORDER BY created_at DESC");
+
+        try (PreparedStatement ps = connection.prepareStatement(queryBuilder.toString())) {
+            // Définir les paramètres
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                jobOffers.add(mapResultSetToJobOffer(rs));
+            }
+        }
+
+        return jobOffers;
+    }
+
+    /**
+     * Récupère toutes les villes distinctes présentes dans les offres
+     * @return Liste des villes uniques
+     */
+    public List<String> getAllLocations() throws SQLException {
+        List<String> locations = new ArrayList<>();
+        String query = "SELECT DISTINCT location FROM job_offer WHERE location IS NOT NULL AND location != '' ORDER BY location";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) {
+                locations.add(rs.getString("location"));
+            }
+        }
+
+        return locations;
+    }
+
     // Inner class for displaying job offers with additional info (optional)
     public static class JobOfferRow {
         public Long id;

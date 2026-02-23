@@ -82,11 +82,12 @@ public class MainShellController {
         highlightActiveButton(btnStatistics);
     }
 
+
     @FXML private void handleDisconnect() {
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmAlert.setTitle("Disconnect");
-        confirmAlert.setHeaderText("Are you sure you want to exit?");
-        confirmAlert.setContentText("The application will close.");
+        confirmAlert.setTitle("Déconnexion");
+        confirmAlert.setHeaderText("Êtes-vous sûr de vouloir quitter ?");
+        confirmAlert.setContentText("L'application va se fermer.");
 
         confirmAlert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
@@ -110,8 +111,8 @@ public class MainShellController {
     @FXML private void handleNotifications() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Notifications");
-        alert.setHeaderText("You have 3 new notifications");
-        alert.setContentText("• Interview scheduled for tomorrow\n• Feedback request pending\n• New job application received");
+        alert.setHeaderText("Vous avez 3 nouvelles notifications");
+        alert.setContentText("• Entretien prévu pour demain\n• Demande de feedback en attente\n• Nouvelle candidature reçue");
         alert.showAndWait();
     }
 
@@ -148,9 +149,9 @@ public class MainShellController {
 
     private void showNotImplementedAlert(String featureName) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Feature Not Implemented");
-        alert.setHeaderText(featureName + " - Coming Soon");
-        alert.setContentText("This feature is not yet implemented.\nRedirecting to Job Offers...");
+        alert.setTitle("Fonctionnalité non implémentée");
+        alert.setHeaderText(featureName + " - Bientôt disponible");
+        alert.setContentText("Cette fonctionnalité n'est pas encore implémentée.\nRedirection vers les Offres d'emploi...");
         alert.show();
     }
 
@@ -177,30 +178,49 @@ public class MainShellController {
         Utils.UserContext.Role role = Utils.UserContext.getRole();
         boolean isRecruiter = role == Utils.UserContext.Role.RECRUITER;
         boolean isAdmin = role == Utils.UserContext.Role.ADMIN;
+        boolean isCandidate = role == Utils.UserContext.Role.CANDIDATE;
+
+        // Masquer le bouton Statistiques pour les candidats
+        if (btnStatistics != null) {
+            if (isCandidate) {
+                btnStatistics.setVisible(false);
+                btnStatistics.setManaged(false);
+            } else {
+                btnStatistics.setVisible(true);
+                btnStatistics.setManaged(true);
+                if (isAdmin) {
+                    btnStatistics.setText("📊  Statistiques Globales");
+                } else {
+                    btnStatistics.setText("📊  Mes Statistiques");
+                }
+            }
+        }
 
         if (btnInterviews != null) {
             if (isAdmin) {
-                btnInterviews.setText("⚙️  System");
+                btnInterviews.setText("⚙️  Système");
             } else if (isRecruiter) {
-                btnInterviews.setText("📋  Interviews");
+                btnInterviews.setText("📋  Entretiens");
             } else {
-                btnInterviews.setText("📋  Upcoming Interviews");
+                btnInterviews.setText("📋  Mes Entretiens");
             }
         }
         if (btnApplications != null) {
             if (isAdmin) {
-                btnApplications.setText("📊  Reports");
+                btnApplications.setText("📊  Rapports");
             } else {
-                btnApplications.setText("📨  Applications");
+                btnApplications.setText("📨  Candidatures");
             }
             btnApplications.setVisible(true);
             btnApplications.setManaged(true);
         }
         if (btnJobOffers != null) {
             if (isAdmin) {
-                btnJobOffers.setText("⚙️  Manage All Jobs");
+                btnJobOffers.setText("⚙️  Gérer les offres");
+            } else if (isRecruiter) {
+                btnJobOffers.setText("💼  Mes Offres");
             } else {
-                btnJobOffers.setText("💼  Job Offers");
+                btnJobOffers.setText("💼  Offres d'emploi");
             }
             btnJobOffers.setVisible(true);
             btnJobOffers.setManaged(true);

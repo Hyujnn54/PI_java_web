@@ -45,15 +45,15 @@
             <VBox spacing="0" style="-fx-padding: 25 0 15 0;">
                 <Label text="MENU" styleClass="sidebar-section-label"/>
 
-                <Button fx:id="btnInterviews" onAction="#handleInterviewsNav" text="📅  Interviews"
+                <Button fx:id="btnInterviews" onAction="#handleInterviewsNav" text="📅  Entretiens"
                         styleClass="sidebar-button" maxWidth="Infinity">
                     <VBox.margin><Insets top="8"/></VBox.margin>
                 </Button>
 
-                <Button fx:id="btnApplications" onAction="#handleApplicationsNav" text="📋  Applications"
+                <Button fx:id="btnApplications" onAction="#handleApplicationsNav" text="📋  Candidatures"
                         styleClass="sidebar-button" maxWidth="Infinity"/>
 
-                <Button fx:id="btnJobOffers" onAction="#handleJobOffersNav" text="💼  Job Offers"
+                <Button fx:id="btnJobOffers" onAction="#handleJobOffersNav" text="💼  Offres d'emploi"
                         styleClass="sidebar-button" maxWidth="Infinity"/>
 
                 <Button fx:id="btnStatistics" onAction="#handleStatistics" text="📊  Statistiques"

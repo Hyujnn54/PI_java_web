@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:id="mainContainer" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.JobOffersFilterController"
+      spacing="0" styleClass="page"
+      stylesheets="@styles.css" style="-fx-background-color: #f8f9fa;"
+      VBox.vgrow="ALWAYS">
+
+    <!-- Filter controls (hidden, managed by controller) -->
+    <TextField fx:id="txtLocationFilter" visible="false" managed="false"/>
+    <ComboBox fx:id="cbContractTypeFilter" visible="false" managed="false"/>
+    <ComboBox fx:id="cbStatusFilter" visible="false" managed="false"/>
+    <Button fx:id="btnApplyFilter" visible="false" managed="false"/>
+    <Button fx:id="btnClearFilter" visible="false" managed="false"/>
+
+</VBox>
