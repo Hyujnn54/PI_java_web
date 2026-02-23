@@ -10,6 +10,7 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 
@@ -41,11 +42,134 @@ public class ApplicationsController {
         } else {
             detailContainer = new VBox(15);
         }
+
+        // Initialize search UI
+        initializeSearchUI();
         loadApplications();
     }
 
-    private void setupUI() {
-        // setupUI is no longer needed as FXML handles the layout
+    private void initializeSearchUI() {
+        UserContext.Role role = UserContext.getRole();
+
+        // Set search criteria options based on role
+        if (cbSearchCriteria != null) {
+            if (role == UserContext.Role.RECRUITER || role == UserContext.Role.ADMIN) {
+                cbSearchCriteria.getItems().addAll(
+                    "Candidate Name",
+                    "Candidate Email",
+                    "Offer Title"
+                );
+            } else if (role == UserContext.Role.CANDIDATE) {
+                cbSearchCriteria.getItems().addAll(
+                    "Offer Title",
+                    "Company Name",
+                    "Status"
+                );
+            }
+            cbSearchCriteria.setPromptText("Search by...");
+        }
+
+        // Setup search button
+        if (btnSearch != null) {
+            btnSearch.setOnAction(e -> performSearch());
+        }
+
+        // Setup clear button
+        if (btnClear != null) {
+            btnClear.setOnAction(e -> clearSearch());
+        }
+
+        // Allow search on Enter key
+        if (txtSearch != null) {
+            txtSearch.setOnKeyPressed(e -> {
+                if (e.getCode() == KeyCode.ENTER) {
+                    performSearch();
+                }
+            });
+        }
+    }
+
+    private void performSearch() {
+        String searchCriteria = cbSearchCriteria.getValue();
+        String searchText = txtSearch.getText();
+
+        if (searchCriteria == null || searchCriteria.isEmpty()) {
+            showAlert("Warning", "Please select a search criteria", Alert.AlertType.WARNING);
+            return;
+        }
+
+        if (searchText == null || searchText.trim().isEmpty()) {
+            showAlert("Warning", "Please enter search text", Alert.AlertType.WARNING);
+            return;
+        }
+
+        UserContext.Role role = UserContext.getRole();
+        List<Long> offerIds = null;
+
+        // Get offer IDs based on role
+        if (role == UserContext.Role.RECRUITER) {
+            Long recruiterId = UserContext.getRecruiterId();
+            List<JobOfferService.JobOfferRow> recruiterOffers = JobOfferService.getByRecruiterId(recruiterId);
+            offerIds = recruiterOffers.stream()
+                .map(JobOfferService.JobOfferRow::id)
+                .toList();
+        }
+        // For candidates and admins, pass null to search all offers
+
+        // Perform search
+        List<ApplicationService.ApplicationRow> searchResults = ApplicationService.searchApplications(
+            offerIds,
+            searchCriteria,
+            searchText
+        );
+
+        // Filter by role if needed
+        if (role == UserContext.Role.CANDIDATE) {
+            Long candidateId = UserContext.getCandidateId();
+            searchResults = searchResults.stream()
+                .filter(app -> app.candidateId().equals(candidateId))
+                .toList();
+        }
+
+        displaySearchResults(searchResults);
+    }
+
+    private void clearSearch() {
+        cbSearchCriteria.setValue(null);
+        cbSearchCriteria.getSelectionModel().clearSelection();
+        txtSearch.clear();
+        loadApplications();
+    }
+
+    private void displaySearchResults(List<ApplicationService.ApplicationRow> results) {
+        if (candidateListContainer == null) return;
+        candidateListContainer.getChildren().clear();
+        selectedApplicationIds.clear();
+
+        if (results.isEmpty()) {
+            Label empty = new Label("No applications found matching your search");
+            empty.setStyle("-fx-text-fill: #999; -fx-font-size: 14px; -fx-padding: 30;");
+            candidateListContainer.getChildren().add(empty);
+            return;
+        }
+
+        // Hide bulk action panel for search results
+        if (bulkActionPanel != null) {
+            bulkActionPanel.setVisible(false);
+            bulkActionPanel.setManaged(false);
+        }
+
+        // Add results to list
+        boolean first = true;
+        for (ApplicationService.ApplicationRow app : results) {
+            VBox card = createApplicationCard(app);
+            candidateListContainer.getChildren().add(card);
+
+            if (first) {
+                selectApplication(app, card);
+                first = false;
+            }
+        }
     }
 
     private void loadApplications() {

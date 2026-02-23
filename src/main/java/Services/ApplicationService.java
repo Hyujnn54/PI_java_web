@@ -388,4 +388,181 @@ public class ApplicationService {
             System.err.println("Error deleting application: " + e.getMessage());
         }
     }
+
+    // Get distinct education levels from database
+    public static List<String> getEducationLevels() {
+        List<String> levels = new ArrayList<>();
+        String sql = "SELECT DISTINCT education_level FROM users WHERE education_level IS NOT NULL ORDER BY education_level";
+
+        try (Statement st = getConnection().createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String level = rs.getString("education_level");
+                if (level != null && !level.trim().isEmpty()) {
+                    levels.add(level);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving education levels: " + e.getMessage());
+        }
+
+        return levels;
+    }
+
+    // SEARCH Applications by various criteria
+    public static List<ApplicationRow> searchApplications(
+            List<Long> offerIds,
+            String searchCriteria,
+            String searchText) {
+
+        List<ApplicationRow> list = new ArrayList<>();
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT ja.id, ja.offer_id, ja.candidate_id, ja.phone, ja.cover_letter, ja.cv_path, " +
+            "ja.applied_at, ja.current_status, ja.is_archived, " +
+            "CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as candidate_name, " +
+            "u.email as candidate_email, jo.title as job_title " +
+            "FROM job_application ja " +
+            "LEFT JOIN users u ON ja.candidate_id = u.id " +
+            "LEFT JOIN job_offer jo ON ja.offer_id = jo.id " +
+            "WHERE 1=1"
+        );
+
+        List<Object> params = new ArrayList<>();
+
+        // Filter by offer IDs (for recruiter's offers)
+        if (offerIds != null && !offerIds.isEmpty()) {
+            sql.append(" AND ja.offer_id IN (");
+            for (int i = 0; i < offerIds.size(); i++) {
+                if (i > 0) sql.append(",");
+                sql.append("?");
+            }
+            sql.append(")");
+            params.addAll(offerIds);
+        }
+
+        // Add search criteria
+        if (searchText != null && !searchText.trim().isEmpty()) {
+            String searchValue = "%" + searchText.trim() + "%";
+
+            if (searchCriteria != null) {
+                switch (searchCriteria) {
+                    case "Candidate Name":
+                        sql.append(" AND (CONCAT(u.first_name, ' ', u.last_name) LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?)");
+                        params.add(searchValue);
+                        params.add(searchValue);
+                        params.add(searchValue);
+                        break;
+                    case "Candidate Email":
+                        sql.append(" AND u.email LIKE ?");
+                        params.add(searchValue);
+                        break;
+                    case "Offer Title":
+                        sql.append(" AND jo.title LIKE ?");
+                        params.add(searchValue);
+                        break;
+                    case "Company Name":
+                        sql.append(" AND jo.company_name LIKE ?");
+                        params.add(searchValue);
+                        break;
+                    case "Status":
+                        sql.append(" AND ja.current_status LIKE ?");
+                        params.add(searchValue);
+                        break;
+                }
+            }
+        }
+
+        sql.append(" ORDER BY ja.applied_at DESC");
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                if (params.get(i) instanceof Long) {
+                    ps.setLong(i + 1, (Long) params.get(i));
+                } else if (params.get(i) instanceof String) {
+                    ps.setString(i + 1, (String) params.get(i));
+                }
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new ApplicationRow(
+                        rs.getLong("id"),
+                        rs.getLong("offer_id"),
+                        rs.getLong("candidate_id"),
+                        rs.getString("phone"),
+                        rs.getString("cover_letter"),
+                        rs.getString("cv_path"),
+                        rs.getTimestamp("applied_at") != null ? rs.getTimestamp("applied_at").toLocalDateTime() : null,
+                        rs.getString("current_status"),
+                        rs.getString("candidate_name"),
+                        rs.getString("candidate_email"),
+                        rs.getString("job_title"),
+                        rs.getBoolean("is_archived")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error searching applications: " + e.getMessage());
+            return getByOfferIds(offerIds);
+        }
+
+        return list;
+    }
+
+    // Helper method to get applications by offer IDs
+    private static List<ApplicationRow> getByOfferIds(List<Long> offerIds) {
+        List<ApplicationRow> list = new ArrayList<>();
+        if (offerIds == null || offerIds.isEmpty()) {
+            return list;
+        }
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT ja.id, ja.offer_id, ja.candidate_id, ja.phone, ja.cover_letter, ja.cv_path, " +
+            "ja.applied_at, ja.current_status, ja.is_archived, " +
+            "CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as candidate_name, " +
+            "u.email as candidate_email, jo.title as job_title " +
+            "FROM job_application ja " +
+            "LEFT JOIN users u ON ja.candidate_id = u.id " +
+            "LEFT JOIN job_offer jo ON ja.offer_id = jo.id " +
+            "WHERE ja.offer_id IN ("
+        );
+
+        for (int i = 0; i < offerIds.size(); i++) {
+            if (i > 0) sql.append(",");
+            sql.append("?");
+        }
+        sql.append(") ORDER BY ja.applied_at DESC");
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql.toString())) {
+            for (int i = 0; i < offerIds.size(); i++) {
+                ps.setLong(i + 1, offerIds.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new ApplicationRow(
+                        rs.getLong("id"),
+                        rs.getLong("offer_id"),
+                        rs.getLong("candidate_id"),
+                        rs.getString("phone"),
+                        rs.getString("cover_letter"),
+                        rs.getString("cv_path"),
+                        rs.getTimestamp("applied_at") != null ? rs.getTimestamp("applied_at").toLocalDateTime() : null,
+                        rs.getString("current_status"),
+                        rs.getString("candidate_name"),
+                        rs.getString("candidate_email"),
+                        rs.getString("job_title"),
+                        rs.getBoolean("is_archived")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving applications by offer IDs: " + e.getMessage());
+        }
+
+        return list;
+    }
 }
+

@@ -27,8 +27,8 @@
         <TextField fx:id="txtSearch" promptText="Search candidates..." HBox.hgrow="ALWAYS"
                    styleClass="modern-search-field"/>
 
-        <Button text="Search" styleClass="btn-primary"/>
-        <Button text="Clear" styleClass="btn-secondary"/>
+        <Button fx:id="btnSearch" text="Search" styleClass="btn-primary"/>
+        <Button fx:id="btnClear" text="Clear" styleClass="btn-secondary"/>
     </HBox>
 
     <!-- Main Content Area: Split View -->
