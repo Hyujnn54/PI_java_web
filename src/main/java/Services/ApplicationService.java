@@ -32,9 +32,36 @@ public class ApplicationService {
     }
 
     /**
+     * Check if candidate has already applied to this offer
+     */
+    public static boolean hasAlreadyApplied(Long offerId, Long candidateId) {
+        String sql = "SELECT COUNT(*) as count FROM job_application " +
+                     "WHERE offer_id = ? AND candidate_id = ? AND is_archived = 0";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setLong(1, offerId);
+            ps.setLong(2, candidateId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count") > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error checking if candidate already applied: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
      * Create application with PDF file upload
      */
     public static Long createWithPDF(Long offerId, Long candidateId, String phone, String coverLetter, File pdfFile) {
+        // Check if candidate has already applied to this offer
+        if (hasAlreadyApplied(offerId, candidateId)) {
+            System.err.println("Candidate " + candidateId + " has already applied to offer " + offerId);
+            return null;
+        }
+
         String cvPath = "";
 
         // Upload PDF if provided

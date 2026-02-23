@@ -292,10 +292,18 @@ public class JobOffersController {
         if (UserContext.getRole() != UserContext.Role.RECRUITER) {
             Button btnApply = new Button("Apply Now");
             btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);");
-            btnApply.setOnAction(e -> showApplicationForm(job));
 
-            btnApply.setOnMouseEntered(e -> btnApply.setStyle("-fx-background-color: #4A90E2; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.5), 15, 0, 0, 3);"));
-            btnApply.setOnMouseExited(e -> btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);"));
+            // Check if candidate has already applied
+            Long candidateId = UserContext.getCandidateId();
+            if (candidateId != null && ApplicationService.hasAlreadyApplied(job.id(), candidateId)) {
+                btnApply.setText("✓ Already Applied");
+                btnApply.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: not-allowed;");
+                btnApply.setDisable(true);
+            } else {
+                btnApply.setOnAction(e -> showApplicationForm(job));
+                btnApply.setOnMouseEntered(e -> btnApply.setStyle("-fx-background-color: #4A90E2; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.5), 15, 0, 0, 3);"));
+                btnApply.setOnMouseExited(e -> btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);"));
+            }
 
             HBox buttonBox = new HBox(btnApply);
             buttonBox.setAlignment(Pos.CENTER);
@@ -609,14 +617,27 @@ public class JobOffersController {
                 return;
             }
 
+            // Check if candidate has already applied to this offer
+            if (ApplicationService.hasAlreadyApplied(job.id(), candidateId)) {
+                showAlert("Already Applied",
+                    "You have already applied to this job offer.\n\nYou can view and edit your existing application in the Applications section.",
+                    Alert.AlertType.WARNING);
+                return;
+            }
+
             // If cvPath is provided, it's a file path - upload the file
             java.io.File pdfFile = null;
             if (cvPath != null && !cvPath.isEmpty()) {
                 pdfFile = new java.io.File(cvPath);
             }
 
-            ApplicationService.createWithPDF(job.id(), candidateId, phone, coverLetter, pdfFile);
-            showAlert("Success", "Application submitted successfully!", Alert.AlertType.INFORMATION);
+            Long applicationId = ApplicationService.createWithPDF(job.id(), candidateId, phone, coverLetter, pdfFile);
+
+            if (applicationId != null) {
+                showAlert("Success", "Application submitted successfully!", Alert.AlertType.INFORMATION);
+            } else {
+                showAlert("Error", "Failed to submit application. Please try again.", Alert.AlertType.ERROR);
+            }
 
         } catch (Exception e) {
             showAlert("Error", "Failed to submit application: " + e.getMessage(), Alert.AlertType.ERROR);
