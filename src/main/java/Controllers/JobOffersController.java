@@ -521,22 +521,30 @@ public class JobOffersController {
 
             alertTextBox.getChildren().addAll(alertTitle, alertSubtitle);
             alertHeader.getChildren().addAll(alertIcon, alertTextBox);
+            HBox.setHgrow(alertTextBox, Priority.ALWAYS);
             warningSection.getChildren().add(alertHeader);
 
             // Liste des avertissements
             for (JobOfferWarning warning : warnings) {
-                VBox warningCard = new VBox(8);
+                VBox warningCard = new VBox(10);
                 warningCard.setStyle("-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 8;");
+                warningCard.setMaxWidth(Double.MAX_VALUE);
 
                 Label reasonLabel = new Label("📋 Raison: " + warning.getReason());
                 reasonLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #2c3e50;");
+                reasonLabel.setWrapText(true);
 
                 Label messageLabel = new Label("💬 Message de l'admin:");
                 messageLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #495057; -fx-font-size: 12px;");
 
-                Label messageContent = new Label(warning.getMessage());
+                // Zone de texte pour le message complet
+                TextArea messageContent = new TextArea(warning.getMessage());
                 messageContent.setWrapText(true);
-                messageContent.setStyle("-fx-text-fill: #495057; -fx-font-size: 13px; -fx-padding: 5 0 5 15;");
+                messageContent.setEditable(false);
+                messageContent.setPrefRowCount(4);
+                messageContent.setStyle("-fx-control-inner-background: #f8f9fa; -fx-text-fill: #495057; " +
+                                       "-fx-font-size: 13px; -fx-border-color: #dee2e6; -fx-border-radius: 5; " +
+                                       "-fx-background-radius: 5;");
 
                 Label dateLabel = new Label("📅 Signalé le " + warning.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm")));
                 dateLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");

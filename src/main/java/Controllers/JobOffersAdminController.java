@@ -571,9 +571,10 @@ public class JobOffersAdminController {
                 warningsSection.getChildren().add(warningsTitle);
 
                 for (JobOfferWarning warning : warnings) {
-                    VBox warningCard = new VBox(5);
-                    warningCard.setStyle("-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 6; " +
+                    VBox warningCard = new VBox(8);
+                    warningCard.setStyle("-fx-background-color: white; -fx-padding: 12; -fx-background-radius: 6; " +
                                         "-fx-border-color: #ffc107; -fx-border-radius: 6;");
+                    warningCard.setMaxWidth(Double.MAX_VALUE);
 
                     HBox headerRow = new HBox(10);
                     headerRow.setAlignment(Pos.CENTER_LEFT);
@@ -593,14 +594,18 @@ public class JobOffersAdminController {
 
                     headerRow.getChildren().addAll(reasonLabel, statusLabel);
 
-                    Label messageLabel = new Label(warning.getMessage());
-                    messageLabel.setWrapText(true);
-                    messageLabel.setStyle("-fx-text-fill: #495057; -fx-font-size: 12px;");
+                    // Zone de texte pour le message complet
+                    TextArea messageArea = new TextArea(warning.getMessage());
+                    messageArea.setWrapText(true);
+                    messageArea.setEditable(false);
+                    messageArea.setPrefRowCount(3);
+                    messageArea.setStyle("-fx-control-inner-background: #f8f9fa; -fx-text-fill: #495057; " +
+                                        "-fx-font-size: 12px; -fx-border-color: transparent;");
 
                     Label dateLabel = new Label("Signalé le " + warning.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
                     dateLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 10px;");
 
-                    warningCard.getChildren().addAll(headerRow, messageLabel, dateLabel);
+                    warningCard.getChildren().addAll(headerRow, messageArea, dateLabel);
                     warningsSection.getChildren().add(warningCard);
                 }
 
@@ -626,7 +631,7 @@ public class JobOffersAdminController {
         // Contenu
         VBox content = new VBox(15);
         content.setPadding(new Insets(20));
-        content.setPrefWidth(450);
+        content.setPrefWidth(500);
 
         // Raison du signalement
         Label reasonLabel = new Label("Raison du signalement:");
@@ -646,21 +651,78 @@ public class JobOffersAdminController {
         reasonCombo.setPromptText("Sélectionnez une raison...");
         reasonCombo.setMaxWidth(Double.MAX_VALUE);
 
-        // Message détaillé
+        // Message détaillé avec bouton de génération
+        HBox messageLabelBox = new HBox(10);
+        messageLabelBox.setAlignment(Pos.CENTER_LEFT);
+
         Label messageLabel = new Label("Message pour le recruteur:");
         messageLabel.setStyle("-fx-font-weight: 600;");
 
+        Button btnGenerate = new Button("🤖 Générer avec IA");
+        btnGenerate.setStyle("-fx-background-color: #6f42c1; -fx-text-fill: white; -fx-font-size: 11px; " +
+                           "-fx-padding: 5 10; -fx-background-radius: 5; -fx-cursor: hand;");
+        btnGenerate.setDisable(true);
+
+        messageLabelBox.getChildren().addAll(messageLabel, btnGenerate);
+
         TextArea messageArea = new TextArea();
-        messageArea.setPromptText("Expliquez le problème au recruteur...\nSoyez précis pour qu'il puisse corriger rapidement.");
-        messageArea.setPrefRowCount(4);
+        messageArea.setPromptText("Expliquez le problème au recruteur...\nOu cliquez sur 'Générer avec IA' pour un message automatique.");
+        messageArea.setPrefRowCount(5);
         messageArea.setWrapText(true);
+
+        // Label de chargement
+        Label loadingLabel = new Label("");
+        loadingLabel.setStyle("-fx-text-fill: #6f42c1; -fx-font-size: 11px;");
+
+        // Action du bouton de génération
+        btnGenerate.setOnAction(e -> {
+            String selectedReason = reasonCombo.getValue();
+            if (selectedReason != null) {
+                loadingLabel.setText("⏳ Génération en cours...");
+                btnGenerate.setDisable(true);
+
+                // Exécuter dans un thread séparé pour ne pas bloquer l'UI
+                new Thread(() -> {
+                    try {
+                        Services.GrokAIService grokService = new Services.GrokAIService();
+                        String generatedMessage = grokService.generateWarningMessage(
+                            selectedReason,
+                            job.getTitle(),
+                            job.getDescription()
+                        );
+
+                        // Mettre à jour l'UI dans le thread JavaFX
+                        javafx.application.Platform.runLater(() -> {
+                            if (generatedMessage != null && !generatedMessage.isEmpty()) {
+                                messageArea.setText(generatedMessage);
+                                loadingLabel.setText("✅ Message généré avec succès");
+                            } else {
+                                loadingLabel.setText("⚠️ Impossible de générer, utilisez un message par défaut");
+                            }
+                            btnGenerate.setDisable(false);
+                        });
+                    } catch (Exception ex) {
+                        javafx.application.Platform.runLater(() -> {
+                            loadingLabel.setText("❌ Erreur: " + ex.getMessage());
+                            btnGenerate.setDisable(false);
+                        });
+                    }
+                }).start();
+            }
+        });
+
+        // Activer le bouton de génération quand une raison est sélectionnée
+        reasonCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            btnGenerate.setDisable(newVal == null);
+            loadingLabel.setText("");
+        });
 
         // Info
         Label infoLabel = new Label("💡 Le recruteur sera notifié et devra corriger ou supprimer son offre.");
         infoLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
         infoLabel.setWrapText(true);
 
-        content.getChildren().addAll(reasonLabel, reasonCombo, messageLabel, messageArea, infoLabel);
+        content.getChildren().addAll(reasonLabel, reasonCombo, messageLabelBox, messageArea, loadingLabel, infoLabel);
         dialog.getDialogPane().setContent(content);
 
         // Validation

@@ -72,19 +72,27 @@ public class JobOfferWarningService {
      * Obtient un recruiter_id valide depuis la base de données
      */
     private Long getValidRecruiterId(Long preferredId, Long jobOfferId) throws SQLException {
-        // D'abord essayer avec l'ID préféré
+        // D'abord essayer avec l'ID préféré dans différentes tables possibles
+        String[] possibleTables = {"recruiter", "recruiters", "user", "users"};
+
         if (preferredId != null) {
-            String checkQuery = "SELECT id FROM recruiter WHERE id = ?";
-            try (PreparedStatement ps = connection.prepareStatement(checkQuery)) {
-                ps.setLong(1, preferredId);
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    return rs.getLong("id");
+            for (String table : possibleTables) {
+                try {
+                    String checkQuery = "SELECT id FROM " + table + " WHERE id = ?";
+                    try (PreparedStatement ps = connection.prepareStatement(checkQuery)) {
+                        ps.setLong(1, preferredId);
+                        ResultSet rs = ps.executeQuery();
+                        if (rs.next()) {
+                            return rs.getLong("id");
+                        }
+                    }
+                } catch (SQLException e) {
+                    // Table n'existe pas, continuer avec la suivante
                 }
             }
         }
 
-        // Sinon, récupérer le recruiter_id depuis l'offre d'emploi
+        // Sinon, récupérer le recruiter_id depuis l'offre d'emploi et vérifier
         if (jobOfferId != null) {
             String query = "SELECT recruiter_id FROM job_offer WHERE id = ?";
             try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -93,56 +101,84 @@ public class JobOfferWarningService {
                 if (rs.next()) {
                     Long recId = rs.getLong("recruiter_id");
                     // Vérifier que ce recruiter existe
-                    String verifyQuery = "SELECT id FROM recruiter WHERE id = ?";
-                    try (PreparedStatement ps2 = connection.prepareStatement(verifyQuery)) {
-                        ps2.setLong(1, recId);
-                        ResultSet rs2 = ps2.executeQuery();
-                        if (rs2.next()) {
-                            return rs2.getLong("id");
+                    for (String table : possibleTables) {
+                        try {
+                            String verifyQuery = "SELECT id FROM " + table + " WHERE id = ?";
+                            try (PreparedStatement ps2 = connection.prepareStatement(verifyQuery)) {
+                                ps2.setLong(1, recId);
+                                ResultSet rs2 = ps2.executeQuery();
+                                if (rs2.next()) {
+                                    return rs2.getLong("id");
+                                }
+                            }
+                        } catch (SQLException e) {
+                            // Table n'existe pas, continuer
                         }
                     }
+                    // Si le recruiter_id existe dans job_offer, l'utiliser directement
+                    return recId;
                 }
             }
         }
 
-        // En dernier recours, prendre le premier recruteur disponible
-        String query = "SELECT id FROM recruiter LIMIT 1";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return rs.getLong("id");
+        // En dernier recours, prendre le premier disponible
+        for (String table : possibleTables) {
+            try {
+                String query = "SELECT id FROM " + table + " LIMIT 1";
+                try (PreparedStatement ps = connection.prepareStatement(query)) {
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next()) {
+                        return rs.getLong("id");
+                    }
+                }
+            } catch (SQLException e) {
+                // Table n'existe pas, continuer
             }
         }
 
-        return null;
+        return 1L; // Valeur par défaut
     }
 
     /**
      * Obtient un admin_id valide depuis la base de données
      */
     private Long getValidAdminId(Long preferredId) throws SQLException {
+        String[] possibleTables = {"admin", "admins", "administrator", "user", "users"};
+
         // D'abord essayer avec l'ID préféré
         if (preferredId != null) {
-            String checkQuery = "SELECT id FROM admin WHERE id = ?";
-            try (PreparedStatement ps = connection.prepareStatement(checkQuery)) {
-                ps.setLong(1, preferredId);
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    return rs.getLong("id");
+            for (String table : possibleTables) {
+                try {
+                    String checkQuery = "SELECT id FROM " + table + " WHERE id = ?";
+                    try (PreparedStatement ps = connection.prepareStatement(checkQuery)) {
+                        ps.setLong(1, preferredId);
+                        ResultSet rs = ps.executeQuery();
+                        if (rs.next()) {
+                            return rs.getLong("id");
+                        }
+                    }
+                } catch (SQLException e) {
+                    // Table n'existe pas, continuer
                 }
             }
         }
 
         // Sinon, prendre le premier admin disponible
-        String query = "SELECT id FROM admin LIMIT 1";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return rs.getLong("id");
+        for (String table : possibleTables) {
+            try {
+                String query = "SELECT id FROM " + table + " LIMIT 1";
+                try (PreparedStatement ps = connection.prepareStatement(query)) {
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next()) {
+                        return rs.getLong("id");
+                    }
+                }
+            } catch (SQLException e) {
+                // Table n'existe pas, continuer
             }
         }
 
-        return null;
+        return 1L; // Valeur par défaut
     }
 
     /**
