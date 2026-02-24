@@ -187,6 +187,18 @@ public class JobOfferService {
 
         jobOffer.setStatus(Status.valueOf(rs.getString("status")));
 
+        // Champs pour le système d'avertissement
+        try {
+            jobOffer.setFlagged(rs.getBoolean("is_flagged"));
+            Timestamp flaggedAt = rs.getTimestamp("flagged_at");
+            if (flaggedAt != null) {
+                jobOffer.setFlaggedAt(flaggedAt.toLocalDateTime());
+            }
+        } catch (SQLException e) {
+            // Les colonnes n'existent peut-être pas encore
+            jobOffer.setFlagged(false);
+        }
+
         return jobOffer;
     }
 

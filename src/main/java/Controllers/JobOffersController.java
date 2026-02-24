@@ -1,14 +1,17 @@
 package Controllers;
 
 import Models.JobOffer;
+import Models.JobOfferWarning;
 import Models.OfferSkill;
 import Models.ContractType;
 import Models.Status;
 import Models.SkillLevel;
 import Services.JobOfferService;
+import Services.JobOfferWarningService;
 import Services.OfferSkillService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -40,6 +43,7 @@ public class JobOffersController {
 
     private JobOfferService jobOfferService;
     private OfferSkillService offerSkillService;
+    private JobOfferWarningService warningService;
 
     // Form elements
     private TextField formTitleField;
@@ -66,9 +70,39 @@ public class JobOffersController {
     public void initialize() {
         jobOfferService = new JobOfferService();
         offerSkillService = new OfferSkillService();
+        warningService = new JobOfferWarningService();
         skillRows = new ArrayList<>();
         buildUI();
         loadJobOffers();
+        checkForWarnings(); // Vérifier les avertissements au démarrage
+    }
+
+    /**
+     * Vérifie s'il y a des avertissements en attente pour ce recruteur
+     */
+    private void checkForWarnings() {
+        try {
+            Long recruiterId = UserContext.getRecruiterId();
+            int warningCount = warningService.countPendingWarningsForRecruiter(recruiterId);
+
+            if (warningCount > 0) {
+                showWarningNotification(warningCount);
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur vérification avertissements: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Affiche une notification d'avertissement
+     */
+    private void showWarningNotification(int count) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("⚠️ Attention");
+        alert.setHeaderText("Vous avez " + count + " offre(s) signalée(s)");
+        alert.setContentText("Un administrateur a signalé un problème avec certaines de vos offres.\n\n" +
+                            "Veuillez consulter les offres marquées en jaune et les corriger ou les supprimer.");
+        alert.show();
     }
 
     private void buildUI() {
@@ -377,7 +411,13 @@ public class JobOffersController {
 
     private VBox createJobCard(JobOffer job) {
         VBox card = new VBox(10);
-        card.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-padding: 15; -fx-border-color: #dee2e6; -fx-border-radius: 8; -fx-cursor: hand;");
+
+        // Style différent si l'offre est signalée
+        String bgColor = job.isFlagged() ? "#fff3cd" : "#f8f9fa";
+        String borderColor = job.isFlagged() ? "#ffc107" : "#dee2e6";
+        card.setStyle("-fx-background-color: " + bgColor + "; -fx-background-radius: 8; -fx-padding: 15; " +
+                     "-fx-border-color: " + borderColor + "; -fx-border-radius: 8; -fx-border-width: " +
+                     (job.isFlagged() ? "2" : "1") + "; -fx-cursor: hand;");
 
         HBox header = new HBox(10);
         header.setAlignment(Pos.CENTER_LEFT);
@@ -386,19 +426,45 @@ public class JobOffersController {
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
         HBox.setHgrow(title, Priority.ALWAYS);
 
-        Label badge = new Label(job.getContractType().name());
+        Label badge = new Label(formatContractType(job.getContractType()));
         badge.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-padding: 4 8; -fx-background-radius: 4; -fx-font-size: 11px;");
 
         header.getChildren().addAll(title, badge);
 
-        Label location = new Label("📍 " + (job.getLocation() != null ? job.getLocation() : "Not specified"));
+        Label location = new Label("📍 " + (job.getLocation() != null ? job.getLocation() : "Non spécifié"));
         location.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 13px;");
 
-        Label statusLabel = new Label(job.getStatus().name());
-        String statusColor = job.getStatus() == Status.OPEN ? "#28a745" : "#dc3545";
-        statusLabel.setStyle("-fx-background-color: " + statusColor + "; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 4; -fx-font-size: 10px;");
+        // Badge de statut avec gestion du statut FLAGGED
+        HBox statusRow = new HBox(8);
+        statusRow.setAlignment(Pos.CENTER_LEFT);
 
-        card.getChildren().addAll(header, location, statusLabel);
+        String statusColor;
+        String statusText;
+        if (job.isFlagged() || job.getStatus() == Status.FLAGGED) {
+            statusColor = "#ffc107";
+            statusText = "⚠️ Signalé";
+        } else if (job.getStatus() == Status.OPEN) {
+            statusColor = "#28a745";
+            statusText = "Ouvert";
+        } else {
+            statusColor = "#dc3545";
+            statusText = "Fermé";
+        }
+
+        Label statusLabel = new Label(statusText);
+        statusLabel.setStyle("-fx-background-color: " + statusColor + "; -fx-text-fill: " +
+                            (job.isFlagged() ? "#212529" : "white") + "; -fx-padding: 2 6; " +
+                            "-fx-background-radius: 4; -fx-font-size: 10px;");
+        statusRow.getChildren().add(statusLabel);
+
+        // Message d'alerte si signalé
+        if (job.isFlagged()) {
+            Label alertLabel = new Label("Action requise");
+            alertLabel.setStyle("-fx-text-fill: #856404; -fx-font-size: 10px; -fx-font-weight: bold;");
+            statusRow.getChildren().add(alertLabel);
+        }
+
+        card.getChildren().addAll(header, location, statusRow);
         card.setOnMouseClicked(e -> selectJob(job, card));
 
         return card;
@@ -419,8 +485,131 @@ public class JobOffersController {
         displayJobDetails(job);
     }
 
+    /**
+     * Affiche les avertissements pour le recruteur avec actions possibles
+     */
+    private void displayWarningsForRecruiter(JobOffer job) {
+        try {
+            List<JobOfferWarning> warnings = warningService.getPendingWarningsByJobOfferId(job.getId());
+            if (warnings.isEmpty()) return;
+
+            // Marquer les avertissements comme vus
+            for (JobOfferWarning warning : warnings) {
+                if (warning.getStatus() == JobOfferWarning.WarningStatus.SENT) {
+                    warningService.markAsSeen(warning.getId());
+                }
+            }
+
+            VBox warningSection = new VBox(15);
+            warningSection.setStyle("-fx-background-color: #f8d7da; -fx-background-radius: 10; -fx-padding: 20; " +
+                                   "-fx-border-color: #f5c6cb; -fx-border-radius: 10; -fx-border-width: 2;");
+
+            // En-tête d'alerte
+            HBox alertHeader = new HBox(10);
+            alertHeader.setAlignment(Pos.CENTER_LEFT);
+
+            Label alertIcon = new Label("🚨");
+            alertIcon.setStyle("-fx-font-size: 24px;");
+
+            VBox alertTextBox = new VBox(3);
+            Label alertTitle = new Label("Action requise - Offre signalée");
+            alertTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #721c24;");
+
+            Label alertSubtitle = new Label("Un administrateur a signalé un problème avec cette offre. Veuillez corriger ou supprimer l'offre.");
+            alertSubtitle.setStyle("-fx-font-size: 12px; -fx-text-fill: #721c24;");
+            alertSubtitle.setWrapText(true);
+
+            alertTextBox.getChildren().addAll(alertTitle, alertSubtitle);
+            alertHeader.getChildren().addAll(alertIcon, alertTextBox);
+            warningSection.getChildren().add(alertHeader);
+
+            // Liste des avertissements
+            for (JobOfferWarning warning : warnings) {
+                VBox warningCard = new VBox(8);
+                warningCard.setStyle("-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 8;");
+
+                Label reasonLabel = new Label("📋 Raison: " + warning.getReason());
+                reasonLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #2c3e50;");
+
+                Label messageLabel = new Label("💬 Message de l'admin:");
+                messageLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #495057; -fx-font-size: 12px;");
+
+                Label messageContent = new Label(warning.getMessage());
+                messageContent.setWrapText(true);
+                messageContent.setStyle("-fx-text-fill: #495057; -fx-font-size: 13px; -fx-padding: 5 0 5 15;");
+
+                Label dateLabel = new Label("📅 Signalé le " + warning.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm")));
+                dateLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+
+                warningCard.getChildren().addAll(reasonLabel, messageLabel, messageContent, dateLabel);
+                warningSection.getChildren().add(warningCard);
+            }
+
+            // Boutons d'action
+            HBox actionButtons = new HBox(15);
+            actionButtons.setAlignment(Pos.CENTER);
+            actionButtons.setStyle("-fx-padding: 10 0 0 0;");
+
+            Button btnEdit = new Button("✏️ Modifier l'offre");
+            btnEdit.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: 600; " +
+                            "-fx-padding: 10 20; -fx-background-radius: 6; -fx-cursor: hand;");
+            btnEdit.setOnAction(e -> showEditForm(job));
+
+            Button btnDelete = new Button("🗑️ Supprimer l'offre");
+            btnDelete.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: 600; " +
+                              "-fx-padding: 10 20; -fx-background-radius: 6; -fx-cursor: hand;");
+            btnDelete.setOnAction(e -> handleDeleteJobOffer(job));
+
+            Button btnMarkResolved = new Button("✓ J'ai corrigé le problème");
+            btnMarkResolved.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: 600; " +
+                                    "-fx-padding: 10 20; -fx-background-radius: 6; -fx-cursor: hand;");
+            btnMarkResolved.setOnAction(e -> handleMarkWarningsResolved(job, warnings));
+
+            actionButtons.getChildren().addAll(btnEdit, btnDelete, btnMarkResolved);
+            warningSection.getChildren().add(actionButtons);
+
+            detailContainer.getChildren().add(warningSection);
+
+        } catch (SQLException e) {
+            System.err.println("Erreur chargement des avertissements: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Marque les avertissements comme résolus après correction par le recruteur
+     */
+    private void handleMarkWarningsResolved(JobOffer job, List<JobOfferWarning> warnings) {
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Confirmation");
+        confirmation.setHeaderText("Confirmer la correction");
+        confirmation.setContentText("Confirmez-vous avoir corrigé le(s) problème(s) signalé(s) ?\n\n" +
+                                   "L'administrateur sera informé de votre correction.");
+
+        Optional<ButtonType> result = confirmation.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                for (JobOfferWarning warning : warnings) {
+                    warningService.resolveWarning(warning.getId());
+                }
+
+                showAlert("Succès", "Les avertissements ont été marqués comme résolus.", Alert.AlertType.INFORMATION);
+
+                // Recharger les données
+                loadJobOffers();
+
+            } catch (SQLException e) {
+                showAlert("Erreur", "Erreur lors de la résolution: " + e.getMessage(), Alert.AlertType.ERROR);
+            }
+        }
+    }
+
     private void displayJobDetails(JobOffer job) {
         detailContainer.getChildren().clear();
+
+        // Afficher les avertissements en premier si l'offre est signalée
+        if (job.isFlagged()) {
+            displayWarningsForRecruiter(job);
+        }
 
         VBox headerCard = new VBox(15);
         headerCard.setStyle("-fx-background-color: #F8F9FA; -fx-background-radius: 10; -fx-padding: 25;");
@@ -431,20 +620,32 @@ public class JobOffersController {
         HBox metaRow = new HBox(20);
         metaRow.setAlignment(Pos.CENTER_LEFT);
 
-        Label contractType = new Label("💼 " + job.getContractType().name());
+        Label contractType = new Label("💼 " + formatContractType(job.getContractType()));
         contractType.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 14px; -fx-font-weight: 600;");
 
-        Label location = new Label("📍 " + (job.getLocation() != null ? job.getLocation() : "Not specified"));
+        Label location = new Label("📍 " + (job.getLocation() != null ? job.getLocation() : "Non spécifié"));
         location.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 14px; -fx-font-weight: 600;");
 
-        String statusColor = job.getStatus() == Status.OPEN ? "#28a745" : "#dc3545";
-        Label status = new Label("📊 " + job.getStatus().name());
+        String statusColor;
+        String statusText;
+        if (job.isFlagged() || job.getStatus() == Status.FLAGGED) {
+            statusColor = "#ffc107";
+            statusText = "⚠️ Signalé";
+        } else if (job.getStatus() == Status.OPEN) {
+            statusColor = "#28a745";
+            statusText = "Ouvert";
+        } else {
+            statusColor = "#dc3545";
+            statusText = "Fermé";
+        }
+
+        Label status = new Label("📊 " + statusText);
         status.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-size: 14px; -fx-font-weight: 700;");
 
         metaRow.getChildren().addAll(contractType, location, status);
 
         if (job.getDeadline() != null) {
-            Label deadline = new Label("⏰ Deadline: " + job.getDeadline().format(DateTimeFormatter.ofPattern("MMM dd, yyyy")));
+            Label deadline = new Label("⏰ Date limite: " + job.getDeadline().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             deadline.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 14px; -fx-font-weight: 700;");
             metaRow.getChildren().add(deadline);
         }

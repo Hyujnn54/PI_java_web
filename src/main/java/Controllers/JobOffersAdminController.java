@@ -1,28 +1,28 @@
 package Controllers;
 
 import Models.JobOffer;
+import Models.JobOfferWarning;
 import Models.OfferSkill;
 import Models.ContractType;
 import Models.Status;
 import Services.JobOfferService;
+import Services.JobOfferWarningService;
 import Services.OfferSkillService;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+import Utils.UserContext;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
- * Contrôleur pour la vue Admin - Voit toutes les offres avec statistiques globales
- * Recherche et filtrage intégrés sur la même page
+ * Contrôleur pour la vue Admin - Gestion des offres d'emploi
+ * Système de signalement au lieu de suppression directe
  */
 public class JobOffersAdminController {
 
@@ -34,8 +34,6 @@ public class JobOffersAdminController {
 
     private VBox jobListContainer;
     private VBox detailContainer;
-    private VBox statisticsContainer;
-    private PieChart statisticsPieChart;
     private JobOffer selectedJob;
     private ComboBox<String> cbFilterType;
     private ComboBox<String> cbFilterLocation;
@@ -43,6 +41,7 @@ public class JobOffersAdminController {
 
     private JobOfferService jobOfferService;
     private OfferSkillService offerSkillService;
+    private JobOfferWarningService warningService;
 
     // Filtres actifs
     private ContractType selectedContractType = null;
@@ -53,6 +52,7 @@ public class JobOffersAdminController {
     public void initialize() {
         jobOfferService = new JobOfferService();
         offerSkillService = new OfferSkillService();
+        warningService = new JobOfferWarningService();
         buildUI();
         loadJobOffers();
     }
@@ -82,27 +82,21 @@ public class JobOffersAdminController {
         mainContainer.getChildren().add(searchFilterBox);
         mainContainer.getChildren().add(new Region() {{ setPrefHeight(15); }});
 
-        // === CONTENU PRINCIPAL (3 colonnes) ===
-        HBox contentArea = new HBox(15);
+        // === CONTENU PRINCIPAL (2 colonnes) ===
+        HBox contentArea = new HBox(20);
         VBox.setVgrow(contentArea, Priority.ALWAYS);
 
         // LEFT: Liste des offres
         VBox leftSide = createJobListPanel();
-        leftSide.setPrefWidth(350);
-        leftSide.setMinWidth(320);
-        leftSide.setMaxWidth(400);
+        leftSide.setPrefWidth(400);
+        leftSide.setMinWidth(350);
+        leftSide.setMaxWidth(450);
 
-        // CENTER: Détails
-        VBox centerSide = createDetailPanel();
-        HBox.setHgrow(centerSide, Priority.ALWAYS);
+        // RIGHT: Détails
+        VBox rightSide = createDetailPanel();
+        HBox.setHgrow(rightSide, Priority.ALWAYS);
 
-        // RIGHT: Statistiques
-        VBox rightSide = createStatisticsPanel();
-        rightSide.setPrefWidth(280);
-        rightSide.setMinWidth(250);
-        rightSide.setMaxWidth(320);
-
-        contentArea.getChildren().addAll(leftSide, centerSide, rightSide);
+        contentArea.getChildren().addAll(leftSide, rightSide);
         mainContainer.getChildren().add(contentArea);
     }
 
@@ -300,77 +294,6 @@ public class JobOffersAdminController {
         };
     }
 
-    private VBox createStatisticsPanel() {
-        statisticsContainer = new VBox(15);
-        statisticsContainer.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; " +
-                                    "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 2);");
-
-        Label title = new Label("📊 Statistiques");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
-
-        statisticsPieChart = new PieChart();
-        statisticsPieChart.setLegendVisible(true);
-        statisticsPieChart.setLabelsVisible(false);
-        statisticsPieChart.setPrefHeight(200);
-        statisticsPieChart.setMaxHeight(200);
-
-        statisticsContainer.getChildren().addAll(title, statisticsPieChart);
-        loadStatistics();
-        return statisticsContainer;
-    }
-
-    private void loadStatistics() {
-        try {
-            Map<ContractType, Integer> stats = jobOfferService.statsGlobal();
-            ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
-
-            for (Map.Entry<ContractType, Integer> entry : stats.entrySet()) {
-                if (entry.getValue() > 0) {
-                    String label = formatContractType(entry.getKey()) + " (" + entry.getValue() + ")";
-                    pieChartData.add(new PieChart.Data(label, entry.getValue()));
-                }
-            }
-
-            if (statisticsPieChart != null) {
-                statisticsPieChart.setData(pieChartData);
-            }
-
-            // Stats textuelles
-            statisticsContainer.getChildren().removeIf(node -> node.getId() != null && node.getId().equals("statsBox"));
-
-            int totalOffers = jobOfferService.getTotalOffresGlobal();
-            int expiredOffers = jobOfferService.getExpiredOffresGlobal();
-
-            VBox statsBox = new VBox(8);
-            statsBox.setId("statsBox");
-            statsBox.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 12; -fx-background-radius: 8;");
-
-            statsBox.getChildren().addAll(
-                createStatLabel("📋 Total", String.valueOf(totalOffers), "#2c3e50"),
-                createStatLabel("✅ Actives", String.valueOf(totalOffers - expiredOffers), "#28a745"),
-                createStatLabel("⚠️ Expirées", String.valueOf(expiredOffers), "#dc3545")
-            );
-
-            statisticsContainer.getChildren().add(statsBox);
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private HBox createStatLabel(String label, String value, String color) {
-        HBox box = new HBox();
-        box.setAlignment(Pos.CENTER_LEFT);
-        Label lbl = new Label(label);
-        lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #6c757d;");
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        Label val = new Label(value);
-        val.setStyle("-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: " + color + ";");
-        box.getChildren().addAll(lbl, spacer, val);
-        return box;
-    }
-
     private VBox createJobListPanel() {
         VBox panel = new VBox(12);
         panel.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; " +
@@ -455,7 +378,9 @@ public class JobOffersAdminController {
 
     private VBox createJobCard(JobOffer job) {
         VBox card = new VBox(6);
-        card.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-padding: 12; -fx-cursor: hand;");
+        String bgColor = job.isFlagged() ? "#fff3cd" : "#f8f9fa";
+        String borderStyle = job.isFlagged() ? "-fx-border-color: #ffc107; -fx-border-width: 1; -fx-border-radius: 8;" : "";
+        card.setStyle("-fx-background-color: " + bgColor + "; -fx-background-radius: 8; -fx-padding: 12; -fx-cursor: hand; " + borderStyle);
 
         Label title = new Label(job.getTitle());
         title.setStyle("-fx-font-size: 13px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
@@ -468,9 +393,22 @@ public class JobOffersAdminController {
         typeBadge.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-padding: 2 8; " +
                           "-fx-background-radius: 10; -fx-font-size: 10px;");
 
-        String statusColor = job.getStatus() == Status.OPEN ? "#28a745" : "#dc3545";
-        Label statusBadge = new Label(job.getStatus() == Status.OPEN ? "Ouvert" : "Fermé");
-        statusBadge.setStyle("-fx-background-color: " + statusColor + "; -fx-text-fill: white; -fx-padding: 2 8; " +
+        String statusColor;
+        String statusText;
+        if (job.isFlagged() || job.getStatus() == Status.FLAGGED) {
+            statusColor = "#ffc107";
+            statusText = "⚠️ Signalé";
+        } else if (job.getStatus() == Status.OPEN) {
+            statusColor = "#28a745";
+            statusText = "Ouvert";
+        } else {
+            statusColor = "#dc3545";
+            statusText = "Fermé";
+        }
+
+        Label statusBadge = new Label(statusText);
+        statusBadge.setStyle("-fx-background-color: " + statusColor + "; -fx-text-fill: " +
+                            (job.isFlagged() ? "#212529" : "white") + "; -fx-padding: 2 8; " +
                             "-fx-background-radius: 10; -fx-font-size: 10px;");
 
         badges.getChildren().addAll(typeBadge, statusBadge);
@@ -480,14 +418,17 @@ public class JobOffersAdminController {
 
         card.getChildren().addAll(title, badges, location);
 
+        final String normalBgColor = bgColor;
+        final String normalBorderStyle = borderStyle;
+
         card.setOnMouseEntered(e -> {
             if (selectedJob == null || !selectedJob.getId().equals(job.getId())) {
-                card.setStyle("-fx-background-color: #e9ecef; -fx-background-radius: 8; -fx-padding: 12; -fx-cursor: hand;");
+                card.setStyle("-fx-background-color: " + (job.isFlagged() ? "#ffecb5" : "#e9ecef") + "; -fx-background-radius: 8; -fx-padding: 12; -fx-cursor: hand; " + normalBorderStyle);
             }
         });
         card.setOnMouseExited(e -> {
             if (selectedJob == null || !selectedJob.getId().equals(job.getId())) {
-                card.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-padding: 12; -fx-cursor: hand;");
+                card.setStyle("-fx-background-color: " + normalBgColor + "; -fx-background-radius: 8; -fx-padding: 12; -fx-cursor: hand; " + normalBorderStyle);
             }
         });
 
@@ -572,25 +513,219 @@ public class JobOffersAdminController {
             System.err.println("Erreur: " + e.getMessage());
         }
 
-        // Bouton supprimer (Admin)
-        HBox actionBox = new HBox();
+        // Afficher les avertissements existants si l'offre est signalée
+        if (job.isFlagged()) {
+            displayExistingWarnings(job);
+        }
+
+        // Boutons d'action Admin
+        HBox actionBox = new HBox(15);
         actionBox.setAlignment(Pos.CENTER);
-        actionBox.setStyle("-fx-padding: 15 0;");
+        actionBox.setStyle("-fx-padding: 20 0;");
 
-        Button btnDelete = new Button("🗑️ Supprimer cette offre");
-        btnDelete.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: 600; " +
-                          "-fx-font-size: 13px; -fx-padding: 10 25; -fx-background-radius: 8; -fx-cursor: hand;");
-        btnDelete.setOnAction(e -> handleDeleteJobOffer(job));
+        // Bouton Signaler (principal)
+        Button btnFlag = new Button("⚠️ Signaler cette offre");
+        btnFlag.setStyle("-fx-background-color: #ffc107; -fx-text-fill: #212529; -fx-font-weight: 600; " +
+                        "-fx-font-size: 13px; -fx-padding: 12 25; -fx-background-radius: 8; -fx-cursor: hand;");
+        btnFlag.setOnAction(e -> showFlagDialog(job));
 
-        actionBox.getChildren().add(btnDelete);
+        // Si déjà signalée, option de retirer le signalement
+        if (job.isFlagged()) {
+            Button btnUnflag = new Button("✓ Retirer le signalement");
+            btnUnflag.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: 600; " +
+                              "-fx-font-size: 13px; -fx-padding: 12 25; -fx-background-radius: 8; -fx-cursor: hand;");
+            btnUnflag.setOnAction(e -> handleUnflagOffer(job));
+            actionBox.getChildren().addAll(btnFlag, btnUnflag);
+        } else {
+            actionBox.getChildren().add(btnFlag);
+        }
+
         detailContainer.getChildren().add(actionBox);
 
         // Info Admin
-        Label adminNote = new Label("⚠️ Mode Admin - Vous pouvez supprimer n'importe quelle offre");
-        adminNote.setStyle("-fx-text-fill: #856404; -fx-font-size: 11px; -fx-background-color: #fff3cd; " +
-                          "-fx-padding: 8 12; -fx-background-radius: 6;");
+        String infoText = job.isFlagged()
+            ? "🚨 Cette offre est actuellement signalée - Le recruteur a été notifié"
+            : "💡 Mode Admin - Signalez une offre pour notifier le recruteur d'un problème";
+        String infoBgColor = job.isFlagged() ? "#f8d7da" : "#fff3cd";
+        String infoTextColor = job.isFlagged() ? "#721c24" : "#856404";
+
+        Label adminNote = new Label(infoText);
+        adminNote.setStyle("-fx-text-fill: " + infoTextColor + "; -fx-font-size: 11px; -fx-background-color: " + infoBgColor + "; " +
+                          "-fx-padding: 10 15; -fx-background-radius: 6;");
         adminNote.setWrapText(true);
         detailContainer.getChildren().add(adminNote);
+    }
+
+    /**
+     * Affiche les avertissements existants pour une offre
+     */
+    private void displayExistingWarnings(JobOffer job) {
+        try {
+            List<JobOfferWarning> warnings = warningService.getWarningsByJobOfferId(job.getId());
+            if (!warnings.isEmpty()) {
+                VBox warningsSection = new VBox(10);
+                warningsSection.setStyle("-fx-background-color: #fff3cd; -fx-background-radius: 8; -fx-padding: 15;");
+
+                Label warningsTitle = new Label("⚠️ Signalements (" + warnings.size() + ")");
+                warningsTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #856404;");
+                warningsSection.getChildren().add(warningsTitle);
+
+                for (JobOfferWarning warning : warnings) {
+                    VBox warningCard = new VBox(5);
+                    warningCard.setStyle("-fx-background-color: white; -fx-padding: 10; -fx-background-radius: 6; " +
+                                        "-fx-border-color: #ffc107; -fx-border-radius: 6;");
+
+                    HBox headerRow = new HBox(10);
+                    headerRow.setAlignment(Pos.CENTER_LEFT);
+
+                    Label reasonLabel = new Label("📋 " + warning.getReason());
+                    reasonLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #856404;");
+
+                    Label statusLabel = new Label(warning.getStatusLabel());
+                    String statusColor = switch (warning.getStatus()) {
+                        case SENT -> "#17a2b8";
+                        case SEEN -> "#ffc107";
+                        case RESOLVED -> "#28a745";
+                        case DISMISSED -> "#6c757d";
+                    };
+                    statusLabel.setStyle("-fx-background-color: " + statusColor + "; -fx-text-fill: white; " +
+                                        "-fx-padding: 2 8; -fx-background-radius: 10; -fx-font-size: 10px;");
+
+                    headerRow.getChildren().addAll(reasonLabel, statusLabel);
+
+                    Label messageLabel = new Label(warning.getMessage());
+                    messageLabel.setWrapText(true);
+                    messageLabel.setStyle("-fx-text-fill: #495057; -fx-font-size: 12px;");
+
+                    Label dateLabel = new Label("Signalé le " + warning.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                    dateLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 10px;");
+
+                    warningCard.getChildren().addAll(headerRow, messageLabel, dateLabel);
+                    warningsSection.getChildren().add(warningCard);
+                }
+
+                detailContainer.getChildren().add(warningsSection);
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur chargement des avertissements: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Affiche le dialogue pour signaler une offre
+     */
+    private void showFlagDialog(JobOffer job) {
+        Dialog<JobOfferWarning> dialog = new Dialog<>();
+        dialog.setTitle("Signaler une offre");
+        dialog.setHeaderText("Signaler: " + job.getTitle());
+
+        // Boutons
+        ButtonType flagButtonType = new ButtonType("Signaler", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(flagButtonType, ButtonType.CANCEL);
+
+        // Contenu
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setPrefWidth(450);
+
+        // Raison du signalement
+        Label reasonLabel = new Label("Raison du signalement:");
+        reasonLabel.setStyle("-fx-font-weight: 600;");
+
+        ComboBox<String> reasonCombo = new ComboBox<>();
+        reasonCombo.getItems().addAll(
+            "Contenu inapproprié",
+            "Information trompeuse",
+            "Discrimination",
+            "Information incomplète",
+            "Offre en double",
+            "Offre expirée non mise à jour",
+            "Spam",
+            "Autre"
+        );
+        reasonCombo.setPromptText("Sélectionnez une raison...");
+        reasonCombo.setMaxWidth(Double.MAX_VALUE);
+
+        // Message détaillé
+        Label messageLabel = new Label("Message pour le recruteur:");
+        messageLabel.setStyle("-fx-font-weight: 600;");
+
+        TextArea messageArea = new TextArea();
+        messageArea.setPromptText("Expliquez le problème au recruteur...\nSoyez précis pour qu'il puisse corriger rapidement.");
+        messageArea.setPrefRowCount(4);
+        messageArea.setWrapText(true);
+
+        // Info
+        Label infoLabel = new Label("💡 Le recruteur sera notifié et devra corriger ou supprimer son offre.");
+        infoLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+        infoLabel.setWrapText(true);
+
+        content.getChildren().addAll(reasonLabel, reasonCombo, messageLabel, messageArea, infoLabel);
+        dialog.getDialogPane().setContent(content);
+
+        // Validation
+        Button flagButton = (Button) dialog.getDialogPane().lookupButton(flagButtonType);
+        flagButton.setDisable(true);
+
+        reasonCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            flagButton.setDisable(newVal == null || messageArea.getText().trim().isEmpty());
+        });
+        messageArea.textProperty().addListener((obs, oldVal, newVal) -> {
+            flagButton.setDisable(reasonCombo.getValue() == null || newVal.trim().isEmpty());
+        });
+
+        // Résultat
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == flagButtonType) {
+                JobOfferWarning warning = new JobOfferWarning(
+                    job.getId(),
+                    job.getRecruiterId(),
+                    UserContext.getAdminId() != null ? UserContext.getAdminId() : 1L,
+                    reasonCombo.getValue(),
+                    messageArea.getText().trim()
+                );
+                return warning;
+            }
+            return null;
+        });
+
+        Optional<JobOfferWarning> result = dialog.showAndWait();
+        result.ifPresent(warning -> {
+            try {
+                warningService.createWarning(warning);
+                showAlert("Succès", "L'offre a été signalée. Le recruteur sera notifié.", Alert.AlertType.INFORMATION);
+                loadJobOffers();
+            } catch (SQLException e) {
+                showAlert("Erreur", "Erreur lors du signalement: " + e.getMessage(), Alert.AlertType.ERROR);
+            }
+        });
+    }
+
+    /**
+     * Retire le signalement d'une offre
+     */
+    private void handleUnflagOffer(JobOffer job) {
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Confirmation");
+        confirmation.setHeaderText("Retirer le signalement ?");
+        confirmation.setContentText("Tous les avertissements en attente seront annulés.\n\n" +
+                                   "Offre: " + job.getTitle());
+
+        Optional<ButtonType> result = confirmation.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                // Marquer tous les avertissements comme annulés
+                List<JobOfferWarning> warnings = warningService.getPendingWarningsByJobOfferId(job.getId());
+                for (JobOfferWarning warning : warnings) {
+                    warningService.dismissWarning(warning.getId());
+                }
+
+                showAlert("Succès", "Le signalement a été retiré.", Alert.AlertType.INFORMATION);
+                loadJobOffers();
+            } catch (SQLException e) {
+                showAlert("Erreur", "Erreur: " + e.getMessage(), Alert.AlertType.ERROR);
+            }
+        }
     }
 
     private Label createMetaBadge(String text, String bgColor, String textColor) {
@@ -598,27 +733,6 @@ public class JobOffersAdminController {
         badge.setStyle("-fx-background-color: " + bgColor + "; -fx-text-fill: " + textColor + "; " +
                       "-fx-padding: 5 10; -fx-background-radius: 12; -fx-font-size: 11px; -fx-font-weight: 600;");
         return badge;
-    }
-
-    private void handleDeleteJobOffer(JobOffer job) {
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmation.setTitle("Confirmation");
-        confirmation.setHeaderText("Supprimer l'offre ?");
-        confirmation.setContentText("Titre: " + job.getTitle() + "\n\nCette action est irréversible.");
-
-        Optional<ButtonType> result = confirmation.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                if (jobOfferService.deleteJobOffer(job.getId())) {
-                    showAlert("Succès", "Offre supprimée avec succès", Alert.AlertType.INFORMATION);
-                    selectedJob = null;
-                    loadJobOffers();
-                    loadStatistics();
-                }
-            } catch (SQLException e) {
-                showAlert("Erreur", "Erreur: " + e.getMessage(), Alert.AlertType.ERROR);
-            }
-        }
     }
 
     @FXML

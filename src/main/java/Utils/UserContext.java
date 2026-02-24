@@ -33,10 +33,10 @@ public class UserContext {
 
 
     private UserContext() {
-        //  Recruiter with ID 1
-        this.currentRole = Role.RECRUITER;
-        this.userName = "Demo Recruiter";
-        this.userEmail = "recruiter@talentbridge.com";
+        // Default: Admin with ID 1 (pour les tests du système de signalement)
+        this.currentRole = Role.ADMIN;
+        this.userName = "Admin User";
+        this.userEmail = "admin@talentbridge.com";
         this.userId = 1L;
     }
 
@@ -113,6 +113,14 @@ public class UserContext {
         // Si l'utilisateur est un recruteur, retourne son ID
         // Sinon retourne null ou un ID par défaut
         if (getInstance().currentRole == Role.RECRUITER) {
+            return getInstance().userId;
+        }
+        return 1L; // ID par défaut pour les tests
+    }
+
+    public static Long getAdminId() {
+        // Si l'utilisateur est un admin, retourne son ID
+        if (getInstance().currentRole == Role.ADMIN) {
             return getInstance().userId;
         }
         return 1L; // ID par défaut pour les tests

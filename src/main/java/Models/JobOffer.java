@@ -12,12 +12,15 @@ public class JobOffer {
     private LocalDateTime createdAt;
     private LocalDateTime deadline;
     private Status status;
+    private boolean isFlagged;
+    private LocalDateTime flaggedAt;
 
 
     // Constructors
     public JobOffer() {
         this.createdAt = LocalDateTime.now();
         this.status = Status.OPEN;
+        this.isFlagged = false;
     }
 
     public JobOffer(Long id, Long recruiterId, String title, String description, String location,
@@ -31,6 +34,23 @@ public class JobOffer {
         this.createdAt = createdAt;
         this.deadline = deadline;
         this.status = status;
+        this.isFlagged = false;
+    }
+
+    public JobOffer(Long id, Long recruiterId, String title, String description, String location,
+                    ContractType contractType, LocalDateTime createdAt, LocalDateTime deadline, Status status,
+                    boolean isFlagged, LocalDateTime flaggedAt) {
+        this.id = id;
+        this.recruiterId = recruiterId;
+        this.title = title;
+        this.description = description;
+        this.location = location;
+        this.contractType = contractType;
+        this.createdAt = createdAt;
+        this.deadline = deadline;
+        this.status = status;
+        this.isFlagged = isFlagged;
+        this.flaggedAt = flaggedAt;
     }
 
 
@@ -106,6 +126,22 @@ public class JobOffer {
         this.status = status;
     }
 
+    public boolean isFlagged() {
+        return isFlagged;
+    }
+
+    public void setFlagged(boolean flagged) {
+        isFlagged = flagged;
+    }
+
+    public LocalDateTime getFlaggedAt() {
+        return flaggedAt;
+    }
+
+    public void setFlaggedAt(LocalDateTime flaggedAt) {
+        this.flaggedAt = flaggedAt;
+    }
+
     @Override
     public String toString() {
         return "JobOffer{" +
@@ -115,6 +151,7 @@ public class JobOffer {
                 ", location='" + location + '\'' +
                 ", contractType=" + contractType +
                 ", status=" + status +
+                ", isFlagged=" + isFlagged +
                 '}';
     }
 }
