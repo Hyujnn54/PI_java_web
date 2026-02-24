@@ -2,12 +2,14 @@ package Controllers;
 
 import Models.JobOffer;
 import Models.JobOfferWarning;
+import Models.WarningCorrection;
 import Models.OfferSkill;
 import Models.ContractType;
 import Models.Status;
 import Models.SkillLevel;
 import Services.JobOfferService;
 import Services.JobOfferWarningService;
+import Services.WarningCorrectionService;
 import Services.OfferSkillService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
@@ -44,6 +46,7 @@ public class JobOffersController {
     private JobOfferService jobOfferService;
     private OfferSkillService offerSkillService;
     private JobOfferWarningService warningService;
+    private WarningCorrectionService correctionService;
 
     // Form elements
     private TextField formTitleField;
@@ -71,6 +74,7 @@ public class JobOffersController {
         jobOfferService = new JobOfferService();
         offerSkillService = new OfferSkillService();
         warningService = new JobOfferWarningService();
+        correctionService = new WarningCorrectionService();
         skillRows = new ArrayList<>();
         buildUI();
         loadJobOffers();
@@ -584,31 +588,169 @@ public class JobOffersController {
     }
 
     /**
-     * Marque les avertissements comme résolus après correction par le recruteur
+     * Ouvre le dialogue pour soumettre une correction à l'admin
      */
     private void handleMarkWarningsResolved(JobOffer job, List<JobOfferWarning> warnings) {
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmation.setTitle("Confirmation");
-        confirmation.setHeaderText("Confirmer la correction");
-        confirmation.setContentText("Confirmez-vous avoir corrigé le(s) problème(s) signalé(s) ?\n\n" +
-                                   "L'administrateur sera informé de votre correction.");
+        // Créer un dialogue pour soumettre la correction
+        Dialog<WarningCorrection> dialog = new Dialog<>();
+        dialog.setTitle("Soumettre une correction");
+        dialog.setHeaderText("Soumettre votre correction pour validation");
 
-        Optional<ButtonType> result = confirmation.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
+        ButtonType submitButtonType = new ButtonType("Soumettre", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(submitButtonType, ButtonType.CANCEL);
+
+        // Contenu du dialogue
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setPrefWidth(600);
+
+        // Info sur l'offre
+        Label offerLabel = new Label("📋 Offre: " + job.getTitle());
+        offerLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 14px;");
+
+        // Explication
+        Label infoLabel = new Label("⚠️ Votre correction sera envoyée à l'administrateur pour validation. " +
+                                   "Une fois approuvée, votre offre sera republiée.");
+        infoLabel.setWrapText(true);
+        infoLabel.setStyle("-fx-text-fill: #856404; -fx-background-color: #fff3cd; -fx-padding: 10; " +
+                          "-fx-background-radius: 5;");
+
+        // Note de correction avec bouton de génération
+        HBox noteLabelBox = new HBox(10);
+        noteLabelBox.setAlignment(Pos.CENTER_LEFT);
+
+        Label noteLabel = new Label("📝 Description des corrections:");
+        noteLabel.setStyle("-fx-font-weight: 600;");
+
+        Button btnGenerateNote = new Button("🤖 Générer automatiquement");
+        btnGenerateNote.setStyle("-fx-background-color: #6f42c1; -fx-text-fill: white; -fx-font-size: 11px; " +
+                                "-fx-padding: 5 10; -fx-background-radius: 5; -fx-cursor: hand;");
+
+        noteLabelBox.getChildren().addAll(noteLabel, btnGenerateNote);
+
+        TextArea correctionNote = new TextArea();
+        correctionNote.setPromptText("Cliquez sur 'Générer automatiquement' pour créer une description des changements...");
+        correctionNote.setPrefRowCount(5);
+        correctionNote.setWrapText(true);
+
+        // Label de chargement
+        Label loadingLabel = new Label("");
+        loadingLabel.setStyle("-fx-text-fill: #6f42c1; -fx-font-size: 11px;");
+
+        // Récupérer la raison du signalement
+        String warningReason = !warnings.isEmpty() ? warnings.get(0).getReason() : "Non spécifié";
+        String warningMessage = !warnings.isEmpty() ? warnings.get(0).getMessage() : "";
+
+        // Action du bouton de génération
+        btnGenerateNote.setOnAction(e -> {
+            loadingLabel.setText("⏳ Génération en cours...");
+            btnGenerateNote.setDisable(true);
+
+            // Exécuter dans un thread séparé
+            new Thread(() -> {
+                try {
+                    String generatedNote = generateCorrectionNote(
+                        warningReason,
+                        warningMessage,
+                        job.getTitle(),
+                        job.getDescription()
+                    );
+
+                    // Mettre à jour l'UI dans le thread JavaFX
+                    javafx.application.Platform.runLater(() -> {
+                        if (generatedNote != null && !generatedNote.isEmpty()) {
+                            correctionNote.setText(generatedNote);
+                            loadingLabel.setText("✅ Description générée avec succès");
+                        } else {
+                            loadingLabel.setText("⚠️ Impossible de générer, veuillez écrire manuellement");
+                        }
+                        btnGenerateNote.setDisable(false);
+                    });
+                } catch (Exception ex) {
+                    javafx.application.Platform.runLater(() -> {
+                        loadingLabel.setText("❌ Erreur: " + ex.getMessage());
+                        btnGenerateNote.setDisable(false);
+                    });
+                }
+            }).start();
+        });
+
+        // Résumé des modifications
+        VBox changesBox = new VBox(10);
+        changesBox.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 15; -fx-background-radius: 8;");
+
+        Label changesTitle = new Label("📊 Résumé de l'offre actuelle:");
+        changesTitle.setStyle("-fx-font-weight: 600;");
+
+        Label currentTitle = new Label("Titre: " + job.getTitle());
+        currentTitle.setStyle("-fx-text-fill: #495057;");
+
+        String descPreview = job.getDescription() != null
+            ? (job.getDescription().length() > 100 ? job.getDescription().substring(0, 100) + "..." : job.getDescription())
+            : "Aucune description";
+        Label currentDesc = new Label("Description: " + descPreview);
+        currentDesc.setStyle("-fx-text-fill: #495057;");
+        currentDesc.setWrapText(true);
+
+        changesBox.getChildren().addAll(changesTitle, currentTitle, currentDesc);
+
+        content.getChildren().addAll(offerLabel, infoLabel, noteLabelBox, correctionNote, loadingLabel, changesBox);
+        dialog.getDialogPane().setContent(content);
+
+        // Validation
+        Button submitButton = (Button) dialog.getDialogPane().lookupButton(submitButtonType);
+        submitButton.setDisable(true);
+
+        correctionNote.textProperty().addListener((obs, oldVal, newVal) -> {
+            submitButton.setDisable(newVal.trim().length() < 10);
+        });
+
+        // Résultat
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == submitButtonType) {
+                WarningCorrection correction = new WarningCorrection();
+                correction.setJobOfferId(job.getId());
+                correction.setRecruiterId(UserContext.getRecruiterId());
+                correction.setCorrectionNote(correctionNote.getText().trim());
+                correction.setNewTitle(job.getTitle());
+                correction.setNewDescription(job.getDescription());
+                // Le warningId sera défini pour le premier warning
+                if (!warnings.isEmpty()) {
+                    correction.setWarningId(warnings.get(0).getId());
+                }
+                return correction;
+            }
+            return null;
+        });
+
+        Optional<WarningCorrection> result = dialog.showAndWait();
+        result.ifPresent(correction -> {
             try {
+                // Soumettre la correction pour chaque warning
                 for (JobOfferWarning warning : warnings) {
-                    warningService.resolveWarning(warning.getId());
+                    WarningCorrection corr = new WarningCorrection();
+                    corr.setWarningId(warning.getId());
+                    corr.setJobOfferId(job.getId());
+                    corr.setRecruiterId(UserContext.getRecruiterId());
+                    corr.setCorrectionNote(correction.getCorrectionNote());
+                    corr.setNewTitle(job.getTitle());
+                    corr.setNewDescription(job.getDescription());
+
+                    correctionService.submitCorrection(corr);
                 }
 
-                showAlert("Succès", "Les avertissements ont été marqués comme résolus.", Alert.AlertType.INFORMATION);
+                showAlert("Succès",
+                    "Votre correction a été soumise à l'administrateur.\n\n" +
+                    "Vous serez notifié une fois qu'elle sera validée et votre offre sera republiée.",
+                    Alert.AlertType.INFORMATION);
 
                 // Recharger les données
                 loadJobOffers();
 
             } catch (SQLException e) {
-                showAlert("Erreur", "Erreur lors de la résolution: " + e.getMessage(), Alert.AlertType.ERROR);
+                showAlert("Erreur", "Erreur lors de la soumission: " + e.getMessage(), Alert.AlertType.ERROR);
             }
-        }
+        });
     }
 
     private void displayJobDetails(JobOffer job) {
@@ -773,15 +915,28 @@ public class JobOffersController {
         VBox formContainer = new VBox(15);
         formContainer.setStyle("-fx-padding: 20;");
 
-        // Title field with help and error labels
-        Label titleLabel = new Label("Job Title *");
+        // Title field with AI Suggest button
+        Label titleLabel = new Label("Titre du poste *");
         titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
-        formTitleField = new TextField();
-        formTitleField.setPromptText("Job Title");
-        formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
+        HBox titleRow = new HBox(10);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
 
-        Label titleHelpLabel = new Label("ℹ️ 3-100 characters. Letters, numbers, spaces, and basic punctuation only.");
+        formTitleField = new TextField();
+        formTitleField.setPromptText("Ex: Développeur Java Senior, Chef de projet IT...");
+        formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
+        HBox.setHgrow(formTitleField, Priority.ALWAYS);
+
+        Button btnAISuggest = new Button("🤖 AI Suggest");
+        btnAISuggest.setStyle("-fx-background-color: #6f42c1; -fx-text-fill: white; -fx-font-weight: 600; " +
+                             "-fx-padding: 10 15; -fx-background-radius: 6; -fx-cursor: hand;");
+
+        Label aiStatusLabel = new Label("");
+        aiStatusLabel.setStyle("-fx-text-fill: #6f42c1; -fx-font-size: 11px;");
+
+        titleRow.getChildren().addAll(formTitleField, btnAISuggest);
+
+        Label titleHelpLabel = new Label("ℹ️ Entrez le titre puis cliquez 'AI Suggest' pour remplir automatiquement le formulaire");
         titleHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 2 0 0 5;");
 
         titleErrorLabel = new Label();
@@ -790,15 +945,15 @@ public class JobOffersController {
         titleErrorLabel.setManaged(false);
 
         // Description field with help and error labels
-        Label descLabel = new Label("Job Description *");
+        Label descLabel = new Label("Description du poste *");
         descLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
         formDescription = new TextArea();
-        formDescription.setPromptText("Job Description");
+        formDescription.setPromptText("Description détaillée du poste...");
         formDescription.setPrefRowCount(6);
         formDescription.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
 
-        Label descHelpLabel = new Label("ℹ️ 20-2000 characters. Provide detailed job requirements and responsibilities.");
+        Label descHelpLabel = new Label("ℹ️ 20-2000 caractères. Décrivez les responsabilités et exigences.");
         descHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 2 0 0 5;");
 
         descriptionErrorLabel = new Label();
@@ -807,14 +962,14 @@ public class JobOffersController {
         descriptionErrorLabel.setManaged(false);
 
         // Location field with help and error labels
-        Label locationLabel = new Label("Location *");
+        Label locationLabel = new Label("Localisation *");
         locationLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
         formLocation = new TextField();
-        formLocation.setPromptText("Location");
+        formLocation.setPromptText("Localisation (ex: Paris, France ou Remote)");
         formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
 
-        Label locationHelpLabel = new Label("ℹ️ 2-100 characters. City, country, or 'Remote'.");
+        Label locationHelpLabel = new Label("ℹ️ 2-100 caractères. Ville, pays ou 'Remote'.");
         locationHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 2 0 0 5;");
 
         locationErrorLabel = new Label();
@@ -823,12 +978,12 @@ public class JobOffersController {
         locationErrorLabel.setManaged(false);
 
         // Contract Type
-        Label contractLabel = new Label("Contract Type *");
+        Label contractLabel = new Label("Type de contrat *");
         contractLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
         formContractType = new ComboBox<>();
         formContractType.getItems().addAll(ContractType.values());
-        formContractType.setPromptText("Select Contract Type");
+        formContractType.setPromptText("Sélectionner le type de contrat");
         formContractType.setStyle("-fx-font-size: 14px;");
 
         formStatus = new ComboBox<>();
@@ -837,10 +992,10 @@ public class JobOffersController {
         formStatus.setStyle("-fx-font-size: 14px;");
 
         formDeadline = new DatePicker();
-        formDeadline.setPromptText("Deadline (optional)");
+        formDeadline.setPromptText("Date limite (optionnel)");
         formDeadline.setStyle("-fx-font-size: 14px;");
 
-        Label deadlineHelpLabel = new Label("ℹ️ Must be a future date. Leave empty if no specific deadline.");
+        Label deadlineHelpLabel = new Label("ℹ️ Doit être une date future. Laissez vide si pas de date limite.");
         deadlineHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 2 0 0 5;");
 
         deadlineErrorLabel = new Label();
@@ -855,10 +1010,10 @@ public class JobOffersController {
         VBox skillsSection = new VBox(10);
         skillsSection.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 15; -fx-background-radius: 8;");
 
-        Label skillsLabel = new Label("Required Skills *");
+        Label skillsLabel = new Label("Compétences requises *");
         skillsLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: #2c3e50;");
 
-        Label skillsHelpLabel = new Label("ℹ️ Add at least one skill. Skill name: 2-50 chars. Only letters, numbers, spaces, -, +, #, . allowed.");
+        Label skillsHelpLabel = new Label("ℹ️ Ajoutez au moins une compétence. 2-50 caractères.");
         skillsHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 5 0 10 0;");
 
         skillsErrorLabel = new Label();
@@ -900,7 +1055,41 @@ public class JobOffersController {
             addSkillRow(null);
         }
 
-        Button btnSubmit = new Button(isEditMode ? "Update Job Offer" : "Create Job Offer");
+        // Action du bouton AI Suggest
+        btnAISuggest.setOnAction(e -> {
+            String jobTitle = formTitleField.getText().trim();
+            if (jobTitle.length() < 3) {
+                showAlert("Attention", "Veuillez entrer un titre de poste valide (minimum 3 caractères)", Alert.AlertType.WARNING);
+                return;
+            }
+
+            aiStatusLabel.setText("⏳ Génération en cours...");
+            btnAISuggest.setDisable(true);
+
+            // Exécuter dans un thread séparé
+            new Thread(() -> {
+                try {
+                    String suggestions = generateJobSuggestions(jobTitle);
+
+                    javafx.application.Platform.runLater(() -> {
+                        if (suggestions != null) {
+                            parseAndFillForm(suggestions, jobTitle);
+                            aiStatusLabel.setText("✅ Formulaire rempli avec succès!");
+                        } else {
+                            aiStatusLabel.setText("⚠️ Impossible de générer les suggestions");
+                        }
+                        btnAISuggest.setDisable(false);
+                    });
+                } catch (Exception ex) {
+                    javafx.application.Platform.runLater(() -> {
+                        aiStatusLabel.setText("❌ Erreur: " + ex.getMessage());
+                        btnAISuggest.setDisable(false);
+                    });
+                }
+            }).start();
+        });
+
+        Button btnSubmit = new Button(isEditMode ? "Mettre à jour l'offre" : "Créer l'offre");
         btnSubmit.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 600; " +
                           "-fx-font-size: 16px; -fx-padding: 12 30; -fx-background-radius: 8; -fx-cursor: hand;");
         btnSubmit.setOnAction(e -> {
@@ -912,12 +1101,12 @@ public class JobOffersController {
         });
 
         formContainer.getChildren().addAll(
-                titleLabel, formTitleField, titleHelpLabel, titleErrorLabel,
+                titleLabel, titleRow, titleHelpLabel, aiStatusLabel, titleErrorLabel,
                 descLabel, formDescription, descHelpLabel, descriptionErrorLabel,
                 locationLabel, formLocation, locationHelpLabel, locationErrorLabel,
                 contractLabel, formContractType,
-                new Label("Status *"), formStatus,
-                new Label("Deadline (Optional)"), formDeadline, deadlineHelpLabel, deadlineErrorLabel,
+                new Label("Statut *"), formStatus,
+                new Label("Date limite (Optionnel)"), formDeadline, deadlineHelpLabel, deadlineErrorLabel,
                 skillsSection,
                 btnSubmit
         );
@@ -1414,6 +1603,415 @@ public class JobOffersController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * Génère automatiquement une note de correction via l'API Grok
+     */
+    private String generateCorrectionNote(String warningReason, String warningMessage, String jobTitle, String jobDescription) {
+        try {
+            String prompt = String.format(
+                "Tu es un recruteur qui a reçu un signalement sur son offre d'emploi. " +
+                "Génère une courte note de correction (3-4 phrases) en français expliquant les modifications apportées pour résoudre le problème signalé. " +
+                "Sois professionnel et concis.\n\n" +
+                "Raison du signalement: %s\n" +
+                "Message de l'admin: %s\n" +
+                "Titre de l'offre: %s\n" +
+                "Description de l'offre: %s\n\n" +
+                "Génère uniquement la note de correction, sans introduction.",
+                warningReason,
+                warningMessage != null && warningMessage.length() > 200 ? warningMessage.substring(0, 200) + "..." : warningMessage,
+                jobTitle != null ? jobTitle : "Non spécifié",
+                jobDescription != null && jobDescription.length() > 200 ? jobDescription.substring(0, 200) + "..." : (jobDescription != null ? jobDescription : "Non spécifiée")
+            );
+
+            return callGrokAPI(prompt);
+        } catch (Exception e) {
+            System.err.println("Erreur génération note de correction: " + e.getMessage());
+            return getDefaultCorrectionNote(warningReason);
+        }
+    }
+
+    /**
+     * Appelle l'API Grok pour les avertissements
+     */
+    private String callGrokAPI(String prompt) throws Exception {
+        String apiKey = "xai-BvO5mSs05cHXwQRM1qa8Z7lojgfAMS0I6Kc9Y1R5lQYSyHWO6eDq62ZZ0QsajWkyyyB6f41ZD4HmWOCU";
+        String apiUrl = "https://api.x.ai/v1/chat/completions";
+
+        java.net.URL url = new java.net.URL(apiUrl);
+        java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/json");
+        connection.setRequestProperty("Authorization", "Bearer " + apiKey);
+        connection.setDoOutput(true);
+        connection.setConnectTimeout(15000);
+        connection.setReadTimeout(60000);
+
+        String jsonBody = String.format(
+            "{\"model\": \"grok-beta\", \"messages\": [{\"role\": \"user\", \"content\": \"%s\"}], \"max_tokens\": 500, \"temperature\": 0.7}",
+            escapeJson(prompt)
+        );
+
+        try (java.io.OutputStream os = connection.getOutputStream()) {
+            byte[] input = jsonBody.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
+        }
+
+        int responseCode = connection.getResponseCode();
+
+        if (responseCode == java.net.HttpURLConnection.HTTP_OK) {
+            StringBuilder response = new StringBuilder();
+            try (java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(connection.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    response.append(line);
+                }
+            }
+            return extractGrokContent(response.toString());
+        } else {
+            throw new Exception("Erreur API Grok: " + responseCode);
+        }
+    }
+
+    /**
+     * Extrait le contenu de la réponse Grok
+     */
+    private String extractGrokContent(String jsonResponse) {
+        try {
+            int contentStart = jsonResponse.indexOf("\"content\":");
+            if (contentStart == -1) return null;
+
+            contentStart = jsonResponse.indexOf("\"", contentStart + 10) + 1;
+            int contentEnd = jsonResponse.indexOf("\"", contentStart);
+
+            while (contentEnd > 0 && jsonResponse.charAt(contentEnd - 1) == '\\') {
+                contentEnd = jsonResponse.indexOf("\"", contentEnd + 1);
+            }
+
+            if (contentStart > 0 && contentEnd > contentStart) {
+                String content = jsonResponse.substring(contentStart, contentEnd);
+                content = content.replace("\\n", "\n")
+                                .replace("\\\"", "\"")
+                                .replace("\\\\", "\\");
+                return content.trim();
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur parsing réponse Grok: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Appelle l'API Gemini pour l'auto-remplissage du formulaire
+     */
+    private String callGeminiAPI(String prompt) throws Exception {
+        String apiKey = "AIzaSyA40pYJkW9p7QYQerVUv_rmS4pNFo1T46o";
+        String apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+
+        java.net.URL url = new java.net.URL(apiUrl);
+        java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/json");
+        connection.setDoOutput(true);
+        connection.setConnectTimeout(15000);
+        connection.setReadTimeout(60000);
+
+        // Construire le JSON de la requête pour Gemini
+        String jsonBody = String.format(
+            "{\"contents\": [{\"parts\": [{\"text\": \"%s\"}]}], \"generationConfig\": {\"maxOutputTokens\": 1000, \"temperature\": 0.7}}",
+            escapeJson(prompt)
+        );
+
+        System.out.println("Appel API Gemini...");
+
+        try (java.io.OutputStream os = connection.getOutputStream()) {
+            byte[] input = jsonBody.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
+        }
+
+        int responseCode = connection.getResponseCode();
+        System.out.println("Response code: " + responseCode);
+
+        if (responseCode == java.net.HttpURLConnection.HTTP_OK) {
+            StringBuilder response = new StringBuilder();
+            try (java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(connection.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    response.append(line);
+                }
+            }
+            String result = extractGeminiContent(response.toString());
+            System.out.println("Réponse API: " + (result != null ? result.substring(0, Math.min(100, result.length())) + "..." : "null"));
+            return result;
+        } else {
+            // Lire le message d'erreur
+            StringBuilder errorResponse = new StringBuilder();
+            try (java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(connection.getErrorStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    errorResponse.append(line);
+                }
+            } catch (Exception e) {
+                // Ignorer si pas d'error stream
+            }
+            System.err.println("Erreur API Gemini: " + responseCode + " - " + errorResponse);
+            throw new Exception("Erreur API: " + responseCode);
+        }
+    }
+
+    /**
+     * Extrait le contenu de la réponse Gemini
+     */
+    private String extractGeminiContent(String jsonResponse) {
+        try {
+            // Format Gemini: {"candidates":[{"content":{"parts":[{"text":"..."}]}}]}
+            int textStart = jsonResponse.indexOf("\"text\":");
+            if (textStart == -1) return null;
+
+            textStart = jsonResponse.indexOf("\"", textStart + 7) + 1;
+            int textEnd = textStart;
+            int braceCount = 0;
+            boolean inString = true;
+
+            for (int i = textStart; i < jsonResponse.length(); i++) {
+                char c = jsonResponse.charAt(i);
+                if (c == '\\' && i + 1 < jsonResponse.length()) {
+                    i++; // Skip escaped character
+                    continue;
+                }
+                if (c == '"' && inString) {
+                    textEnd = i;
+                    break;
+                }
+            }
+
+            if (textEnd > textStart) {
+                String content = jsonResponse.substring(textStart, textEnd);
+                content = content.replace("\\n", "\n")
+                                .replace("\\\"", "\"")
+                                .replace("\\\\", "\\")
+                                .replace("\\t", "\t");
+                return content.trim();
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur parsing réponse Gemini: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Extrait le contenu du message de la réponse JSON
+     */
+    private String extractContentFromResponse(String jsonResponse) {
+        try {
+            int contentStart = jsonResponse.indexOf("\"content\":");
+            if (contentStart == -1) return null;
+
+            contentStart = jsonResponse.indexOf("\"", contentStart + 10) + 1;
+            int contentEnd = jsonResponse.indexOf("\"", contentStart);
+
+            while (contentEnd > 0 && jsonResponse.charAt(contentEnd - 1) == '\\') {
+                contentEnd = jsonResponse.indexOf("\"", contentEnd + 1);
+            }
+
+            if (contentStart > 0 && contentEnd > contentStart) {
+                String content = jsonResponse.substring(contentStart, contentEnd);
+                content = content.replace("\\n", "\n")
+                                .replace("\\\"", "\"")
+                                .replace("\\\\", "\\");
+                return content.trim();
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur parsing réponse: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Échappe les caractères spéciaux pour JSON
+     */
+    private String escapeJson(String text) {
+        if (text == null) return "";
+        return text.replace("\\", "\\\\")
+                   .replace("\"", "\\\"")
+                   .replace("\n", "\\n")
+                   .replace("\r", "\\r")
+                   .replace("\t", "\\t");
+    }
+
+    /**
+     * Note de correction par défaut si l'API échoue
+     */
+    private String getDefaultCorrectionNote(String reason) {
+        return switch (reason) {
+            case "Contenu inapproprié" ->
+                "J'ai revu et corrigé le contenu de l'offre pour supprimer tout élément inapproprié. " +
+                "Le texte a été reformulé de manière professionnelle et conforme aux normes de la plateforme.";
+            case "Information trompeuse" ->
+                "J'ai vérifié et corrigé les informations de l'offre pour garantir leur exactitude. " +
+                "Les détails du poste, du salaire et des conditions ont été mis à jour.";
+            case "Discrimination" ->
+                "J'ai modifié l'offre pour supprimer tout critère discriminatoire. " +
+                "L'offre est maintenant conforme aux lois sur l'égalité des chances.";
+            case "Information incomplète" ->
+                "J'ai complété l'offre avec toutes les informations nécessaires: " +
+                "description du poste, qualifications requises, conditions de travail et avantages.";
+            case "Offre en double" ->
+                "J'ai supprimé le doublon et conservé uniquement cette version mise à jour de l'offre.";
+            case "Offre expirée non mise à jour" ->
+                "J'ai mis à jour la date limite de candidature et vérifié que le poste est toujours disponible.";
+            case "Spam" ->
+                "J'ai reformulé l'offre de manière professionnelle et pertinente. " +
+                "Le contenu est maintenant approprié pour la plateforme.";
+            default ->
+                "J'ai effectué les corrections nécessaires suite au signalement. " +
+                "L'offre a été revue et mise à jour pour répondre aux exigences de la plateforme.";
+        };
+    }
+
+    /**
+     * Génère des suggestions pour remplir le formulaire basé sur le titre du poste (utilise Gemini)
+     */
+    private String generateJobSuggestions(String jobTitle) {
+        try {
+            String prompt = String.format(
+                "Tu es un expert RH. Génère les informations pour une offre d'emploi basée sur le titre: '%s'.\n\n" +
+                "Réponds UNIQUEMENT dans ce format exact (sans autre texte):\n" +
+                "DESCRIPTION: [description détaillée du poste en 4-5 phrases, responsabilités et qualifications]\n" +
+                "SKILLS: [skill1, skill2, skill3, skill4, skill5]\n\n" +
+                "Exemple pour 'Développeur Java':\n" +
+                "DESCRIPTION: Nous recherchons un développeur Java passionné pour rejoindre notre équipe technique. Vous serez responsable du développement d'applications backend robustes et scalables. Vous participerez à la conception et à l'implémentation de nouvelles fonctionnalités. Une expérience avec les frameworks Spring est appréciée.\n" +
+                "SKILLS: Java, Spring Boot, SQL, Git, REST API",
+                jobTitle
+            );
+
+            String result = callGeminiAPI(prompt);
+            if (result != null && !result.isEmpty()) {
+                return result;
+            }
+            // Si l'API retourne null, utiliser le fallback
+            return getDefaultJobSuggestions(jobTitle);
+        } catch (Exception e) {
+            System.err.println("Erreur génération suggestions: " + e.getMessage());
+            e.printStackTrace();
+            // Retourner des suggestions par défaut en cas d'erreur
+            return getDefaultJobSuggestions(jobTitle);
+        }
+    }
+
+    /**
+     * Génère des suggestions par défaut basées sur le titre
+     */
+    private String getDefaultJobSuggestions(String jobTitle) {
+        String titleLower = jobTitle.toLowerCase();
+
+        // Suggestions par défaut basées sur des mots-clés
+        if (titleLower.contains("développeur") || titleLower.contains("developer") || titleLower.contains("dev")) {
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " passionné(e) pour rejoindre notre équipe technique. Vous serez responsable du développement et de la maintenance d'applications. Vous travaillerez en collaboration avec l'équipe pour concevoir des solutions innovantes. Maîtrise des bonnes pratiques de développement requise.\n" +
+                   "SKILLS: Programmation, Git, Base de données, API REST, Méthodologie Agile";
+        } else if (titleLower.contains("chef") || titleLower.contains("manager") || titleLower.contains("responsable")) {
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " expérimenté(e) pour piloter nos projets stratégiques. Vous serez en charge de la coordination des équipes et du suivi des objectifs. Vous assurerez la communication avec les parties prenantes. Leadership et vision stratégique requis.\n" +
+                   "SKILLS: Management, Gestion de projet, Communication, Leadership, Planification";
+        } else if (titleLower.contains("commercial") || titleLower.contains("vente") || titleLower.contains("sales")) {
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " dynamique pour développer notre portefeuille clients. Vous serez responsable de la prospection et de la fidélisation. Vous atteindrez les objectifs de vente fixés. Excellent sens du relationnel requis.\n" +
+                   "SKILLS: Négociation, Prospection, CRM, Communication, Relation client";
+        } else if (titleLower.contains("mécanicien") || titleLower.contains("mecanicien") || titleLower.contains("technicien")) {
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " qualifié(e) pour assurer l'entretien et la réparation des équipements. Vous diagnostiquerez les pannes et effectuerez les interventions nécessaires. Vous veillerez au respect des normes de sécurité. Une expérience en maintenance industrielle est un plus.\n" +
+                   "SKILLS: Diagnostic, Réparation, Maintenance préventive, Lecture de plans, Sécurité";
+        } else if (titleLower.contains("comptable") || titleLower.contains("finance") || titleLower.contains("accounting")) {
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " rigoureux(se) pour gérer la comptabilité de l'entreprise. Vous serez en charge de la tenue des comptes et des déclarations fiscales. Vous participerez aux clôtures mensuelles et annuelles. Maîtrise des outils comptables requise.\n" +
+                   "SKILLS: Comptabilité, Excel, Fiscalité, SAP, Analyse financière";
+        } else if (titleLower.contains("rh") || titleLower.contains("ressources humaines") || titleLower.contains("hr")) {
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " pour renforcer notre équipe RH. Vous gérerez le recrutement et l'administration du personnel. Vous contribuerez au développement de la marque employeur. Connaissance du droit du travail appréciée.\n" +
+                   "SKILLS: Recrutement, Droit du travail, SIRH, Communication, Gestion administrative";
+        } else if (titleLower.contains("design") || titleLower.contains("graphi") || titleLower.contains("ux") || titleLower.contains("ui")) {
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " créatif(ve) pour concevoir des interfaces utilisateur attractives. Vous créerez des maquettes et prototypes. Vous collaborerez avec les équipes techniques pour implémenter vos designs. Portfolio requis.\n" +
+                   "SKILLS: Figma, Adobe Creative Suite, UX Design, Prototypage, Design System";
+        } else if (titleLower.contains("data") || titleLower.contains("analyst") || titleLower.contains("bi")) {
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " pour analyser nos données et fournir des insights stratégiques. Vous créerez des dashboards et rapports. Vous contribuerez à la prise de décision basée sur les données. Esprit analytique requis.\n" +
+                   "SKILLS: SQL, Python, Power BI, Excel, Statistiques";
+        } else {
+            // Suggestion générique
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " motivé(e) pour rejoindre notre équipe. Vous contribuerez au développement de nos activités et participerez aux projets stratégiques de l'entreprise. Vous travaillerez dans un environnement dynamique et collaboratif. Bonne capacité d'adaptation requise.\n" +
+                   "SKILLS: Communication, Travail en équipe, Organisation, Adaptabilité, Rigueur";
+        }
+    }
+
+    /**
+     * Parse la réponse AI et remplit le formulaire (uniquement description et compétences)
+     */
+    private void parseAndFillForm(String suggestions, String jobTitle) {
+        if (suggestions == null || suggestions.isEmpty()) return;
+
+        try {
+            // Parser la description
+            String description = extractField(suggestions, "DESCRIPTION:");
+            if (description != null && !description.isEmpty()) {
+                formDescription.setText(description);
+            }
+
+            // Parser les compétences
+            String skillsStr = extractField(suggestions, "SKILLS:");
+            if (skillsStr != null && !skillsStr.isEmpty()) {
+                // Effacer les compétences existantes
+                skillsContainer.getChildren().clear();
+                skillRows.clear();
+
+                // Ajouter les nouvelles compétences
+                String[] skills = skillsStr.split(",");
+                for (String skill : skills) {
+                    String trimmedSkill = skill.trim();
+                    if (!trimmedSkill.isEmpty() && trimmedSkill.length() >= 2) {
+                        OfferSkill offerSkill = new OfferSkill(null, trimmedSkill, SkillLevel.INTERMEDIATE);
+                        addSkillRow(offerSkill);
+                    }
+                }
+
+                // Ajouter une ligne vide si aucune compétence
+                if (skillRows.isEmpty()) {
+                    addSkillRow(null);
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Erreur parsing suggestions: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Extrait un champ de la réponse AI
+     */
+    private String extractField(String text, String fieldName) {
+        int startIndex = text.indexOf(fieldName);
+        if (startIndex == -1) return null;
+
+        startIndex += fieldName.length();
+        int endIndex = text.indexOf("\n", startIndex);
+        if (endIndex == -1) endIndex = text.length();
+
+        return text.substring(startIndex, endIndex).trim();
+    }
+
+    /**
+     * Convertit une chaîne en ContractType
+     */
+    private ContractType parseContractType(String contract) {
+        String upper = contract.toUpperCase().trim();
+        return switch (upper) {
+            case "CDI" -> ContractType.CDI;
+            case "CDD" -> ContractType.CDD;
+            case "INTERNSHIP", "STAGE" -> ContractType.INTERNSHIP;
+            case "FREELANCE" -> ContractType.FREELANCE;
+            case "PART_TIME", "TEMPS PARTIEL" -> ContractType.PART_TIME;
+            case "FULL_TIME", "TEMPS PLEIN" -> ContractType.FULL_TIME;
+            default -> ContractType.CDI;
+        };
     }
 
     // Helper class to store skill row components

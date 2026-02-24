@@ -2,11 +2,13 @@ package Controllers;
 
 import Models.JobOffer;
 import Models.JobOfferWarning;
+import Models.WarningCorrection;
 import Models.OfferSkill;
 import Models.ContractType;
 import Models.Status;
 import Services.JobOfferService;
 import Services.JobOfferWarningService;
+import Services.WarningCorrectionService;
 import Services.OfferSkillService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
@@ -38,10 +40,12 @@ public class JobOffersAdminController {
     private ComboBox<String> cbFilterType;
     private ComboBox<String> cbFilterLocation;
     private ComboBox<String> cbFilterStatus;
+    private Label notificationBadge;
 
     private JobOfferService jobOfferService;
     private OfferSkillService offerSkillService;
     private JobOfferWarningService warningService;
+    private WarningCorrectionService correctionService;
 
     // Filtres actifs
     private ContractType selectedContractType = null;
@@ -53,6 +57,7 @@ public class JobOffersAdminController {
         jobOfferService = new JobOfferService();
         offerSkillService = new OfferSkillService();
         warningService = new JobOfferWarningService();
+        correctionService = new WarningCorrectionService();
         buildUI();
         loadJobOffers();
     }
@@ -73,9 +78,33 @@ public class JobOffersAdminController {
         Label pageTitle = new Label("Gestion des offres d'emploi");
         pageTitle.setStyle("-fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
 
-        headerBox.getChildren().addAll(adminBadge, pageTitle);
+        // Spacer
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        // Bouton notifications pour les corrections en attente
+        Button btnCorrections = new Button("📬 Corrections en attente");
+        btnCorrections.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-weight: 600; " +
+                               "-fx-padding: 8 16; -fx-background-radius: 8; -fx-cursor: hand;");
+        btnCorrections.setOnAction(e -> showPendingCorrectionsDialog());
+
+        // Badge de notification
+        notificationBadge = new Label("0");
+        notificationBadge.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-size: 11px; " +
+                                  "-fx-font-weight: 700; -fx-padding: 2 6; -fx-background-radius: 10;");
+        notificationBadge.setVisible(false);
+
+        StackPane notificationPane = new StackPane();
+        notificationPane.getChildren().addAll(btnCorrections, notificationBadge);
+        StackPane.setAlignment(notificationBadge, Pos.TOP_RIGHT);
+        StackPane.setMargin(notificationBadge, new Insets(-5, -5, 0, 0));
+
+        headerBox.getChildren().addAll(adminBadge, pageTitle, spacer, notificationPane);
         mainContainer.getChildren().add(headerBox);
         mainContainer.getChildren().add(new Region() {{ setPrefHeight(15); }});
+
+        // Mettre à jour le compteur de notifications
+        updateNotificationBadge();
 
         // === BARRE DE RECHERCHE ET FILTRES ===
         VBox searchFilterBox = createSearchFilterBox();
@@ -787,6 +816,221 @@ public class JobOffersAdminController {
             } catch (SQLException e) {
                 showAlert("Erreur", "Erreur: " + e.getMessage(), Alert.AlertType.ERROR);
             }
+        }
+    }
+
+    /**
+     * Met à jour le badge de notification
+     */
+    private void updateNotificationBadge() {
+        try {
+            int count = correctionService.countPendingCorrections();
+            if (notificationBadge != null) {
+                notificationBadge.setText(String.valueOf(count));
+                notificationBadge.setVisible(count > 0);
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur comptage corrections: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Affiche le dialogue des corrections en attente
+     */
+    private void showPendingCorrectionsDialog() {
+        try {
+            List<WarningCorrection> corrections = correctionService.getPendingCorrections();
+
+            if (corrections.isEmpty()) {
+                showAlert("Information", "Aucune correction en attente de validation.", Alert.AlertType.INFORMATION);
+                return;
+            }
+
+            // Créer un dialogue pour afficher les corrections
+            Dialog<Void> dialog = new Dialog<>();
+            dialog.setTitle("Corrections en attente");
+            dialog.setHeaderText("📬 " + corrections.size() + " correction(s) en attente de validation");
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+            dialog.getDialogPane().setPrefWidth(700);
+            dialog.getDialogPane().setPrefHeight(500);
+
+            VBox content = new VBox(15);
+            content.setPadding(new Insets(10));
+
+            ScrollPane scrollPane = new ScrollPane();
+            scrollPane.setFitToWidth(true);
+            scrollPane.setStyle("-fx-background: transparent;");
+
+            VBox correctionsList = new VBox(15);
+            correctionsList.setPadding(new Insets(5));
+
+            for (WarningCorrection correction : corrections) {
+                VBox card = createCorrectionCard(correction, dialog);
+                correctionsList.getChildren().add(card);
+            }
+
+            scrollPane.setContent(correctionsList);
+            content.getChildren().add(scrollPane);
+            VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
+            dialog.getDialogPane().setContent(content);
+            dialog.showAndWait();
+
+        } catch (SQLException e) {
+            showAlert("Erreur", "Erreur lors du chargement des corrections: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    /**
+     * Crée une carte pour afficher une correction
+     */
+    private VBox createCorrectionCard(WarningCorrection correction, Dialog<Void> parentDialog) {
+        VBox card = new VBox(12);
+        card.setStyle("-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10; " +
+                     "-fx-border-color: #17a2b8; -fx-border-radius: 10; -fx-border-width: 2;");
+
+        // En-tête
+        HBox header = new HBox(10);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        Label icon = new Label("📝");
+        icon.setStyle("-fx-font-size: 20px;");
+
+        VBox headerText = new VBox(2);
+        Label titleLabel = new Label("Correction pour l'offre #" + correction.getJobOfferId());
+        titleLabel.setStyle("-fx-font-weight: 700; -fx-font-size: 14px; -fx-text-fill: #2c3e50;");
+
+        Label dateLabel = new Label("Soumise le " + correction.getSubmittedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm")));
+        dateLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #6c757d;");
+
+        headerText.getChildren().addAll(titleLabel, dateLabel);
+        header.getChildren().addAll(icon, headerText);
+
+        // Note du recruteur
+        VBox noteBox = new VBox(5);
+        noteBox.setStyle("-fx-background-color: #e3f2fd; -fx-padding: 10; -fx-background-radius: 5;");
+
+        Label noteTitle = new Label("💬 Note du recruteur:");
+        noteTitle.setStyle("-fx-font-weight: 600; -fx-text-fill: #1976d2;");
+
+        TextArea noteContent = new TextArea(correction.getCorrectionNote());
+        noteContent.setEditable(false);
+        noteContent.setWrapText(true);
+        noteContent.setPrefRowCount(3);
+        noteContent.setStyle("-fx-control-inner-background: transparent;");
+
+        noteBox.getChildren().addAll(noteTitle, noteContent);
+
+        // Détails de l'offre corrigée
+        VBox offerDetails = new VBox(5);
+        offerDetails.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-background-radius: 5;");
+
+        Label offerTitle = new Label("📋 Offre corrigée:");
+        offerTitle.setStyle("-fx-font-weight: 600; -fx-text-fill: #495057;");
+
+        Label newTitleLabel = new Label("Titre: " + (correction.getNewTitle() != null ? correction.getNewTitle() : "N/A"));
+        newTitleLabel.setStyle("-fx-text-fill: #2c3e50;");
+
+        String descPreview = correction.getNewDescription() != null
+            ? (correction.getNewDescription().length() > 150
+                ? correction.getNewDescription().substring(0, 150) + "..."
+                : correction.getNewDescription())
+            : "Aucune description";
+        Label newDescLabel = new Label("Description: " + descPreview);
+        newDescLabel.setWrapText(true);
+        newDescLabel.setStyle("-fx-text-fill: #495057;");
+
+        offerDetails.getChildren().addAll(offerTitle, newTitleLabel, newDescLabel);
+
+        // Boutons d'action
+        HBox actions = new HBox(15);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.setPadding(new Insets(10, 0, 0, 0));
+
+        Button btnApprove = new Button("✅ Approuver et republier");
+        btnApprove.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: 600; " +
+                          "-fx-padding: 10 20; -fx-background-radius: 6; -fx-cursor: hand;");
+        btnApprove.setOnAction(e -> handleApproveCorrection(correction, parentDialog));
+
+        Button btnReject = new Button("❌ Rejeter");
+        btnReject.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: 600; " +
+                          "-fx-padding: 10 20; -fx-background-radius: 6; -fx-cursor: hand;");
+        btnReject.setOnAction(e -> handleRejectCorrection(correction, parentDialog));
+
+        Button btnViewOffer = new Button("👁️ Voir l'offre");
+        btnViewOffer.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: 600; " +
+                            "-fx-padding: 10 20; -fx-background-radius: 6; -fx-cursor: hand;");
+        btnViewOffer.setOnAction(e -> viewOfferFromCorrection(correction));
+
+        actions.getChildren().addAll(btnViewOffer, btnReject, btnApprove);
+
+        card.getChildren().addAll(header, noteBox, offerDetails, actions);
+        return card;
+    }
+
+    /**
+     * Approuver une correction
+     */
+    private void handleApproveCorrection(WarningCorrection correction, Dialog<Void> parentDialog) {
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Confirmer l'approbation");
+        confirmation.setHeaderText("Approuver cette correction ?");
+        confirmation.setContentText("L'offre sera republiée automatiquement.");
+
+        Optional<ButtonType> result = confirmation.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                correctionService.approveCorrection(correction.getId(), "Correction approuvée");
+                showAlert("Succès", "La correction a été approuvée.\nL'offre a été republiée.", Alert.AlertType.INFORMATION);
+
+                parentDialog.close();
+                updateNotificationBadge();
+                loadJobOffers();
+
+            } catch (SQLException e) {
+                showAlert("Erreur", "Erreur lors de l'approbation: " + e.getMessage(), Alert.AlertType.ERROR);
+            }
+        }
+    }
+
+    /**
+     * Rejeter une correction
+     */
+    private void handleRejectCorrection(WarningCorrection correction, Dialog<Void> parentDialog) {
+        TextInputDialog noteDialog = new TextInputDialog();
+        noteDialog.setTitle("Rejeter la correction");
+        noteDialog.setHeaderText("Expliquez pourquoi la correction est rejetée");
+        noteDialog.setContentText("Raison du rejet:");
+
+        Optional<String> result = noteDialog.showAndWait();
+        if (result.isPresent() && !result.get().trim().isEmpty()) {
+            try {
+                correctionService.rejectCorrection(correction.getId(), result.get());
+                showAlert("Information", "La correction a été rejetée.\nLe recruteur devra soumettre une nouvelle correction.", Alert.AlertType.INFORMATION);
+
+                parentDialog.close();
+                updateNotificationBadge();
+                loadJobOffers();
+
+            } catch (SQLException e) {
+                showAlert("Erreur", "Erreur lors du rejet: " + e.getMessage(), Alert.AlertType.ERROR);
+            }
+        } else {
+            showAlert("Attention", "Veuillez indiquer une raison pour le rejet.", Alert.AlertType.WARNING);
+        }
+    }
+
+    /**
+     * Voir l'offre associée à une correction
+     */
+    private void viewOfferFromCorrection(WarningCorrection correction) {
+        try {
+            JobOffer job = jobOfferService.getJobOfferById(correction.getJobOfferId());
+            if (job != null) {
+                displayJobDetails(job);
+            }
+        } catch (SQLException e) {
+            showAlert("Erreur", "Erreur lors du chargement de l'offre: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
