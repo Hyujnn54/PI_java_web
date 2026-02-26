@@ -2,8 +2,6 @@ package Controllers;
 
 import Models.Candidate;
 import Models.Recruiter;
-import Models.Role;
-import Models.User;
 import Services.CandidateService;
 import Services.RecruiterService;
 import Services.UserService;
@@ -22,7 +20,10 @@ public class SignUpController {
     @FXML private TextField txtPhone;
     @FXML private PasswordField txtPassword;
     @FXML private PasswordField txtConfirmPassword;
-    @FXML private ComboBox<Role> cbRole;
+
+    // ✅ CHANGED: no Role enum
+    @FXML private ComboBox<String> cbRole;
+
     @FXML private CheckBox cbTerms;
 
     // blocks
@@ -45,12 +46,12 @@ public class SignUpController {
 
     @FXML
     public void initialize() {
-        // ✅ Admin not allowed in signup
-        cbRole.setItems(FXCollections.observableArrayList(Role.CANDIDATE, Role.RECRUITER));
+        // ✅ only these two types in signup
+        cbRole.setItems(FXCollections.observableArrayList("CANDIDATE", "RECRUITER"));
 
         cbRole.valueProperty().addListener((obs, oldV, newV) -> {
-            boolean isRecruiter = newV == Role.RECRUITER;
-            boolean isCandidate = newV == Role.CANDIDATE;
+            boolean isRecruiter = "RECRUITER".equals(newV);
+            boolean isCandidate = "CANDIDATE".equals(newV);
 
             recruiterBlock.setVisible(isRecruiter);
             recruiterBlock.setManaged(isRecruiter);
@@ -58,98 +59,131 @@ public class SignUpController {
             candidateBlock.setVisible(isCandidate);
             candidateBlock.setManaged(isCandidate);
         });
+
+        // hide blocks initially
+        recruiterBlock.setVisible(false);
+        recruiterBlock.setManaged(false);
+        candidateBlock.setVisible(false);
+        candidateBlock.setManaged(false);
     }
 
     @FXML
     private void handleSignUp() {
+
+        // Terms
         if (!cbTerms.isSelected()) {
-            showAlert("Error", "You must accept terms.");
+            showAlert(Alert.AlertType.ERROR, "Error", "You must accept Terms and Conditions.");
             return;
         }
 
-        if (cbRole.getValue() == null) {
-            showAlert("Error", "Please select a role.");
+        // Type
+        String type = cbRole.getValue();
+        if (type == null) {
+            showAlert(Alert.AlertType.ERROR, "Error", "Please select account type.");
             return;
         }
 
-        if (!txtPassword.getText().equals(txtConfirmPassword.getText())) {
-            showAlert("Error", "Passwords do not match.");
+        // Full name
+        String fullName = txtFullName.getText() == null ? "" : txtFullName.getText().trim();
+        if (fullName.isEmpty()) {
+            showAlert(Alert.AlertType.ERROR, "Error", "Full name is required.");
             return;
         }
 
+        String[] parts = fullName.split("\\s+");
+        String firstName = parts[0];
+        String lastName = parts.length > 1
+                ? String.join(" ", java.util.Arrays.copyOfRange(parts, 1, parts.length))
+                : "";
+
+        // Validate names
+        String err = utils.InputValidator.validateName(firstName, "First name");
+        if (err != null) { showAlert(Alert.AlertType.ERROR, "Error", err); return; }
+
+        if (!lastName.isBlank()) {
+            err = utils.InputValidator.validateName(lastName, "Last name");
+            if (err != null) { showAlert(Alert.AlertType.ERROR, "Error", err); return; }
+        }
+
+        // Email
+        String email = txtEmail.getText() == null ? "" : txtEmail.getText().trim();
+        err = utils.InputValidator.validateEmail(email);
+        if (err != null) { showAlert(Alert.AlertType.ERROR, "Error", err); return; }
+
+        // Email unique (DB)
         try {
-            String fullName = txtFullName.getText().trim();
-            if (fullName.isEmpty()) {
-                showAlert("Error", "Full name is required.");
+            if (userService.emailExists(email, null)) {
+                showAlert(Alert.AlertType.ERROR, "Error", "Email already exists.");
                 return;
             }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error", "Database error while checking email.");
+            return;
+        }
 
-            String[] parts = fullName.split("\\s+");
-            String firstName = parts[0];
-            String lastName = parts.length > 1 ? String.join(" ", java.util.Arrays.copyOfRange(parts, 1, parts.length)) : "";
+        // Phone (8 digits)
+        String phone = txtPhone.getText() == null ? "" : txtPhone.getText().trim();
+        err = utils.InputValidator.validatePhone8(phone);
+        if (err != null) { showAlert(Alert.AlertType.ERROR, "Error", err); return; }
 
-            Role role = cbRole.getValue();
+        // Password
+        String pass = txtPassword.getText();
+        String confirm = txtConfirmPassword.getText();
 
-            if (role == Role.RECRUITER) {
-                if (txtCompanyName.getText().trim().isEmpty()) {
-                    showAlert("Error", "Company name is required for recruiter.");
+        err = utils.InputValidator.validateStrongPassword(pass);
+        if (err != null) { showAlert(Alert.AlertType.ERROR, "Error", err); return; }
+
+        if (!pass.equals(confirm)) {
+            showAlert(Alert.AlertType.ERROR, "Error", "Passwords do not match.");
+            return;
+        }
+
+        // Insert user (NO role column in DB)
+        try {
+            if ("RECRUITER".equals(type)) {
+                String companyName = txtCompanyName.getText() == null ? "" : txtCompanyName.getText().trim();
+                if (companyName.isEmpty()) {
+                    showAlert(Alert.AlertType.ERROR, "Error", "Company name is required for recruiter.");
                     return;
                 }
 
                 Recruiter r = new Recruiter(
-                        txtEmail.getText().trim(),
-                        txtPassword.getText(),
-                        firstName,
-                        lastName,
-                        txtPhone.getText().trim(),
-                        txtCompanyName.getText().trim(),
-                        txtCompanyLocation.getText().trim()
+                        email, pass, firstName, lastName, phone,
+                        companyName,
+                        txtCompanyLocation.getText() == null ? "" : txtCompanyLocation.getText().trim()
                 );
 
-                recruiterService.addRecruiter(r); // ✅ users + recruiter
+                recruiterService.addRecruiter(r);
 
-            } else if (role == Role.CANDIDATE) {
+            } else { // CANDIDATE
                 Integer years = null;
-                String yearsText = txtExperienceYears.getText().trim();
+                String yearsText = txtExperienceYears.getText() == null ? "" : txtExperienceYears.getText().trim();
                 if (!yearsText.isEmpty()) {
                     try { years = Integer.parseInt(yearsText); }
                     catch (NumberFormatException nfe) {
-                        showAlert("Error", "Experience years must be a number.");
+                        showAlert(Alert.AlertType.ERROR, "Error", "Experience years must be a number.");
                         return;
                     }
                 }
 
                 Candidate c = new Candidate(
-                        txtEmail.getText().trim(),
-                        txtPassword.getText(),
-                        firstName,
-                        lastName,
-                        txtPhone.getText().trim(),
-                        txtCandidateLocation.getText().trim(),
-                        txtEducationLevel.getText().trim(),
+                        email, pass, firstName, lastName, phone,
+                        txtCandidateLocation.getText() == null ? "" : txtCandidateLocation.getText().trim(),
+                        txtEducationLevel.getText() == null ? "" : txtEducationLevel.getText().trim(),
                         years,
-                        txtCvPath.getText().trim()
+                        txtCvPath.getText() == null ? "" : txtCvPath.getText().trim()
                 );
 
-                candidateService.addCandidate(c); // ✅ users + candidate
-            } else {
-                // should never happen because admin not in combobox
-                User u = new User(
-                        txtEmail.getText().trim(),
-                        txtPassword.getText(),
-                        role,
-                        firstName,
-                        lastName,
-                        txtPhone.getText().trim()
-                );
-                userService.addUser(u);
+                candidateService.addCandidate(c);
             }
 
-            showAlert("Success", "Account created successfully ✅");
+            showAlert(Alert.AlertType.INFORMATION, "Success", "Account created successfully ✅");
+            clearForm();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Error", "Error: " + e.getMessage());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error", "Database error: " + ex.getMessage());
         }
     }
 
@@ -164,11 +198,33 @@ public class SignUpController {
         }
     }
 
-    private void showAlert(String title, String msg) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(msg);
+        alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private void clearForm() {
+        txtFullName.clear();
+        txtEmail.clear();
+        txtPhone.clear();
+        txtPassword.clear();
+        txtConfirmPassword.clear();
+        cbRole.setValue(null);
+        cbTerms.setSelected(false);
+
+        txtCompanyName.clear();
+        txtCompanyLocation.clear();
+        txtCandidateLocation.clear();
+        txtEducationLevel.clear();
+        txtExperienceYears.clear();
+        txtCvPath.clear();
+
+        recruiterBlock.setVisible(false);
+        recruiterBlock.setManaged(false);
+        candidateBlock.setVisible(false);
+        candidateBlock.setManaged(false);
     }
 }
