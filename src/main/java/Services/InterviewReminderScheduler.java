@@ -103,23 +103,33 @@ public class InterviewReminderScheduler {
     }
 
     /**
-     * Send reminder email for an interview
+     * Send reminder email and SMS for an interview
      */
     private static void sendReminderForInterview(Interview interview) {
         try {
-            // Get candidate email (from application or database)
-            String candidateEmail = getCandidateEmailForInterview(interview.getApplicationId());
+            // Get candidate email and phone (from application or database)
+            CandidateContact contact = getCandidateContactForInterview(interview.getApplicationId());
 
-            if (candidateEmail != null && !candidateEmail.isEmpty()) {
-                EmailService.sendInterviewReminder(interview, candidateEmail);
+            if (contact != null) {
+                // Send Email
+                if (contact.email != null && !contact.email.isEmpty()) {
+                    EmailService.sendInterviewReminder(interview, contact.email);
+                    System.out.println("📧 Email reminder sent for Interview #" + interview.getId()
+                        + " to " + contact.email);
+                }
+
+                // Send SMS
+                if (contact.phone != null && !contact.phone.isEmpty() && SMSService.isValidPhoneNumber(contact.phone)) {
+                    SMSService.sendInterviewReminder(interview, contact.phone);
+                    System.out.println("📱 SMS reminder sent for Interview #" + interview.getId()
+                        + " to " + contact.phone);
+                }
 
                 // Log the reminder sent
-                logEmailReminder(interview.getId(), candidateEmail);
+                logReminder(interview.getId(), contact.email, contact.phone);
 
-                System.out.println("📧 Reminder sent for Interview #" + interview.getId()
-                    + " to " + candidateEmail);
             } else {
-                System.out.println("⚠️  Could not find candidate email for Interview #" + interview.getId());
+                System.out.println("⚠️  Could not find candidate contact for Interview #" + interview.getId());
             }
         } catch (Exception e) {
             System.err.println("❌ Failed to send reminder for Interview #" + interview.getId() + ": " + e.getMessage());
@@ -127,15 +137,28 @@ public class InterviewReminderScheduler {
     }
 
     /**
-     * Get candidate email from application using database connection
+     * Helper class to hold candidate contact information
      */
-    private static String getCandidateEmailForInterview(Long applicationId) {
+    private static class CandidateContact {
+        String email;
+        String phone;
+
+        CandidateContact(String email, String phone) {
+            this.email = email;
+            this.phone = phone;
+        }
+    }
+
+    /**
+     * Get candidate contact info (email and phone) from application using database connection
+     */
+    private static CandidateContact getCandidateContactForInterview(Long applicationId) {
         if (applicationId == null) return null;
 
         try {
             Connection conn = MyDatabase.getInstance().getConnection();
-            // Join job_application -> candidate -> users to get email
-            String query = "SELECT u.email FROM job_application ja " +
+            // Join job_application -> candidate -> users to get email and phone
+            String query = "SELECT u.email, u.phone FROM job_application ja " +
                           "JOIN candidate c ON ja.candidate_id = c.id " +
                           "JOIN users u ON c.id = u.id " +
                           "WHERE ja.id = ?";
@@ -145,35 +168,38 @@ public class InterviewReminderScheduler {
 
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
-                        return rs.getString("email");
+                        String email = rs.getString("email");
+                        String phone = rs.getString("phone");
+                        return new CandidateContact(email, phone);
                     }
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error fetching candidate email: " + e.getMessage());
+            System.err.println("Error fetching candidate contact: " + e.getMessage());
         }
 
         return null;
     }
 
     /**
-     * Log that a reminder email was sent (prevents duplicate sends in database)
+     * Log that a reminder (email/SMS) was sent (prevents duplicate sends in database)
      */
-    private static void logEmailReminder(Long interviewId, String candidateEmail) {
+    private static void logReminder(Long interviewId, String candidateEmail, String candidatePhone) {
         try {
             Connection conn = MyDatabase.getInstance().getConnection();
-            String query = "INSERT INTO email_reminders (interview_id, candidate_email, sent_at) " +
-                          "VALUES (?, ?, NOW()) " +
+            String query = "INSERT INTO reminders_log (interview_id, candidate_email, candidate_phone, sent_at) " +
+                          "VALUES (?, ?, ?, NOW()) " +
                           "ON DUPLICATE KEY UPDATE sent_at = NOW()";
 
             try (PreparedStatement ps = conn.prepareStatement(query)) {
                 ps.setLong(1, interviewId);
                 ps.setString(2, candidateEmail);
+                ps.setString(3, candidatePhone);
                 ps.executeUpdate();
             }
         } catch (SQLException e) {
             // Table might not exist - that's okay, we still track in memory
-            System.out.println("💡 Optional: Create email_reminders table for persistent tracking");
+            System.out.println("💡 Optional: Create reminders_log table for persistent tracking");
         }
     }
 
