@@ -144,24 +144,35 @@ public class SMSService {
 
         // Send real SMS via SMSMobileAPI
         try {
+            // SMSMobileAPI expects phone number as digits only — no leading +
+            // e.g. 21653757969 NOT +21653757969
+            String phoneDigits = toPhoneNumber.startsWith("+")
+                ? toPhoneNumber.substring(1)   // strip the +
+                : toPhoneNumber;
+
             System.out.println("[SMSService] Sending SMS...");
             System.out.println("[SMSService] FROM : +" + (SENDER_PHONE.isEmpty() ? "default phone" : SENDER_PHONE));
-            System.out.println("[SMSService] TO   : " + toPhoneNumber);
+            System.out.println("[SMSService] TO   : " + phoneDigits + " (digits only, no +)");
 
-            // Build URL — include waphone to force sending from the configured number
+            // Build URL — SMSMobileAPI uses plain digit phone numbers, no + sign
             StringBuilder urlBuilder = new StringBuilder(API_URL);
             urlBuilder.append("?apikey=").append(URLEncoder.encode(API_KEY, StandardCharsets.UTF_8));
-            urlBuilder.append("&phone=").append(URLEncoder.encode(toPhoneNumber, StandardCharsets.UTF_8));
+            urlBuilder.append("&phone=").append(phoneDigits);          // no encoding needed, digits only
             urlBuilder.append("&message=").append(URLEncoder.encode(messageBody, StandardCharsets.UTF_8));
             if (!SENDER_PHONE.isEmpty()) {
                 // waphone tells SMSMobileAPI which registered phone to send FROM
-                urlBuilder.append("&waphone=").append(URLEncoder.encode(SENDER_PHONE, StandardCharsets.UTF_8));
-                System.out.println("[SMSService] waphone=" + SENDER_PHONE + " (forced sender)");
+                // also digits only, no +
+                String senderDigits = SENDER_PHONE.startsWith("+")
+                    ? SENDER_PHONE.substring(1) : SENDER_PHONE;
+                urlBuilder.append("&waphone=").append(senderDigits);
+                System.out.println("[SMSService] waphone=" + senderDigits + " (forced sender)");
             }
 
             String urlString = urlBuilder.toString();
-            System.out.println("[SMSService] Request: " + API_URL + "?apikey=[hidden]&phone="
-                + toPhoneNumber + "&waphone=" + SENDER_PHONE);
+            System.out.println("[SMSService] Request: " + API_URL
+                + "?apikey=[hidden]&phone=" + phoneDigits
+                + "&waphone=" + SENDER_PHONE
+                + "&message=[" + messageBody.length() + " chars]");
 
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -189,33 +200,34 @@ public class SMSService {
 
             // Check response for success
             String responseStr = response.toString();
-            System.out.println("📊 Réponse API: " + responseStr);
-            System.out.println("📊 Code HTTP: " + responseCode);
+            System.out.println("[SMSService] HTTP code : " + responseCode);
+            System.out.println("[SMSService] Response  : " + responseStr);
 
             if (responseCode >= 200 && responseCode < 300) {
-                // Check for success - error code "0" or "00" means success
                 if (responseStr.contains("\"error\":\"0\"") ||
                     responseStr.contains("\"error\":0") ||
                     responseStr.contains("\"error\":\"00\"") ||
                     responseStr.contains("\"sent\":\"1\"") ||
                     responseStr.contains("\"success\":true") ||
                     responseStr.contains("\"status\":\"success\"")) {
-                    System.out.println("✅ SMS envoyé avec succès via SMSMobileAPI!");
+                    System.out.println("[SMSService] SMS sent successfully!");
+                } else if (responseStr.toLowerCase().contains("specify") ||
+                           responseStr.toLowerCase().contains("recipient") ||
+                           responseStr.contains("phone_missing") ||
+                           responseStr.contains("\"error\":\"61\"") ||
+                           responseStr.contains("\"error\":\"62\"")) {
+                    System.err.println("[SMSService] ERROR: Recipient number rejected by API.");
+                    System.err.println("[SMSService]   Phone sent: " + phoneDigits);
+                    System.err.println("[SMSService]   The number must be digits only, e.g. 21653757969");
                 } else if (responseStr.contains("api_missing") || responseStr.contains("\"error\":\"60\"")) {
-                    System.err.println("❌ ERREUR 60: Paramètre API manquant");
-                    System.err.println("💡 L'API ne reçoit pas le paramètre 'key' correctement");
-                    System.err.println("💡 SOLUTION: Ouvrez le navigateur DevTools (F12)");
-                    System.err.println("💡 Allez sur leur site web et envoyez un test SMS");
-                    System.err.println("💡 Dans Network tab, cherchez 'Query String Parameters'");
-                    System.err.println("💡 Copiez les NOMS EXACTS des paramètres (key/apikey/api?)");
+                    System.err.println("[SMSService] ERROR 60: API key missing or invalid.");
                 } else if (responseStr.contains("\"error\"")) {
-                    System.err.println("❌ Échec de l'envoi du SMS (erreur API)");
-                    System.err.println("💡 Réponse: " + responseStr);
+                    System.err.println("[SMSService] API error: " + responseStr);
                 } else {
-                    System.out.println("⚠️ Réponse inattendue - vérifiez manuellement");
+                    System.out.println("[SMSService] Unexpected response — check manually.");
                 }
             } else {
-                System.err.println("❌ Échec de l'envoi du SMS. Code HTTP: " + responseCode);
+                System.err.println("[SMSService] HTTP error: " + responseCode + " — " + responseStr);
             }
 
         } catch (Exception e) {
