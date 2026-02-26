@@ -66,7 +66,31 @@ public class ApplicationsController {
                     "Status"
                 );
             }
+            // Ensure the prompt is visible even when ComboBox is non-editable by providing a custom button cell
             cbSearchCriteria.setPromptText("Search by...");
+            cbSearchCriteria.setButtonCell(new ListCell<String>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText("Search by...");
+                    } else {
+                        setText(item);
+                    }
+                }
+            });
+            // Keep default list cell rendering for dropdown
+            cbSearchCriteria.setCellFactory(listView -> new ListCell<>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        setText(item);
+                    }
+                }
+            });
         }
 
         // Setup search button
@@ -135,9 +159,31 @@ public class ApplicationsController {
     }
 
     private void clearSearch() {
-        cbSearchCriteria.setValue(null);
-        cbSearchCriteria.getSelectionModel().clearSelection();
-        txtSearch.clear();
+        if (cbSearchCriteria != null) {
+            cbSearchCriteria.getSelectionModel().clearSelection();
+            cbSearchCriteria.setValue(null);
+            cbSearchCriteria.setPromptText("Search by...");
+            // Force button cell text to show prompt for non-editable ComboBox
+            try {
+                if (cbSearchCriteria.getButtonCell() != null) {
+                    cbSearchCriteria.getButtonCell().setText("Search by...");
+                }
+            } catch (Exception ignored) {
+            }
+
+            // If editable, clear its editor too
+            try {
+                if (cbSearchCriteria.isEditable() && cbSearchCriteria.getEditor() != null) {
+                    cbSearchCriteria.getEditor().clear();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (txtSearch != null) {
+            txtSearch.clear();
+        }
+
         loadApplications();
     }
 

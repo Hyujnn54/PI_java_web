@@ -1,7 +1,10 @@
 package Controllers;
 
 import Services.ApplicationService;
+import Services.FileService;
+import Services.GrokAIService;
 import Services.JobOfferService;
+import Services.UserService;
 import Utils.UserContext;
 import Utils.ValidationUtils;
 import javafx.fxml.FXML;
@@ -565,9 +568,19 @@ public class JobOffersController {
             }
         });
 
+        // Generate Cover Letter button
+        Button btnGenerateLetter = new Button("🤖 Generate with AI");
+        btnGenerateLetter.setStyle("-fx-background-color: #9B59B6; -fx-text-fill: white; -fx-padding: 8 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 12px;");
+        btnGenerateLetter.setOnAction(e -> generateCoverLetterWithAI(job, letterArea, pdfPathField));
+
+        HBox generateBox = new HBox(10);
+        generateBox.setAlignment(Pos.CENTER_LEFT);
+        generateBox.getChildren().add(btnGenerateLetter);
+
         content.getChildren().addAll(
             phoneLabel, phoneContainer, phoneErrorLabel,
             letterBox, letterErrorLabel,
+            generateBox,
             pdfLabel, pdfBox
         );
 
@@ -643,5 +656,140 @@ public class JobOffersController {
             showAlert("Error", "Failed to submit application: " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Generate cover letter using Grok AI based on candidate profile and CV
+     */
+    private void generateCoverLetterWithAI(JobOfferService.JobOfferRow job, TextArea letterArea, TextField pdfPathField) {
+        // Show loading dialog with Cancel button
+        Alert loadingAlert = new Alert(Alert.AlertType.INFORMATION);
+        loadingAlert.setTitle("Generating Cover Letter");
+        loadingAlert.setHeaderText(null);
+        loadingAlert.setContentText("Generating your personalized cover letter...\nThis may take a moment.");
+
+        // Add Cancel button so user can close it if needed
+        loadingAlert.getButtonTypes().setAll(ButtonType.CANCEL);
+
+        // Make it non-modal so it doesn't block
+        loadingAlert.initModality(javafx.stage.Modality.NONE);
+        loadingAlert.show();
+
+        // Run on separate thread to prevent UI freezing
+        new Thread(() -> {
+            try {
+                Long candidateId = UserContext.getCandidateId();
+                if (candidateId == null) {
+                    javafx.application.Platform.runLater(() -> {
+                        loadingAlert.close();
+                        showAlert("Error", "Candidate ID not found. Please login again.", Alert.AlertType.ERROR);
+                    });
+                    return;
+                }
+
+                // Fetch candidate information
+                UserService.UserInfo candidateInfo = UserService.getUserInfo(candidateId);
+                if (candidateInfo == null) {
+                    javafx.application.Platform.runLater(() -> {
+                        loadingAlert.close();
+                        showAlert("Error", "Could not retrieve candidate information.", Alert.AlertType.ERROR);
+                    });
+                    return;
+                }
+
+                // Fetch candidate skills from database
+                java.util.List<String> candidateSkills = UserService.getCandidateSkills(candidateId);
+
+                // Extract CV content if PDF is uploaded
+                String cvContent = "";
+                String pdfPath = pdfPathField.getText();
+                if (pdfPath != null && !pdfPath.isEmpty()) {
+                    try {
+                        Services.FileService fileService = new Services.FileService();
+                        cvContent = fileService.extractTextFromPDF(pdfPath);
+                        if (cvContent == null) {
+                            cvContent = "";
+                        }
+                        System.out.println("CV content extracted successfully from: " + pdfPath);
+                    } catch (Exception e) {
+                        System.err.println("Could not extract CV text: " + e.getMessage());
+                        cvContent = "";
+                    }
+                }
+
+                // Build candidate experience and education strings
+                String experience = candidateInfo.experienceYears() != null && candidateInfo.experienceYears() > 0
+                    ? candidateInfo.experienceYears() + " years of experience"
+                    : "No specific experience years provided";
+
+                String education = candidateInfo.educationLevel() != null && !candidateInfo.educationLevel().isEmpty()
+                    ? candidateInfo.educationLevel()
+                    : "Not specified";
+
+                // Get company name from recruiter
+                String companyName = UserService.getRecruiterCompanyName(job.recruiterId());
+                if (companyName == null || companyName.isEmpty()) {
+                    companyName = "Our Company";
+                }
+
+                // Call Cover Letter generation service based on candidate skills and CV
+                String generatedCoverLetter = GrokAIService.generateCoverLetter(
+                    candidateInfo.firstName() + " " + candidateInfo.lastName(),
+                    candidateInfo.email(),
+                    candidateInfo.phone(),
+                    job.title(),
+                    companyName,
+                    experience,
+                    education,
+                    candidateSkills,
+                    cvContent
+                );
+
+                // IMPORTANT: Close loading dialog first, then show result
+                javafx.application.Platform.runLater(() -> {
+                    // Force close the loading dialog
+                    try {
+                        loadingAlert.close();
+                    } catch (Exception ex) {
+                        // Ignore if already closed
+                    }
+
+                    if (generatedCoverLetter != null && !generatedCoverLetter.isEmpty()) {
+                        // Show the generated cover letter for review
+                        Alert reviewAlert = new Alert(Alert.AlertType.INFORMATION);
+                        reviewAlert.setTitle("Generated Cover Letter");
+                        reviewAlert.setHeaderText("Here's your AI-generated cover letter. Review and edit as needed:");
+
+                        TextArea textArea = new TextArea(generatedCoverLetter);
+                        textArea.setWrapText(true);
+                        textArea.setPrefRowCount(15);
+                        textArea.setStyle("-fx-font-size: 12px;");
+
+                        reviewAlert.getDialogPane().setContent(textArea);
+                        reviewAlert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
+
+                        var result = reviewAlert.showAndWait();
+                        if (result.isPresent() && result.get() == ButtonType.OK) {
+                            // Use the generated cover letter
+                            letterArea.setText(generatedCoverLetter);
+                            showAlert("Success", "Cover letter inserted! You can still edit it before submitting.", Alert.AlertType.INFORMATION);
+                        }
+                    } else {
+                        showAlert("Error", "Failed to generate cover letter. Please write one manually or try again.", Alert.AlertType.ERROR);
+                    }
+                });
+
+            } catch (Exception e) {
+                javafx.application.Platform.runLater(() -> {
+                    try {
+                        loadingAlert.close();
+                    } catch (Exception ex) {
+                        // Ignore if already closed
+                    }
+                    showAlert("Error", "Error generating cover letter: " + e.getMessage(), Alert.AlertType.ERROR);
+                    e.printStackTrace();
+                });
+            }
+        }).start();
     }
 }
