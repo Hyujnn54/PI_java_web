@@ -157,16 +157,12 @@ public class MainShellController {
     @FXML
     private void handleTestSMS() {
         showInfo("Test SMS", "Envoi en cours...",
-            "Un SMS de rappel est envoyé au candidat du premier entretien\ntrouvé dans la base de données.\nVérifiez la console pour le résultat.");
+            "Un SMS est envoyé au candidat du premier entretien\ntrouvé dans la base de données.\nVérifiez la console pour le résultat.");
         new Thread(() -> {
-            try {
-                Services.SMSService.sendTestFromDatabase();
-                Platform.runLater(() -> showInfo("Test SMS", "SMS dispatché",
-                    "Vérifiez la console pour confirmer.\n"
-                    + "Le SMS a été envoyé au vrai candidat depuis la BD."));
-            } catch (Exception e) {
-                Platform.runLater(() -> showError("Test SMS échoué", e.getMessage()));
-            }
+            Services.SMSService.sendTestFromDatabase();
+            Platform.runLater(() -> showInfo("Test SMS", "Terminé",
+                "Vérifiez la console.\n"
+                + "FROM: 53757969  TO: numéro depuis la BD"));
         }, "TestSMSThread").start();
     }
 
