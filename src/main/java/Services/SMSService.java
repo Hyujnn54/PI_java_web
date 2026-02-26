@@ -20,10 +20,10 @@ public class SMSService {
     private static final Properties smsConfig = loadSMSConfiguration();
 
     // Configuration loaded from properties file
-    private static final String API_URL = smsConfig.getProperty("sms.api.url", "");
-    private static final String API_KEY = smsConfig.getProperty("sms.api.key", "");
-    private static final String SENDER_NAME = smsConfig.getProperty("sms.sender.name", "TalentBridge");
-    private static final String TEST_PHONE_NUMBER = smsConfig.getProperty("sms.test.recipient", "");
+    private static final String API_URL      = smsConfig.getProperty("sms.api.url", "");
+    private static final String API_KEY      = smsConfig.getProperty("sms.api.key", "");
+    private static final String SENDER_NAME  = smsConfig.getProperty("sms.sender.name", "TalentBridge");
+    private static final String SENDER_PHONE = smsConfig.getProperty("sms.sender.phone", ""); // waphone param
     private static final boolean SMS_ENABLED = Boolean.parseBoolean(smsConfig.getProperty("sms.enabled", "false"));
 
     /**
@@ -73,36 +73,50 @@ public class SMSService {
      * @param recipientPhone The recipient's phone number (format: +21612345678)
      */
     public static void sendInterviewReminder(Interview interview, String recipientPhone) {
+        sendInterviewReminder(interview, recipientPhone, "");
+    }
+
+    public static void sendInterviewReminder(Interview interview, String recipientPhone, String candidateName) {
         try {
-            String messageBody = buildReminderSMSBody(interview);
-            sendSMS(recipientPhone, messageBody);
-            System.out.println("📱 SMS reminder sent successfully to: " + recipientPhone);
+            String normalizedPhone = normalizePhone(recipientPhone);
+            System.out.println("[SMSService] Normalized phone: " + recipientPhone + " -> " + normalizedPhone);
+            String messageBody = buildReminderSMSBody(interview, candidateName);
+            sendSMS(normalizedPhone, messageBody);
+            System.out.println("[SMSService] SMS reminder sent to: " + normalizedPhone);
         } catch (Exception e) {
-            System.err.println("❌ Failed to send SMS reminder: " + e.getMessage());
+            System.err.println("[SMSService] Failed to send SMS reminder: " + e.getMessage());
         }
     }
 
     /**
-     * Build the SMS body for interview reminder
+     * Professional SMS body — clear, concise, no emoji clutter.
      */
-    private static String buildReminderSMSBody(Interview interview) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm");
+    private static String buildReminderSMSBody(Interview interview, String candidateName) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a' HH:mm");
+        String mode = "ONLINE".equals(interview.getMode()) ? "En ligne" : "Sur site";
 
-        StringBuilder body = new StringBuilder();
-        body.append("🎯 RAPPEL ENTRETIEN - Talent Bridge\n\n");
-        body.append("📅 ").append(interview.getScheduledAt().format(formatter)).append("\n");
-        body.append("⏱️ Durée: ").append(interview.getDurationMinutes()).append(" min\n");
-        body.append("📍 Mode: ").append(interview.getMode()).append("\n");
+        StringBuilder b = new StringBuilder();
+        b.append("Talent Bridge - Rappel d'entretien\n");
+        b.append("----------------------------------\n");
+        if (candidateName != null && !candidateName.isBlank()) {
+            b.append("Bonjour ").append(candidateName).append(",\n\n");
+        }
+        b.append("Votre entretien est prevu demain :\n");
+        b.append("Date    : ").append(interview.getScheduledAt().format(fmt)).append("\n");
+        b.append("Duree   : ").append(interview.getDurationMinutes()).append(" minutes\n");
+        b.append("Format  : ").append(mode).append("\n");
 
-        if ("ONLINE".equals(interview.getMode()) && interview.getMeetingLink() != null) {
-            body.append("🔗 Lien: ").append(interview.getMeetingLink()).append("\n");
-        } else if ("ON_SITE".equals(interview.getMode()) && interview.getLocation() != null) {
-            body.append("📍 Lieu: ").append(interview.getLocation()).append("\n");
+        if ("ONLINE".equals(interview.getMode()) && interview.getMeetingLink() != null
+                && !interview.getMeetingLink().isBlank()) {
+            b.append("Lien    : ").append(interview.getMeetingLink()).append("\n");
+        } else if ("ON_SITE".equals(interview.getMode()) && interview.getLocation() != null
+                && !interview.getLocation().isBlank()) {
+            b.append("Lieu    : ").append(interview.getLocation()).append("\n");
         }
 
-        body.append("\nBonne chance! 🍀");
-
-        return body.toString();
+        b.append("----------------------------------\n");
+        b.append("Bonne chance !\nL'equipe Talent Bridge");
+        return b.toString();
     }
 
     /**
@@ -130,26 +144,24 @@ public class SMSService {
 
         // Send real SMS via SMSMobileAPI
         try {
-            System.out.println("📱 Envoi d'un SMS réel via SMSMobileAPI à: " + toPhoneNumber);
-            System.out.println("🔑 API Key (first 10 chars): " + API_KEY.substring(0, Math.min(10, API_KEY.length())) + "...");
+            System.out.println("[SMSService] Sending SMS...");
+            System.out.println("[SMSService] FROM : +" + (SENDER_PHONE.isEmpty() ? "default phone" : SENDER_PHONE));
+            System.out.println("[SMSService] TO   : " + toPhoneNumber);
 
-            // Encode parameters for URL
-            String encodedMessage = URLEncoder.encode(messageBody, StandardCharsets.UTF_8);
-            String encodedPhone = URLEncoder.encode(toPhoneNumber, StandardCharsets.UTF_8);
-            String encodedKey = URLEncoder.encode(API_KEY, StandardCharsets.UTF_8);
+            // Build URL — include waphone to force sending from the configured number
+            StringBuilder urlBuilder = new StringBuilder(API_URL);
+            urlBuilder.append("?apikey=").append(URLEncoder.encode(API_KEY, StandardCharsets.UTF_8));
+            urlBuilder.append("&phone=").append(URLEncoder.encode(toPhoneNumber, StandardCharsets.UTF_8));
+            urlBuilder.append("&message=").append(URLEncoder.encode(messageBody, StandardCharsets.UTF_8));
+            if (!SENDER_PHONE.isEmpty()) {
+                // waphone tells SMSMobileAPI which registered phone to send FROM
+                urlBuilder.append("&waphone=").append(URLEncoder.encode(SENDER_PHONE, StandardCharsets.UTF_8));
+                System.out.println("[SMSService] waphone=" + SENDER_PHONE + " (forced sender)");
+            }
 
-            // Build GET URL with parameters (using correct parameter names from SMSMobileAPI)
-            // Their API uses: apikey, phone, message
-            String urlString = String.format(
-                "%s?apikey=%s&phone=%s&message=%s",
-                API_URL,
-                encodedKey,
-                encodedPhone,
-                encodedMessage
-            );
-
-            System.out.println("🔍 Requête GET: " + API_URL);
-            System.out.println("📝 Paramètres: apikey=[hidden]&phone=" + toPhoneNumber + "&message=[" + messageBody.length() + " chars]");
+            String urlString = urlBuilder.toString();
+            System.out.println("[SMSService] Request: " + API_URL + "?apikey=[hidden]&phone="
+                + toPhoneNumber + "&waphone=" + SENDER_PHONE);
 
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -264,33 +276,103 @@ public class SMSService {
     }
 
     /**
-     * Test method to send a test SMS immediately
+     * Test method — sends a real reminder SMS to the first upcoming interview found in the DB.
+     * Never sends to a hardcoded number; always uses real candidate data.
      */
-    public static void sendTestSMS() {
+    public static void sendTestFromDatabase() {
+        System.out.println("[SMSService] Looking for a real interview in the DB to test with...");
         try {
-            String messageBody = "🎯 Test SMS - Talent Bridge\n\n" +
-                "Si vous recevez ce message, le service SMS fonctionne correctement!\n\n" +
-                "Cordialement,\nL'équipe Talent Bridge";
+            java.util.List<Models.Interview> interviews = InterviewService.getAll();
+            Models.Interview target = interviews.stream()
+                .filter(i -> i.getId() != null && i.getScheduledAt() != null
+                          && i.getScheduledAt().isAfter(java.time.LocalDateTime.now().minusHours(1)))
+                .findFirst().orElse(null);
 
-            sendSMS(TEST_PHONE_NUMBER, messageBody);
-            System.out.println("✅ Test SMS envoyé avec succès!");
+            if (target == null) {
+                System.out.println("[SMSService] No upcoming interviews found in DB — nothing to test.");
+                return;
+            }
+
+            String phone = getCandidatePhoneForApplication(target.getApplicationId());
+            if (phone == null || phone.isBlank()) {
+                System.out.println("[SMSService] No phone found for interview #" + target.getId());
+                return;
+            }
+
+            String normalizedPhone = normalizePhone(phone);
+            if (!isValidPhoneNumber(normalizedPhone)) {
+                System.out.println("[SMSService] Phone '" + phone + "' -> '" + normalizedPhone
+                    + "' is invalid — cannot send.");
+                return;
+            }
+
+            System.out.println("[SMSService] Sending test reminder for interview #" + target.getId()
+                + " to " + normalizedPhone);
+            sendInterviewReminder(target, normalizedPhone);
+
         } catch (Exception e) {
-            System.err.println("❌ Échec de l'envoi du test SMS: " + e.getMessage());
+            System.err.println("[SMSService] DB test failed: " + e.getMessage());
         }
     }
 
+    /** Fetch the candidate phone from users table (real registered number, not CV field). */
+    private static String getCandidatePhoneForApplication(Long applicationId) {
+        if (applicationId == null) return null;
+        // Use users.phone (registered phone), NOT job_application.phone (CV submission field)
+        String sql = "SELECT u.phone FROM job_application ja " +
+                     "JOIN users u ON ja.candidate_id = u.id WHERE ja.id = ?";
+        try {
+            java.sql.Connection conn = Utils.MyDatabase.getInstance().getConnection();
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setLong(1, applicationId);
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) return rs.getString("phone");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[SMSService] DB lookup error: " + e.getMessage());
+        }
+        return null;
+    }
+
     /**
-     * Validate phone number format
+     * Validate phone number format - accepts international (+216...) and local 8-digit Tunisian numbers
      *
      * @param phoneNumber Phone number to validate
-     * @return true if valid format (+21612345678)
+     * @return true if valid
      */
     public static boolean isValidPhoneNumber(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.isEmpty()) {
             return false;
         }
-        // Basic validation: starts with + and has 10-15 digits
-        return phoneNumber.matches("^\\+[1-9]\\d{9,14}$");
+        String normalized = normalizePhone(phoneNumber);
+        // International format: +XXXXXXXXXXX (10-15 digits after +)
+        return normalized.matches("^\\+[1-9]\\d{9,14}$");
+    }
+
+    /**
+     * Normalize a phone number to international format.
+     * - Already international (+216...) -> kept as-is
+     * - 8-digit local Tunisian number    -> +216XXXXXXXX prepended
+     * - Strips spaces, dashes, dots
+     */
+    public static String normalizePhone(String phoneNumber) {
+        if (phoneNumber == null) return "";
+        // Remove spaces, dashes, dots, parentheses
+        String cleaned = phoneNumber.replaceAll("[\\s\\-\\.\\(\\)]", "");
+        if (cleaned.startsWith("+")) {
+            return cleaned; // already international
+        }
+        if (cleaned.startsWith("00")) {
+            return "+" + cleaned.substring(2); // 00216... -> +216...
+        }
+        // Tunisian local number: 8 digits starting with 2,4,5,7,9
+        if (cleaned.matches("[2457-9]\\d{7}")) {
+            return "+216" + cleaned;
+        }
+        // Return as-is — may still fail validation
+        return cleaned;
     }
 }
+
 

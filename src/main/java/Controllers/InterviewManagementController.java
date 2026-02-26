@@ -5,6 +5,7 @@ import Models.InterviewFeedback;
 import Services.InterviewFeedbackService;
 import Services.InterviewService;
 import Services.EmailService;
+import Services.MeetingService;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -15,6 +16,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.GridPane;
 
+import java.awt.Desktop;
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -65,6 +68,8 @@ public class InterviewManagementController {
     @FXML private Label lblMeetingLink;
     @FXML private Label lblLocation;
     @FXML private Button btnSave;
+    @FXML private Button btnGenerateMeetingLink;
+    @FXML private Button btnOpenMeetingLink;
 
     private Interview selectedInterview = null;
     private boolean isEditMode = false;
@@ -482,6 +487,54 @@ public class InterviewManagementController {
     }
 
     @FXML
+    private void handleGenerateMeetingLink() {
+        if (datePicker.getValue() == null || txtTime.getText().trim().isEmpty()) {
+            showAlert("Champs manquants", "Veuillez d'abord renseigner la date et l'heure.", Alert.AlertType.WARNING);
+            return;
+        }
+        try {
+            LocalDateTime scheduledAt = LocalDateTime.of(
+                datePicker.getValue(),
+                LocalTime.parse(txtTime.getText().trim(), DateTimeFormatter.ofPattern("HH:mm"))
+            );
+            int dur = 60;
+            try { dur = Integer.parseInt(txtDuration.getText().trim()); } catch (NumberFormatException ignored) {}
+
+            Long id = (selectedInterview != null && selectedInterview.getId() != null)
+                      ? selectedInterview.getId() : System.currentTimeMillis();
+            String link = MeetingService.generateMeetingLink(id, scheduledAt, dur);
+
+            txtMeetingLink.setText(link);
+            txtMeetingLink.setStyle("-fx-background-color: #d4edda;");
+
+            if (btnOpenMeetingLink != null) {
+                btnOpenMeetingLink.setVisible(true);
+                btnOpenMeetingLink.setManaged(true);
+            }
+        } catch (Exception e) {
+            showAlert("Erreur", "Date ou heure invalide: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    @FXML
+    private void handleOpenMeetingLink() {
+        String url = txtMeetingLink != null ? txtMeetingLink.getText().trim() : "";
+        if (url.isEmpty()) {
+            showAlert("Aucun lien", "Générez d'abord un lien de réunion.", Alert.AlertType.WARNING);
+            return;
+        }
+        try {
+            Desktop.getDesktop().browse(new URI(url));
+        } catch (Exception e) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Lien de réunion");
+            alert.setHeaderText("Copiez ce lien dans votre navigateur:");
+            alert.setContentText(url);
+            alert.showAndWait();
+        }
+    }
+
+    @FXML
     private void handleSaveInterview() {
         // New flow: interviews are created from Applications.
         // Keep Update only for existing interviews.
@@ -612,10 +665,31 @@ public class InterviewManagementController {
 
         // Add meeting link or location info
         if ("ONLINE".equals(interview.getMode()) && interview.getMeetingLink() != null && !interview.getMeetingLink().trim().isEmpty()) {
-            Label linkLabel = new Label("🔗 Lien de réunion: " + interview.getMeetingLink());
-            linkLabel.setWrapText(true);
-            linkLabel.setStyle("-fx-text-fill: #5BA3F5; -fx-font-size: 12px; -fx-padding: 5 0;");
-            card.getChildren().add(linkLabel);
+            HBox linkRow = new HBox(8);
+            linkRow.setAlignment(Pos.CENTER_LEFT);
+            linkRow.setPadding(new Insets(4, 0, 4, 0));
+
+            Label linkIcon = new Label("🔗 Lien de réunion:");
+            linkIcon.setStyle("-fx-font-size: 12px; -fx-text-fill: #2c3e50; -fx-font-weight: 600;");
+
+            Hyperlink linkBtn = new Hyperlink("Rejoindre la réunion");
+            linkBtn.setStyle("-fx-text-fill: #5BA3F5; -fx-font-size: 12px; -fx-font-weight: 700; -fx-border-color: transparent; -fx-padding: 0;");
+            final String meetUrl = interview.getMeetingLink().trim();
+            linkBtn.setOnAction(e -> {
+                try {
+                    java.awt.Desktop.getDesktop().browse(new java.net.URI(meetUrl));
+                } catch (Exception ex) {
+                    // fallback: show the URL in an alert so user can copy it
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Lien de réunion");
+                    alert.setHeaderText("Copiez ce lien dans votre navigateur:");
+                    alert.setContentText(meetUrl);
+                    alert.showAndWait();
+                }
+            });
+
+            linkRow.getChildren().addAll(linkIcon, linkBtn);
+            card.getChildren().add(linkRow);
         } else if ("ON_SITE".equals(interview.getMode()) && interview.getLocation() != null && !interview.getLocation().trim().isEmpty()) {
             Label locLabel = new Label("📍 Lieu: " + interview.getLocation());
             locLabel.setWrapText(true);
@@ -1030,22 +1104,36 @@ public class InterviewManagementController {
                 txtTime.setText(interview.getScheduledAt().format(DateTimeFormatter.ofPattern("HH:mm")));
                 txtDuration.setText(String.valueOf(interview.getDurationMinutes()));
                 comboMode.setValue(convertModeToDisplay(interview.getMode()));
-                txtMeetingLink.setText(interview.getMeetingLink());
-                txtLocation.setText(interview.getLocation());
-                txtNotes.setText(interview.getNotes());
+                txtMeetingLink.setText(interview.getMeetingLink() != null ? interview.getMeetingLink() : "");
+                txtLocation.setText(interview.getLocation() != null ? interview.getLocation() : "");
+                txtNotes.setText(interview.getNotes() != null ? interview.getNotes() : "");
                 btnSave.setText("Mettre à jour");
                 toggleModeFields(comboMode.getValue());
+
+                // Show "Open" button if link already exists
+                boolean hasLink = interview.getMeetingLink() != null && !interview.getMeetingLink().isBlank();
+                if (btnOpenMeetingLink != null) {
+                    btnOpenMeetingLink.setVisible(hasLink);
+                    btnOpenMeetingLink.setManaged(hasLink);
+                }
+                if (hasLink && txtMeetingLink != null) {
+                    txtMeetingLink.setStyle("-fx-background-color: #d4edda;");
+                }
                 System.out.println("Edit dialog opened for update - Interview ID: " + interview.getId());
             } else {
                 // Clear form for new interview with some default values
                 datePicker.setValue(LocalDate.now().plusDays(1));
-                txtTime.setText("14:00"); // Default to 2 PM
-                txtDuration.setText("60"); // Default to 60 minutes
-                comboMode.setValue("Sur Site"); // Default to ON_SITE (matches database enum)
+                txtTime.setText("14:00");
+                txtDuration.setText("60");
+                comboMode.setValue("Sur Site");
                 txtMeetingLink.setText("");
                 txtLocation.setText("");
                 txtNotes.setText("");
                 btnSave.setText("Créer");
+                if (btnOpenMeetingLink != null) {
+                    btnOpenMeetingLink.setVisible(false);
+                    btnOpenMeetingLink.setManaged(false);
+                }
                 toggleModeFields(comboMode.getValue());
                 System.out.println("Edit dialog opened for new interview");
             }

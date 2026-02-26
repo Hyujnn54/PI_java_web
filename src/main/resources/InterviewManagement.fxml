@@ -139,7 +139,13 @@
 
             <!-- Meeting Link (for ONLINE interviews) -->
             <Label fx:id="lblMeetingLink" text="Lien de Réunion:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="info-label"/>
-            <TextField fx:id="txtMeetingLink" promptText="https://meet.example.com/..." GridPane.columnIndex="1" GridPane.rowIndex="3" styleClass="dialog-input"/>
+            <HBox spacing="6" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="3" fx:id="meetingLinkBox">
+                <TextField fx:id="txtMeetingLink" promptText="Cliquez sur Générer..." prefWidth="190" styleClass="dialog-input" editable="false"/>
+                <Button fx:id="btnGenerateMeetingLink" text="Générer" onAction="#handleGenerateMeetingLink"
+                        style="-fx-background-color:#28a745;-fx-text-fill:white;-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:6 10;-fx-background-radius:6;"/>
+                <Button fx:id="btnOpenMeetingLink" text="Ouvrir" onAction="#handleOpenMeetingLink"
+                        style="-fx-background-color:#5BA3F5;-fx-text-fill:white;-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:6 10;-fx-background-radius:6;" visible="false" managed="false"/>
+            </HBox>
 
             <!-- Location (for ON_SITE interviews) -->
             <Label fx:id="lblLocation" text="Lieu:" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="info-label"/>

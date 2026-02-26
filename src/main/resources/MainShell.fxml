@@ -62,6 +62,35 @@
 
             <Region VBox.vgrow="ALWAYS"/>
 
+            <!-- TEST SECTION -->
+            <VBox spacing="6" style="-fx-padding: 0 16 10 16;">
+                <Label text="TESTS &amp; DEBUG" styleClass="sidebar-section-label"/>
+
+                <Button fx:id="btnTestEmail" onAction="#handleTestEmail"
+                        text="📧  Test Email"
+                        styleClass="sidebar-button"
+                        maxWidth="Infinity"
+                        style="-fx-background-color: #e8f4fd; -fx-text-fill: #1a6fa0; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 8; -fx-padding: 10 15;"/>
+
+                <Button fx:id="btnTestSMS" onAction="#handleTestSMS"
+                        text="📱  Test SMS"
+                        styleClass="sidebar-button"
+                        maxWidth="Infinity"
+                        style="-fx-background-color: #e8f4fd; -fx-text-fill: #1a6fa0; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 8; -fx-padding: 10 15;"/>
+
+                <Button fx:id="btnTestReminders" onAction="#handleTestReminders"
+                        text="🔔  Forcer Rappels"
+                        styleClass="sidebar-button"
+                        maxWidth="Infinity"
+                        style="-fx-background-color: #fff3cd; -fx-text-fill: #856404; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 8; -fx-padding: 10 15;"/>
+
+                <Button fx:id="btnDiagnostics" onAction="#handleDiagnostics"
+                        text="🔍  Diagnostics"
+                        styleClass="sidebar-button"
+                        maxWidth="Infinity"
+                        style="-fx-background-color: #e8f4fd; -fx-text-fill: #1a6fa0; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 8; -fx-padding: 10 15;"/>
+            </VBox>
+
             <!-- Bottom Section -->
             <VBox spacing="8" style="-fx-padding: 20;">
                 <Separator styleClass="sidebar-separator"/>
