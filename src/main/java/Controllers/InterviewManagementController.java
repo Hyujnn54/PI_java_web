@@ -5,7 +5,6 @@ import Models.InterviewFeedback;
 import Services.InterviewFeedbackService;
 import Services.InterviewService;
 import Services.EmailService;
-import Services.MeetingService;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -16,8 +15,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.GridPane;
 
-import java.awt.Desktop;
-import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -44,10 +41,6 @@ public class InterviewManagementController {
     @FXML private TextField txtSearchInterview;
     @FXML private Button btnCalendar;
 
-    @FXML private ComboBox<String> comboSearchMode;
-    @FXML private DatePicker dateSearchPicker;
-    @FXML private ComboBox<String> comboSearchStatus;
-
     // Feedback panel controls (bottom panel like interview edit)
     @FXML private VBox feedbackPanel;
     @FXML private ComboBox<String> comboFeedbackDecision;
@@ -63,13 +56,24 @@ public class InterviewManagementController {
     @FXML private TextField txtDuration;
     @FXML private ComboBox<String> comboMode;
     @FXML private TextField txtMeetingLink;
+    @FXML private HBox meetingLinkBox;
+    @FXML private Button btnGenerateMeetingLink;
+    @FXML private Button btnOpenMeetingLink;
     @FXML private TextField txtLocation;
     @FXML private TextArea txtNotes;
     @FXML private Label lblMeetingLink;
     @FXML private Label lblLocation;
     @FXML private Button btnSave;
-    @FXML private Button btnGenerateMeetingLink;
-    @FXML private Button btnOpenMeetingLink;
+    @FXML private TextField txtApplicationId;
+    @FXML private TextField txtRecruiterId;
+    @FXML private ComboBox<String> comboStatus;
+
+    // Additional search controls
+    @FXML private ComboBox<String> comboSearchMode;
+    @FXML private DatePicker dateSearchPicker;
+    @FXML private ComboBox<String> comboSearchStatus;
+    @FXML private Button btnSearchInterview;
+    @FXML private Button btnClearSearch;
 
     private Interview selectedInterview = null;
     private boolean isEditMode = false;
@@ -100,28 +104,13 @@ public class InterviewManagementController {
             comboFeedbackDecision.setItems(FXCollections.observableArrayList("Accepté", "Rejeté"));
         }
 
-        // Setup search criteria combobox (recruiter)
+        // Setup search criteria combobox
         if (comboSearchCriteria != null) {
             comboSearchCriteria.setItems(FXCollections.observableArrayList(
-                "Date", "Mode", "Statut", "Lieu"
+                "Nom", "Date", "Mode", "Statut", "Lieu"
             ));
-            comboSearchCriteria.setValue("Date");
-
-            comboSearchCriteria.valueProperty().addListener((obs, oldVal, newVal) -> updateSearchInputForCriteria(newVal));
+            comboSearchCriteria.setValue("Nom"); // Default criterion
         }
-
-        if (comboSearchMode != null) {
-            comboSearchMode.setItems(FXCollections.observableArrayList("En Ligne", "Sur Site"));
-        }
-
-        if (comboSearchStatus != null) {
-            comboSearchStatus.setItems(FXCollections.observableArrayList(
-                "En attente", "Accepté", "Rejeté"
-            ));
-        }
-
-        // Initialize search input state
-        updateSearchInputForCriteria(comboSearchCriteria != null ? comboSearchCriteria.getValue() : null);
 
         // Setup feedback score live indicator
         if (txtFeedbackScore != null && lblScoreIndicator != null) {
@@ -205,84 +194,45 @@ public class InterviewManagementController {
         showEditDialog(null);
     }
 
-    private void updateSearchInputForCriteria(String criteria) {
-        if (txtSearchInterview == null) return;
-
-        boolean mode = "Mode".equals(criteria);
-        boolean date = "Date".equals(criteria);
-        boolean status = "Statut".equals(criteria);
-
-        if (comboSearchMode != null) {
-            comboSearchMode.setVisible(mode);
-            comboSearchMode.setManaged(mode);
-        }
-        if (dateSearchPicker != null) {
-            dateSearchPicker.setVisible(date);
-            dateSearchPicker.setManaged(date);
-        }
-        if (comboSearchStatus != null) {
-            comboSearchStatus.setVisible(status);
-            comboSearchStatus.setManaged(status);
-        }
-
-        txtSearchInterview.setVisible(!mode && !date && !status);
-        txtSearchInterview.setManaged(!mode && !date && !status);
-
-        if (!mode && !date && !status) {
-            txtSearchInterview.setPromptText("Rechercher...");
-        }
-    }
-
     @FXML
     private void handleSearchInterview() {
-        String criteria = comboSearchCriteria != null ? comboSearchCriteria.getValue() : "Date";
+        if (txtSearchInterview == null || txtSearchInterview.getText().trim().isEmpty()) {
+            loadInterviews();
+            return;
+        }
+
+        String keyword = txtSearchInterview.getText().trim().toLowerCase();
+        String criteria = comboSearchCriteria != null ? comboSearchCriteria.getValue() : "Nom";
         List<Interview> allInterviews = InterviewService.getAll();
 
         List<Interview> filtered = allInterviews.stream()
             .filter(interview -> {
                 switch (criteria) {
-                    case "Date" -> {
-                        if (dateSearchPicker == null || dateSearchPicker.getValue() == null) return true;
-                        return interview.getScheduledAt() != null && interview.getScheduledAt().toLocalDate().equals(dateSearchPicker.getValue());
-                    }
-                    case "Mode" -> {
-                        if (comboSearchMode == null || comboSearchMode.getValue() == null) return true;
-                        String dbMode = convertModeToDatabase(comboSearchMode.getValue());
-                        return interview.getMode() != null && interview.getMode().equalsIgnoreCase(dbMode);
-                    }
-                    case "Statut" -> {
-                        if (comboSearchStatus == null || comboSearchStatus.getValue() == null) return true;
-                        String selected = comboSearchStatus.getValue();
-
-                        // Map dropdown values to DB fields
-                        if ("En attente".equals(selected)) {
-                            // Interview status: scheduled and no feedback
-                            return (interview.getStatus() == null || "SCHEDULED".equalsIgnoreCase(interview.getStatus()))
-                                   && !InterviewFeedbackService.existsForInterview(interview.getId());
-                        }
-
-                        // Accepted/Rejected come from feedback decision
-                        var feedbacks = InterviewFeedbackService.getByInterviewId(interview.getId());
-                        if (feedbacks.isEmpty()) return false;
-
-                        String decision = feedbacks.get(0).getDecision();
-                        if (decision == null) return false;
-
-                        if ("Accepté".equals(selected)) return "ACCEPTED".equalsIgnoreCase(decision);
-                        if ("Rejeté".equals(selected)) return "REJECTED".equalsIgnoreCase(decision);
-
-                        return true;
-                    }
-                    case "Lieu" -> {
-                        String keyword = txtSearchInterview != null ? txtSearchInterview.getText().trim().toLowerCase() : "";
-                        if (keyword.isEmpty()) return true;
+                    case "Nom":
+                        // Search by candidate name (from application)
+                        return searchByName(interview, keyword);
+                    case "Date":
+                        // Search by date
+                        String dateStr = interview.getScheduledAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                        return dateStr.contains(keyword);
+                    case "Mode":
+                        // Search by mode (ONLINE or ON_SITE)
+                        return interview.getMode() != null && interview.getMode().toLowerCase().contains(keyword);
+                    case "Statut":
+                        // Search by status
+                        return interview.getStatus() != null && interview.getStatus().toLowerCase().contains(keyword);
+                    case "Lieu":
+                        // Search by location or meeting link
                         String location = interview.getLocation() != null ? interview.getLocation().toLowerCase() : "";
                         String meetingLink = interview.getMeetingLink() != null ? interview.getMeetingLink().toLowerCase() : "";
                         return location.contains(keyword) || meetingLink.contains(keyword);
-                    }
-                    default -> {
-                        return true;
-                    }
+                    default:
+                        // Default: search all fields
+                        String searchText = String.valueOf(interview.getId()) + " " +
+                                          (interview.getMode() != null ? interview.getMode() : "") + " " +
+                                          (interview.getStatus() != null ? interview.getStatus() : "") + " " +
+                                          formatDateTime(interview.getScheduledAt());
+                        return searchText.toLowerCase().contains(keyword);
                 }
             })
             .toList();
@@ -292,13 +242,12 @@ public class InterviewManagementController {
 
     @FXML
     private void handleClearSearch() {
-        if (txtSearchInterview != null) txtSearchInterview.clear();
-        if (comboSearchMode != null) comboSearchMode.setValue(null);
-        if (comboSearchStatus != null) comboSearchStatus.setValue(null);
-        if (dateSearchPicker != null) dateSearchPicker.setValue(null);
-        if (comboSearchCriteria != null) comboSearchCriteria.setValue("Date");
-
-        updateSearchInputForCriteria("Date");
+        if (txtSearchInterview != null) {
+            txtSearchInterview.clear();
+        }
+        if (comboSearchCriteria != null) {
+            comboSearchCriteria.setValue("Nom");
+        }
         loadInterviews();
     }
 
@@ -487,54 +436,6 @@ public class InterviewManagementController {
     }
 
     @FXML
-    private void handleGenerateMeetingLink() {
-        if (datePicker.getValue() == null || txtTime.getText().trim().isEmpty()) {
-            showAlert("Champs manquants", "Veuillez d'abord renseigner la date et l'heure.", Alert.AlertType.WARNING);
-            return;
-        }
-        try {
-            LocalDateTime scheduledAt = LocalDateTime.of(
-                datePicker.getValue(),
-                LocalTime.parse(txtTime.getText().trim(), DateTimeFormatter.ofPattern("HH:mm"))
-            );
-            int dur = 60;
-            try { dur = Integer.parseInt(txtDuration.getText().trim()); } catch (NumberFormatException ignored) {}
-
-            Long id = (selectedInterview != null && selectedInterview.getId() != null)
-                      ? selectedInterview.getId() : System.currentTimeMillis();
-            String link = MeetingService.generateMeetingLink(id, scheduledAt, dur);
-
-            txtMeetingLink.setText(link);
-            txtMeetingLink.setStyle("-fx-background-color: #d4edda;");
-
-            if (btnOpenMeetingLink != null) {
-                btnOpenMeetingLink.setVisible(true);
-                btnOpenMeetingLink.setManaged(true);
-            }
-        } catch (Exception e) {
-            showAlert("Erreur", "Date ou heure invalide: " + e.getMessage(), Alert.AlertType.ERROR);
-        }
-    }
-
-    @FXML
-    private void handleOpenMeetingLink() {
-        String url = txtMeetingLink != null ? txtMeetingLink.getText().trim() : "";
-        if (url.isEmpty()) {
-            showAlert("Aucun lien", "Générez d'abord un lien de réunion.", Alert.AlertType.WARNING);
-            return;
-        }
-        try {
-            Desktop.getDesktop().browse(new URI(url));
-        } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Lien de réunion");
-            alert.setHeaderText("Copiez ce lien dans votre navigateur:");
-            alert.setContentText(url);
-            alert.showAndWait();
-        }
-    }
-
-    @FXML
     private void handleSaveInterview() {
         // New flow: interviews are created from Applications.
         // Keep Update only for existing interviews.
@@ -646,7 +547,7 @@ public class InterviewManagementController {
         VBox statusBox = new VBox(10);
         statusBox.setStyle("-fx-background-color: rgba(91, 163, 245, 0.1); -fx-padding: 15; -fx-background-radius: 8;");
 
-        Label statusLabel = new Label("Statut de l'entretien");
+        Label statusLabel = new Label("Interview Status");
         statusLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;");
 
         Label statusValue = new Label(getStatusDescription(interview.getStatus()));
@@ -658,37 +559,33 @@ public class InterviewManagementController {
         // Interview details (no raw IDs shown)
         HBox detailsRow = new HBox(30);
         detailsRow.getChildren().addAll(
-            createInfoBox("📅 Date & Heure", formatDateTime(interview.getScheduledAt())),
-            createInfoBox("⏱ Durée", interview.getDurationMinutes() + " min"),
-            createInfoBox("🎯 Mode", convertModeToDisplay(interview.getMode()))
+            createInfoBox("📅 Date & Time", formatDateTime(interview.getScheduledAt())),
+            createInfoBox("⏱ Duration", interview.getDurationMinutes() + " min"),
+            createInfoBox("🎯 Mode", interview.getMode())
         );
 
         // Add meeting link or location info
         if ("ONLINE".equals(interview.getMode()) && interview.getMeetingLink() != null && !interview.getMeetingLink().trim().isEmpty()) {
+            String link = interview.getMeetingLink().trim();
             HBox linkRow = new HBox(8);
-            linkRow.setAlignment(Pos.CENTER_LEFT);
-            linkRow.setPadding(new Insets(4, 0, 4, 0));
-
-            Label linkIcon = new Label("🔗 Lien de réunion:");
+            linkRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            Label linkIcon = new Label("🔗 Lien de Réunion:");
             linkIcon.setStyle("-fx-font-size: 12px; -fx-text-fill: #2c3e50; -fx-font-weight: 600;");
-
-            Hyperlink linkBtn = new Hyperlink("Rejoindre la réunion");
-            linkBtn.setStyle("-fx-text-fill: #5BA3F5; -fx-font-size: 12px; -fx-font-weight: 700; -fx-border-color: transparent; -fx-padding: 0;");
-            final String meetUrl = interview.getMeetingLink().trim();
-            linkBtn.setOnAction(e -> {
+            Hyperlink hyperlink = new Hyperlink(link);
+            hyperlink.setStyle("-fx-text-fill: #5BA3F5; -fx-font-size: 12px; -fx-padding: 0;");
+            hyperlink.setWrapText(true);
+            hyperlink.setOnAction(e -> {
                 try {
-                    java.awt.Desktop.getDesktop().browse(new java.net.URI(meetUrl));
+                    java.awt.Desktop.getDesktop().browse(new java.net.URI(link));
                 } catch (Exception ex) {
-                    // fallback: show the URL in an alert so user can copy it
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("Lien de réunion");
-                    alert.setHeaderText("Copiez ce lien dans votre navigateur:");
-                    alert.setContentText(meetUrl);
-                    alert.showAndWait();
+                    // If Desktop browse fails, copy to clipboard
+                    javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+                    content.putString(link);
+                    javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
+                    showAlert("Lien copié", "Le lien a été copié dans le presse-papiers.", Alert.AlertType.INFORMATION);
                 }
             });
-
-            linkRow.getChildren().addAll(linkIcon, linkBtn);
+            linkRow.getChildren().addAll(linkIcon, hyperlink);
             card.getChildren().add(linkRow);
         } else if ("ON_SITE".equals(interview.getMode()) && interview.getLocation() != null && !interview.getLocation().trim().isEmpty()) {
             Label locLabel = new Label("📍 Lieu: " + interview.getLocation());
@@ -720,14 +617,14 @@ public class InterviewManagementController {
     }
 
     private String getStatusDescription(String status) {
-        if (status == null) return "En attente de confirmation";
+        if (status == null) return "Pending Confirmation";
 
         return switch (status.toUpperCase()) {
-            case "SCHEDULED" -> "✓ Confirmé - L'entretien est planifié";
-            case "DONE", "COMPLETED" -> "✓ Terminé - L'entretien a eu lieu";
-            case "CANCELLED" -> "✕ Annulé - L'entretien a été annulé";
-            case "RESCHEDULED" -> "🔄 Replanifié - Un nouvel horaire a été défini";
-            default -> "En attente de confirmation";
+            case "SCHEDULED" -> "✓ Confirmed - Interview is scheduled and confirmed";
+            case "COMPLETED" -> "✓ Completed - Interview has been conducted";
+            case "CANCELLED" -> "✕ Cancelled - Interview has been cancelled";
+            case "RESCHEDULED" -> "🔄 Rescheduled - New time has been set";
+            default -> "Pending Confirmation";
         };
     }
 
@@ -902,11 +799,14 @@ public class InterviewManagementController {
 
         // Pre-fill if exists
         if (existingFeedback != null) {
-            // Get decision from database field
+            // Convert DB enum to French display value
             String decision = existingFeedback.getDecision();
+            String decisionDisplay = "ACCEPTED".equals(decision) ? "Accepté"
+                                   : "REJECTED".equals(decision) ? "Rejeté"
+                                   : decision;
 
             if (comboFeedbackDecision != null) {
-                comboFeedbackDecision.setValue(decision);
+                comboFeedbackDecision.setValue(decisionDisplay);
             }
 
             if (existingFeedback.getOverallScore() != null) {
@@ -985,7 +885,11 @@ public class InterviewManagementController {
             }
 
             String comment = txtFeedbackComments.getText();
-            String decision = comboFeedbackDecision.getValue();
+            String decisionDisplay = comboFeedbackDecision.getValue();
+            // Convert French display value to DB enum
+            String decision = "Accepté".equals(decisionDisplay) ? "ACCEPTED"
+                            : "Rejeté".equals(decisionDisplay)   ? "REJECTED"
+                            : decisionDisplay; // fallback (already in English)
             Long recruiterId = (long) getEffectiveRecruiterIdForInterview(selectedInterview);
 
             System.out.println("Form Values:");
@@ -1103,38 +1007,24 @@ public class InterviewManagementController {
                 datePicker.setValue(interview.getScheduledAt().toLocalDate());
                 txtTime.setText(interview.getScheduledAt().format(DateTimeFormatter.ofPattern("HH:mm")));
                 txtDuration.setText(String.valueOf(interview.getDurationMinutes()));
-                comboMode.setValue(convertModeToDisplay(interview.getMode()));
-                txtMeetingLink.setText(interview.getMeetingLink() != null ? interview.getMeetingLink() : "");
-                txtLocation.setText(interview.getLocation() != null ? interview.getLocation() : "");
-                txtNotes.setText(interview.getNotes() != null ? interview.getNotes() : "");
-                btnSave.setText("Mettre à jour");
-                toggleModeFields(comboMode.getValue());
-
-                // Show "Open" button if link already exists
-                boolean hasLink = interview.getMeetingLink() != null && !interview.getMeetingLink().isBlank();
-                if (btnOpenMeetingLink != null) {
-                    btnOpenMeetingLink.setVisible(hasLink);
-                    btnOpenMeetingLink.setManaged(hasLink);
-                }
-                if (hasLink && txtMeetingLink != null) {
-                    txtMeetingLink.setStyle("-fx-background-color: #d4edda;");
-                }
+                comboMode.setValue(interview.getMode());
+                txtMeetingLink.setText(interview.getMeetingLink());
+                txtLocation.setText(interview.getLocation());
+                txtNotes.setText(interview.getNotes());
+                btnSave.setText("Update Interview");
+                toggleModeFields(interview.getMode()); // Set visibility based on mode
                 System.out.println("Edit dialog opened for update - Interview ID: " + interview.getId());
             } else {
                 // Clear form for new interview with some default values
                 datePicker.setValue(LocalDate.now().plusDays(1));
-                txtTime.setText("14:00");
-                txtDuration.setText("60");
-                comboMode.setValue("Sur Site");
+                txtTime.setText("14:00"); // Default to 2 PM
+                txtDuration.setText("60"); // Default to 60 minutes
+                comboMode.setValue("ON_SITE"); // Default to ON_SITE (matches database enum)
                 txtMeetingLink.setText("");
                 txtLocation.setText("");
                 txtNotes.setText("");
-                btnSave.setText("Créer");
-                if (btnOpenMeetingLink != null) {
-                    btnOpenMeetingLink.setVisible(false);
-                    btnOpenMeetingLink.setManaged(false);
-                }
-                toggleModeFields(comboMode.getValue());
+                btnSave.setText("Create Interview");
+                toggleModeFields("ON_SITE"); // Set visibility for default mode
                 System.out.println("Edit dialog opened for new interview");
             }
 
@@ -1253,12 +1143,8 @@ public class InterviewManagementController {
             return false;
         }
 
-        System.out.println("Validation réussie");
+        System.out.println("Validation passed successfully");
         return true;
-    }
-
-    private String formatDateTime(LocalDateTime dateTime) {
-        return dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy - HH:mm"));
     }
 
     private void highlightSelectedCard(VBox card) {
@@ -1282,6 +1168,9 @@ public class InterviewManagementController {
         };
     }
 
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy - HH:mm"));
+    }
 
     private void showAlert(String title, String message, Alert.AlertType type) {
         Alert alert = new Alert(type);
@@ -1331,5 +1220,54 @@ public class InterviewManagementController {
         if ("ACCEPTED".equals(dbDecision)) return "Accepté";
         if ("REJECTED".equals(dbDecision)) return "Rejeté";
         return dbDecision;
+    }
+
+    @FXML
+    private void handleGenerateMeetingLink() {
+        try {
+            if (datePicker.getValue() == null || txtTime.getText().trim().isEmpty()) {
+                showAlert("Erreur", "Veuillez sélectionner une date et une heure avant de générer le lien.", Alert.AlertType.WARNING);
+                return;
+            }
+            java.time.LocalTime time = java.time.LocalTime.parse(txtTime.getText().trim());
+            LocalDateTime scheduledAt = LocalDateTime.of(datePicker.getValue(), time);
+            int duration = 60;
+            try { duration = Integer.parseInt(txtDuration.getText().trim()); } catch (Exception ignored) {}
+
+            // Use applicationId from hidden field if available
+            Long appId = null;
+            if (txtApplicationId != null && txtApplicationId.getText() != null && !txtApplicationId.getText().isBlank()) {
+                try { appId = Long.parseLong(txtApplicationId.getText().trim()); } catch (Exception ignored) {}
+            }
+            if (appId == null && selectedInterview != null) {
+                appId = selectedInterview.getApplicationId();
+            }
+            if (appId == null) appId = 0L;
+
+            String link = Services.MeetingService.generateMeetingLink(appId, scheduledAt, duration);
+            if (txtMeetingLink != null) {
+                txtMeetingLink.setText(link);
+                txtMeetingLink.setStyle("-fx-background-color: #d4edda; -fx-background-radius: 6;");
+            }
+            if (btnOpenMeetingLink != null) {
+                btnOpenMeetingLink.setVisible(true);
+                btnOpenMeetingLink.setManaged(true);
+            }
+        } catch (Exception e) {
+            showAlert("Erreur", "Impossible de générer le lien : " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    @FXML
+    private void handleOpenMeetingLink() {
+        if (txtMeetingLink == null || txtMeetingLink.getText().isBlank()) {
+            showAlert("Erreur", "Aucun lien de réunion disponible.", Alert.AlertType.WARNING);
+            return;
+        }
+        try {
+            java.awt.Desktop.getDesktop().browse(new java.net.URI(txtMeetingLink.getText().trim()));
+        } catch (Exception e) {
+            showAlert("Erreur", "Impossible d'ouvrir le lien : " + e.getMessage(), Alert.AlertType.ERROR);
+        }
     }
 }

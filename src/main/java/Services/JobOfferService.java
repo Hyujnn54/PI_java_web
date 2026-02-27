@@ -237,5 +237,4 @@ public class JobOfferService {
         return skills;
     }
 }
-}
 

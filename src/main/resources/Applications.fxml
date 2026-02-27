@@ -5,224 +5,60 @@
 <?import javafx.scene.layout.*?>
 
 <VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="Controllers.ApplicationsController" spacing="20" styleClass="page"
-      stylesheets="@styles.css" style="-fx-background-color: #f8f9fa;">
+      fx:controller="Controllers.ApplicationsController"
+      spacing="20" styleClass="page"
+      stylesheets="@styles.css"
+      style="-fx-background-color: #f8f9fa;">
 
     <padding>
         <Insets top="25" left="25" right="25" bottom="25"/>
     </padding>
 
-    <!-- Header Section -->
+    <!-- Header -->
     <HBox alignment="CENTER_LEFT" spacing="20">
         <VBox spacing="5" HBox.hgrow="ALWAYS">
-            <Label text="Candidate Applications" styleClass="page-title"/>
-            <Label fx:id="lblSubtitle" text="Review and manage candidate applications" styleClass="page-subtitle"/>
-            <Label text="Candidatures" styleClass="page-title"/>
-            <Label fx:id="lblSubtitle" text="Examiner et gérer les candidatures" styleClass="page-subtitle"/>
+            <Label text="Candidatures" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Label fx:id="lblSubtitle" text="Examiner et gérer les candidatures"
+                   style="-fx-font-size: 14px; -fx-text-fill: #7f8c8d;"/>
         </VBox>
     </HBox>
 
-    <!-- Search Bar Section -->
-    <HBox spacing="15" alignment="CENTER_LEFT" styleClass="search-bar-container">
-        <ComboBox fx:id="cbSearchCriteria" promptText="Search by..." prefWidth="180" styleClass="modern-combo"/>
-
-        <TextField fx:id="txtSearch" promptText="Search candidates..." HBox.hgrow="ALWAYS"
-                   styleClass="modern-search-field"/>
-
-        <Button fx:id="btnSearch" text="Search" styleClass="btn-primary"/>
-        <Button fx:id="btnClear" text="Clear" styleClass="btn-secondary"/>
-        <ComboBox fx:id="cbSearchCriteria" promptText="Rechercher par..." prefWidth="180" styleClass="modern-combo"/>
-
-        <TextField fx:id="txtSearch" promptText="Rechercher candidats..." HBox.hgrow="ALWAYS"
-                   styleClass="modern-search-field"/>
-
-        <Button text="Rechercher" styleClass="btn-primary"/>
-        <Button text="Effacer" styleClass="btn-secondary"/>
+    <!-- Search Bar -->
+    <HBox spacing="12" alignment="CENTER_LEFT"
+          style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 12 15; -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.06),10,0,0,2);">
+        <ComboBox fx:id="cbSearchCriteria" promptText="Rechercher par..."
+                  prefWidth="180"
+                  style="-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-border-color: #e9ecef; -fx-border-radius: 8;"/>
+        <TextField fx:id="txtSearch" promptText="Rechercher..."
+                   HBox.hgrow="ALWAYS"
+                   style="-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-padding: 10 14; -fx-border-color: #e9ecef; -fx-border-radius: 8;"/>
+        <Button fx:id="btnSearch" text="🔍 Rechercher"
+                style="-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 600; -fx-padding: 10 18; -fx-background-radius: 8; -fx-cursor: hand;"/>
+        <Button fx:id="btnClear" text="✕ Effacer"
+                style="-fx-background-color: #e9ecef; -fx-text-fill: #6c757d; -fx-font-weight: 600; -fx-padding: 10 14; -fx-background-radius: 8; -fx-cursor: hand;"/>
     </HBox>
 
-    <!-- Main Content Area: Split View -->
+    <!-- Split View -->
     <HBox spacing="20" VBox.vgrow="ALWAYS" styleClass="split-view-container">
 
-        <!-- LEFT SIDE: Candidate List (30%) -->
-        <VBox spacing="12" prefWidth="400" styleClass="candidate-list-container">
-            <Label text="Applications" styleClass="section-title"/>
-
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
-                <VBox fx:id="candidateListContainer" spacing="12" style="-fx-padding: 5;"/>
+        <!-- LEFT: Candidate / Application list -->
+        <VBox spacing="12" prefWidth="380" minWidth="340" maxWidth="420"
+              style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.08),15,0,0,2);">
+            <Label text="Liste des Candidatures"
+                   style="-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;"/>
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                        style="-fx-background: transparent; -fx-background-color: transparent;">
+                <VBox fx:id="candidateListContainer" spacing="12" style="-fx-padding: 5 0;"/>
             </ScrollPane>
         </VBox>
 
-        <!-- RIGHT SIDE: Application Detail View (70%) -->
-        <VBox spacing="20" HBox.hgrow="ALWAYS" styleClass="detail-view-container">
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
-                <VBox fx:id="mainContainer" spacing="20" style="-fx-padding: 10;"/>
-            <Label text="Candidats" styleClass="section-title"/>
-
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
-                <VBox fx:id="candidateListContainer" spacing="12" style="-fx-padding: 5;">
-
-                    <!-- Candidate Card 1 -->
-                    <VBox styleClass="candidate-card candidate-card-selected" spacing="10">
-                        <HBox alignment="CENTER_LEFT" spacing="12">
-                            <VBox HBox.hgrow="ALWAYS" spacing="4">
-                                <Label text="Sarah Johnson" styleClass="candidate-name"/>
-                                <Label text="Senior Frontend Developer" styleClass="candidate-position"/>
-                            </VBox>
-                            <Label text="⭐ 4.5" styleClass="rating-badge"/>
-                        </HBox>
-
-                        <HBox spacing="8">
-                            <Label text="📍 New York, NY" styleClass="candidate-info"/>
-                        </HBox>
-
-                        <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Label text="New" styleClass="status-badge status-new"/>
-                            <Label text="1/23/2026" styleClass="date-label"/>
-                        </HBox>
-                    </VBox>
-
-                    <!-- Candidate Card 2 -->
-                    <VBox styleClass="candidate-card" spacing="10">
-                        <HBox alignment="CENTER_LEFT" spacing="12">
-                            <VBox HBox.hgrow="ALWAYS" spacing="4">
-                                <Label text="Michael Chen" styleClass="candidate-name"/>
-                                <Label text="Product Designer" styleClass="candidate-position"/>
-                            </VBox>
-                            <Label text="⭐ 4.8" styleClass="rating-badge"/>
-                        </HBox>
-
-                        <HBox spacing="8">
-                            <Label text="📍 San Francisco, CA" styleClass="candidate-info"/>
-                        </HBox>
-
-                        <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Label text="Shortlisted" styleClass="status-badge status-shortlisted"/>
-                            <Label text="1/23/2026" styleClass="date-label"/>
-                        </HBox>
-                    </VBox>
-
-                    <!-- Candidate Card 3 -->
-                    <VBox styleClass="candidate-card" spacing="10">
-                        <HBox alignment="CENTER_LEFT" spacing="12">
-                            <VBox HBox.hgrow="ALWAYS" spacing="4">
-                                <Label text="Emily Davis" styleClass="candidate-name"/>
-                                <Label text="Senior Frontend Developer" styleClass="candidate-position"/>
-                            </VBox>
-                            <Label text="⭐ 4.2" styleClass="rating-badge"/>
-                        </HBox>
-
-                        <HBox spacing="8">
-                            <Label text="📍 Austin, TX" styleClass="candidate-info"/>
-                        </HBox>
-
-                        <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Label text="Reviewing" styleClass="status-badge status-reviewing"/>
-                            <Label text="1/22/2026" styleClass="date-label"/>
-                        </HBox>
-                    </VBox>
-
-                    <!-- Candidate Card 4 -->
-                    <VBox styleClass="candidate-card" spacing="10">
-                        <HBox alignment="CENTER_LEFT" spacing="12">
-                            <VBox HBox.hgrow="ALWAYS" spacing="4">
-                                <Label text="James Wilson" styleClass="candidate-name"/>
-                                <Label text="DevOps Engineer" styleClass="candidate-position"/>
-                            </VBox>
-                            <Label text="⭐ 4.7" styleClass="rating-badge"/>
-                        </HBox>
-
-                        <HBox spacing="8">
-                            <Label text="📍 Seattle, WA" styleClass="candidate-info"/>
-                        </HBox>
-
-                        <HBox spacing="10" alignment="CENTER_LEFT">
-                            <Label text="New" styleClass="status-badge status-new"/>
-                            <Label text="1/21/2026" styleClass="date-label"/>
-                        </HBox>
-                    </VBox>
-
-                </VBox>
+        <!-- RIGHT: Detail view -->
+        <VBox HBox.hgrow="ALWAYS"
+              style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.08),15,0,0,2);">
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                        style="-fx-background: transparent; -fx-background-color: transparent;">
+                <VBox fx:id="mainContainer" spacing="20" style="-fx-padding: 10 5 10 0;"/>
             </ScrollPane>
-        </VBox>
-
-        <!-- RIGHT SIDE: Candidate Detail View (70%) -->
-        <VBox spacing="20" HBox.hgrow="ALWAYS" styleClass="detail-view-container">
-
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
-                <VBox spacing="20" style="-fx-padding: 10;">
-
-                    <!-- Candidate Header -->
-                    <VBox styleClass="detail-header-card" spacing="15">
-                        <HBox alignment="CENTER_LEFT" spacing="15">
-                            <VBox HBox.hgrow="ALWAYS" spacing="8">
-                                <Label text="Sarah Johnson" styleClass="detail-candidate-name"/>
-                                <Label text="Senior Frontend Developer" styleClass="detail-candidate-position"/>
-                            </VBox>
-                            <Label text="⭐ 4.5" styleClass="detail-rating-badge"/>
-                        </HBox>
-
-                        <Separator styleClass="detail-separator"/>
-
-                        <HBox spacing="30">
-                            <VBox spacing="5">
-                                <Label text="📧 Email" styleClass="detail-label"/>
-                                <Label text="sarah.johnson@email.com" styleClass="detail-value"/>
-                            </VBox>
-                            <VBox spacing="5">
-                                <Label text="📞 Phone" styleClass="detail-label"/>
-                                <Label text="+1 (555) 123-4567" styleClass="detail-value"/>
-                            </VBox>
-                            <VBox spacing="5">
-                                <Label text="📍 Location" styleClass="detail-label"/>
-                                <Label text="New York, NY" styleClass="detail-value"/>
-                            </VBox>
-                        </HBox>
-                    </VBox>
-
-                    <!-- Experience & Education -->
-                    <HBox spacing="20">
-                        <VBox spacing="10" HBox.hgrow="ALWAYS" styleClass="info-card">
-                            <Label text="💼 Experience" styleClass="info-card-title"/>
-                            <Label text="6 years" styleClass="info-card-value"/>
-                        </VBox>
-
-                        <VBox spacing="10" HBox.hgrow="ALWAYS" styleClass="info-card">
-                            <Label text="🎓 Education" styleClass="info-card-title"/>
-                            <Label text="BS Computer Science, MIT" styleClass="info-card-value"/>
-                        </VBox>
-                    </HBox>
-
-                    <!-- Skills -->
-                    <VBox spacing="12" styleClass="detail-section-card">
-                        <Label text="Compétences" styleClass="detail-section-title"/>
-                        <FlowPane hgap="10" vgap="10">
-                            <Label text="React" styleClass="skill-tag"/>
-                            <Label text="TypeScript" styleClass="skill-tag"/>
-                            <Label text="CSS" styleClass="skill-tag"/>
-                            <Label text="Node.js" styleClass="skill-tag"/>
-                            <Label text="GraphQL" styleClass="skill-tag"/>
-                        </FlowPane>
-                    </VBox>
-
-                    <!-- Application Status -->
-                    <VBox spacing="15" styleClass="detail-section-card">
-                        <Label text="Statut de la Candidature" styleClass="detail-section-title"/>
-
-                        <ComboBox fx:id="cbApplicationStatus" promptText="Sélectionner statut..." prefWidth="300" styleClass="modern-combo"/>
-                    </VBox>
-
-                    <!-- Action Buttons -->
-                    <HBox spacing="15" alignment="CENTER_LEFT" styleClass="action-buttons-container">
-                        <Button text="✓ Accepter Candidat" styleClass="btn-success action-button"/>
-                        <Button text="📅 Planifier Entretien" styleClass="btn-primary action-button"/>
-                        <Button text="📥 Télécharger CV" styleClass="btn-secondary action-button"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Button text="✕ Rejeter" styleClass="btn-danger action-button"/>
-                    </HBox>
-
-                </VBox>
-            </ScrollPane>
-
         </VBox>
 
     </HBox>

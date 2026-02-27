@@ -4,7 +4,7 @@ import java.sql.*;
 
 /**
  * UI-only user context.
- * Later you can replace this with real authentication + session.
+ * Replace with real authentication + session when login is implemented.
  */
 public final class UserContext {
 
@@ -12,11 +12,6 @@ public final class UserContext {
         RECRUITER,
         CANDIDATE,
         ADMIN
-    }
-
-    private static Role currentRole = Role.RECRUITER;
-    // Using static IDs for testing: candidate=1, recruiter=2, admin=3
-        CANDIDATE
     }
 
     private static Role currentRole = Role.RECRUITER;
@@ -31,42 +26,30 @@ public final class UserContext {
 
     public static void setCurrentRole(Role role) {
         currentRole = role;
+        // Reset cached IDs when role changes
+        cachedRecruiterId = null;
+        cachedCandidateId = null;
     }
 
     public static void toggleRole() {
         currentRole = switch (currentRole) {
             case RECRUITER -> Role.CANDIDATE;
-            case CANDIDATE -> Role.ADMIN;
-            case ADMIN -> Role.RECRUITER;
             case CANDIDATE -> Role.RECRUITER;
+            case ADMIN     -> Role.RECRUITER;
         };
+        cachedRecruiterId = null;
+        cachedCandidateId = null;
     }
 
     public static String getRoleLabel() {
         return switch (currentRole) {
-            case RECRUITER -> "Recruiter";
-            case CANDIDATE -> "Candidate";
-            case ADMIN -> "Admin";
             case RECRUITER -> "Recruteur";
             case CANDIDATE -> "Candidat";
+            case ADMIN     -> "Admin";
         };
     }
 
-    // Mock ids for now (replace with authenticated user ids)
     public static Long getRecruiterId() {
-        return 2L; // Static ID for testing
-    }
-
-    public static Long getCandidateId() {
-        return 1L; // Static ID for testing
-    }
-
-    public static Long getAdminId() {
-        return 3L; // Static ID for testing
-    }
-}
-
-
         if (cachedRecruiterId == null) {
             cachedRecruiterId = getFirstRecruiterId();
         }
@@ -80,29 +63,29 @@ public final class UserContext {
         return cachedCandidateId;
     }
 
+    public static Long getAdminId() {
+        return 3L; // Static fallback
+    }
+
     private static Long getFirstRecruiterId() {
         try (Connection conn = MyDatabase.getInstance().getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT id FROM recruiter LIMIT 1")) {
-            if (rs.next()) {
-                return rs.getLong("id");
-            }
+            if (rs.next()) return rs.getLong("id");
         } catch (SQLException e) {
             System.err.println("Error getting recruiter ID: " + e.getMessage());
         }
-        return 1L; // Fallback
+        return 1L;
     }
 
     private static Long getFirstCandidateId() {
         try (Connection conn = MyDatabase.getInstance().getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT id FROM candidate LIMIT 1")) {
-            if (rs.next()) {
-                return rs.getLong("id");
-            }
+            if (rs.next()) return rs.getLong("id");
         } catch (SQLException e) {
             System.err.println("Error getting candidate ID: " + e.getMessage());
         }
-        return 1L; // Fallback
+        return 1L;
     }
 }

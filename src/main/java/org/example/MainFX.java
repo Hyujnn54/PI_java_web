@@ -1,5 +1,6 @@
 package org.example;
 
+import Services.InterviewReminderScheduler;
 import Utils.SceneManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -29,7 +30,7 @@ public class MainFX extends Application {
             Parent root = fxmlLoader.load();
             System.out.println("MainShell page loaded successfully");
 
-            Scene scene = new Scene(root, 1400, 800);
+            Scene scene = new Scene(root, WINDOWED_WIDTH, WINDOWED_HEIGHT);
 
             // Add global CSS styling with error handling
             try {
@@ -47,8 +48,12 @@ public class MainFX extends Application {
             stage.setScene(scene);
             stage.setResizable(false);
             stage.centerOnScreen();
-            stage.show();
 
+            // Start background reminder scheduler (email + SMS, checks every 5 min)
+            InterviewReminderScheduler.start();
+            stage.setOnCloseRequest(e -> InterviewReminderScheduler.stop());
+
+            stage.show();
             System.out.println("Application started successfully");
 
         } catch (Exception e) {
@@ -62,23 +67,19 @@ public class MainFX extends Application {
      * Toggle between fullscreen and windowed mode
      */
     public static void toggleFullscreen() {
-        if (primaryStage != null) {
-            isFullscreen = !isFullscreen;
-
-            if (isFullscreen) {
-                primaryStage.setFullScreen(true);
-                primaryStage.setResizable(true);
-            } else {
-                primaryStage.setFullScreen(false);
-                primaryStage.setResizable(false);
-                primaryStage.setWidth(WINDOWED_WIDTH);
-                primaryStage.setHeight(WINDOWED_HEIGHT);
-
-                // Center window on screen
-                Screen screen = Screen.getPrimary();
-                primaryStage.setX((screen.getVisualBounds().getWidth() - WINDOWED_WIDTH) / 2);
-                primaryStage.setY((screen.getVisualBounds().getHeight() - WINDOWED_HEIGHT) / 2);
-            }
+        if (primaryStage == null) return;
+        isFullscreen = !isFullscreen;
+        if (isFullscreen) {
+            primaryStage.setFullScreen(true);
+            primaryStage.setResizable(true);
+        } else {
+            primaryStage.setFullScreen(false);
+            primaryStage.setResizable(false);
+            primaryStage.setWidth(WINDOWED_WIDTH);
+            primaryStage.setHeight(WINDOWED_HEIGHT);
+            Screen screen = Screen.getPrimary();
+            primaryStage.setX((screen.getVisualBounds().getWidth()  - WINDOWED_WIDTH)  / 2);
+            primaryStage.setY((screen.getVisualBounds().getHeight() - WINDOWED_HEIGHT) / 2);
         }
     }
 
@@ -89,32 +90,14 @@ public class MainFX extends Application {
         return isFullscreen;
     }
 
-    public static void main(String[] args) {
-        launch(args);
-    }
-}
-import javafx.stage.Stage;
-
-/**
- * Utility class for MainFX operations
- */
-public class MainFX {
-
-    /**
-     * Toggle fullscreen mode for the primary stage
-     */
-    public static void toggleFullscreen() {
-        Stage stage = Main.getPrimaryStage();
-        if (stage != null) {
-            stage.setFullScreen(!stage.isFullScreen());
-        }
-    }
-
     /**
      * Get the primary stage
      */
     public static Stage getPrimaryStage() {
-        return Main.getPrimaryStage();
+        return primaryStage;
+    }
+
+    public static void main(String[] args) {
+        launch(args);
     }
 }
-

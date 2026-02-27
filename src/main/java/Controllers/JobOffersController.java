@@ -2,7 +2,6 @@ package Controllers;
 
 import Services.ApplicationService;
 import Services.EmailService;
-import Services.FileService;
 import Services.GrokAIService;
 import Services.JobOfferService;
 import Services.UserService;
@@ -14,12 +13,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
-import Services.JobOfferService;
-import Utils.UserContext;
-import javafx.fxml.FXML;
-import javafx.geometry.Pos;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -56,8 +49,6 @@ public class JobOffersController {
         if (cbSearchCriteria != null) {
             cbSearchCriteria.getItems().addAll("Title", "Location", "Contract Type");
             cbSearchCriteria.setValue("Title");
-            cbSearchCriteria.getItems().addAll("Titre", "Lieu", "Type de Contrat");
-            cbSearchCriteria.setValue("Titre");
         }
     }
 
@@ -73,7 +64,6 @@ public class JobOffersController {
 
         if (cbSearchCriteria != null) {
             cbSearchCriteria.setPromptText("Search by...");
-            cbSearchCriteria.setPromptText("Rechercher par...");
             cbSearchCriteria.setStyle("-fx-pref-width: 150px;");
             cbSearchCriteria.setVisible(true);
             cbSearchCriteria.setManaged(true);
@@ -81,7 +71,6 @@ public class JobOffersController {
 
         if (txtSearch != null) {
             txtSearch.setPromptText("Search job offers...");
-            txtSearch.setPromptText("Rechercher des offres d'emploi...");
             txtSearch.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 10 15; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;");
             HBox.setHgrow(txtSearch, Priority.ALWAYS);
             txtSearch.setVisible(true);
@@ -129,7 +118,7 @@ public class JobOffersController {
     private VBox createJobListPanel() {
         VBox panel = new VBox(15);
         panel.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20; " +
-                      "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 2);");
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 2);");
 
         // Title only (search is at top now)
         Label title = new Label("Job Offers");
@@ -152,7 +141,7 @@ public class JobOffersController {
     private VBox createDetailPanel() {
         VBox panel = new VBox(20);
         panel.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 25; " +
-                      "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 2);");
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 2);");
 
         // Top bar with title and create button
         HBox topBar = new HBox(15);
@@ -168,7 +157,7 @@ public class JobOffersController {
         if (UserContext.getRole() == UserContext.Role.RECRUITER) {
             Button btnCreate = new Button("➕ Create Job Offer");
             btnCreate.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: 600; " +
-                              "-fx-font-size: 14px; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
+                    "-fx-font-size: 14px; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
             btnCreate.setOnAction(e -> showCreateForm());
             topBar.getChildren().add(btnCreate);
         }
@@ -246,8 +235,8 @@ public class JobOffersController {
 
         // Selected card: white background with blue left border (like Applications)
         card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; " +
-                     "-fx-border-color: #5BA3F5; -fx-border-width: 0 0 0 4; -fx-border-radius: 10; " +
-                     "-fx-effect: dropshadow(gaussian, rgba(91,163,245,0.2), 10, 0, 0, 2); -fx-cursor: hand;");
+                "-fx-border-color: #5BA3F5; -fx-border-width: 0 0 0 4; -fx-border-radius: 10; " +
+                "-fx-effect: dropshadow(gaussian, rgba(91,163,245,0.2), 10, 0, 0, 2); -fx-cursor: hand;");
 
         selectedJob = job;
         displayJobDetails(job);
@@ -318,10 +307,6 @@ public class JobOffersController {
                 btnApply.setOnMouseEntered(e -> btnApply.setStyle("-fx-background-color: #4A90E2; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.5), 15, 0, 0, 3);"));
                 btnApply.setOnMouseExited(e -> btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);"));
             }
-            btnApply.setOnAction(e -> showAlert("Apply", "Application feature will be integrated later", Alert.AlertType.INFORMATION));
-
-            btnApply.setOnMouseEntered(e -> btnApply.setStyle("-fx-background-color: #4A90E2; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.5), 15, 0, 0, 3);"));
-            btnApply.setOnMouseExited(e -> btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);"));
 
             HBox buttonBox = new HBox(btnApply);
             buttonBox.setAlignment(Pos.CENTER);
@@ -530,7 +515,7 @@ public class JobOffersController {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Select PDF File");
             fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+                    new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
             );
             java.io.File selectedFile = fileChooser.showOpenDialog(null);
             if (selectedFile != null) {
@@ -554,7 +539,7 @@ public class JobOffersController {
                 phoneErrorLabel.setVisible(false);
             } else if (!isValid) {
                 phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
-                    "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                        "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
                 phoneErrorLabel.setVisible(true);
             } else {
                 phoneErrorLabel.setVisible(false);
@@ -576,7 +561,7 @@ public class JobOffersController {
                 phoneErrorLabel.setVisible(false);
             } else if (!isValid) {
                 phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
-                    "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                        "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
                 phoneErrorLabel.setVisible(true);
             } else {
                 phoneErrorLabel.setVisible(false);
@@ -593,10 +578,10 @@ public class JobOffersController {
         generateBox.getChildren().add(btnGenerateLetter);
 
         content.getChildren().addAll(
-            phoneLabel, phoneContainer, phoneErrorLabel,
-            letterBox, letterErrorLabel,
-            generateBox,
-            pdfLabel, pdfBox
+                phoneLabel, phoneContainer, phoneErrorLabel,
+                letterBox, letterErrorLabel,
+                generateBox,
+                pdfLabel, pdfBox
         );
 
         dialog.getDialogPane().setContent(scrollPane);
@@ -619,16 +604,16 @@ public class JobOffersController {
 
                 if (!phoneValid) {
                     showAlert("Validation Error",
-                        ValidationUtils.getPhoneErrorMessage(
-                            "Tunisia (+216)".equals(country) ? "TN" : "FR", phone),
-                        Alert.AlertType.ERROR);
+                            ValidationUtils.getPhoneErrorMessage(
+                                    "Tunisia (+216)".equals(country) ? "TN" : "FR", phone),
+                            Alert.AlertType.ERROR);
                     return;
                 }
 
                 if (!ValidationUtils.isValidCoverLetter(coverLetter)) {
                     showAlert("Validation Error",
-                        ValidationUtils.getCoverLetterErrorMessage(coverLetter),
-                        Alert.AlertType.ERROR);
+                            ValidationUtils.getCoverLetterErrorMessage(coverLetter),
+                            Alert.AlertType.ERROR);
                     return;
                 }
 
@@ -648,8 +633,8 @@ public class JobOffersController {
             // Check if candidate has already applied to this offer
             if (ApplicationService.hasAlreadyApplied(job.id(), candidateId)) {
                 showAlert("Already Applied",
-                    "You have already applied to this job offer.\n\nYou can view and edit your existing application in the Applications section.",
-                    Alert.AlertType.WARNING);
+                        "You have already applied to this job offer.\n\nYou can view and edit your existing application in the Applications section.",
+                        Alert.AlertType.WARNING);
                 return;
             }
 
@@ -683,13 +668,13 @@ public class JobOffersController {
                 }
 
                 String candidateName = ((info.firstName() != null ? info.firstName() : "") + " " +
-                    (info.lastName() != null ? info.lastName() : "")).trim();
+                        (info.lastName() != null ? info.lastName() : "")).trim();
 
                 EmailService.sendApplicationConfirmation(
-                    info.email(),
-                    candidateName.isEmpty() ? "Candidate" : candidateName,
-                    offerTitle != null && !offerTitle.isBlank() ? offerTitle : "Job Offer",
-                    LocalDateTime.now()
+                        info.email(),
+                        candidateName.isEmpty() ? "Candidate" : candidateName,
+                        offerTitle != null && !offerTitle.isBlank() ? offerTitle : "Job Offer",
+                        LocalDateTime.now()
                 );
             } catch (Exception e) {
                 System.err.println("Failed to send confirmation email: " + e.getMessage());
@@ -758,12 +743,12 @@ public class JobOffersController {
 
                 // Build candidate experience and education strings
                 String experience = candidateInfo.experienceYears() != null && candidateInfo.experienceYears() > 0
-                    ? candidateInfo.experienceYears() + " years of experience"
-                    : "No specific experience years provided";
+                        ? candidateInfo.experienceYears() + " years of experience"
+                        : "No specific experience years provided";
 
                 String education = candidateInfo.educationLevel() != null && !candidateInfo.educationLevel().isEmpty()
-                    ? candidateInfo.educationLevel()
-                    : "Not specified";
+                        ? candidateInfo.educationLevel()
+                        : "Not specified";
 
                 // Get company name from recruiter
                 String companyName = UserService.getRecruiterCompanyName(job.recruiterId());
@@ -773,15 +758,15 @@ public class JobOffersController {
 
                 // Call Cover Letter generation service based on candidate skills and CV
                 String generatedCoverLetter = GrokAIService.generateCoverLetter(
-                    candidateInfo.firstName() + " " + candidateInfo.lastName(),
-                    candidateInfo.email(),
-                    candidateInfo.phone(),
-                    job.title(),
-                    companyName,
-                    experience,
-                    education,
-                    candidateSkills,
-                    cvContent
+                        candidateInfo.firstName() + " " + candidateInfo.lastName(),
+                        candidateInfo.email(),
+                        candidateInfo.phone(),
+                        job.title(),
+                        companyName,
+                        experience,
+                        education,
+                        candidateSkills,
+                        cvContent
                 );
 
                 // IMPORTANT: Close loading dialog first, then show result
@@ -831,5 +816,4 @@ public class JobOffersController {
             }
         }).start();
     }
-}
 }
