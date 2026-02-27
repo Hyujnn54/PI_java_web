@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.InterviewManagementController"
+      spacing="25" style="-fx-background-color: #f8f9fa; -fx-padding: 25;"
+      stylesheets="@styles.css">
+
+    <!-- Header Section with Search and Calendar -->
+    <HBox alignment="CENTER_LEFT" spacing="15">
+        <Label text="📋 Mes Entretiens" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- Search Bar for Recruiter -->
+        <HBox fx:id="searchBox" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false">
+            <ComboBox fx:id="comboSearchCriteria" promptText="Critère"
+                     style="-fx-pref-width: 150px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 8 12; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
+            <!-- Default text search -->
+            <TextField fx:id="txtSearchInterview" promptText="Rechercher..."
+                      style="-fx-pref-width: 250px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 8 12; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
+            <!-- Mode search input (shown only when Critère=Mode) -->
+            <ComboBox fx:id="comboSearchMode" promptText="Mode"
+                      visible="false" managed="false"
+                      style="-fx-pref-width: 180px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 8 12; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
+            <!-- Date search input (shown only when Critère=Date) -->
+            <DatePicker fx:id="dateSearchPicker" visible="false" managed="false"
+                        style="-fx-pref-width: 170px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 6 10; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
+            <!-- Status search input (shown only when Critère=Statut) -->
+            <ComboBox fx:id="comboSearchStatus" promptText="Statut"
+                      visible="false" managed="false"
+                      style="-fx-pref-width: 200px; -fx-background-color: white; -fx-background-radius: 8; -fx-padding: 8 12; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
+            <Button fx:id="btnSearchInterview" text="🔍"
+                   style="-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 6 12; -fx-background-radius: 8; -fx-cursor: hand;"
+                   onAction="#handleSearchInterview"/>
+            <Button fx:id="btnClearSearch" text="✕"
+                   style="-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 6 12; -fx-background-radius: 8; -fx-cursor: hand;"
+                   onAction="#handleClearSearch"/>
+        </HBox>
+
+        <!-- Calendar Button for Recruiter -->
+        <Button fx:id="btnCalendar" text="📅 Calendrier" visible="false" managed="false"
+                style="-fx-background-color: white; -fx-text-fill: #5BA3F5; -fx-font-weight: 600; -fx-padding: 10 20; -fx-background-radius: 8; -fx-border-color: #5BA3F5; -fx-border-width: 2; -fx-border-radius: 8; -fx-cursor: hand;"
+                onAction="#handleShowCalendar"/>
+
+        <!-- Schedule button for recruiter -->
+        <Button fx:id="btnScheduleNew" text="+ Planifier Entretien" visible="false" managed="false"
+                styleClass="btn-primary" onAction="#handleScheduleNew"/>
+    </HBox>
+
+    <!-- Interview Cards Container -->
+    <ScrollPane fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;">
+        <VBox fx:id="interviewsListContainer" spacing="20">
+            <!-- Cards will be dynamically added here -->
+        </VBox>
+    </ScrollPane>
+
+    <!-- Bottom Action Buttons (appear when interview is selected) -->
+    <HBox fx:id="bottomActionButtons" spacing="15" alignment="CENTER_RIGHT"
+          visible="false" managed="false"
+          style="-fx-padding: 20 0 0 0;">
+        <Button fx:id="btnUpdate" text="✏️ Modifier Entretien" styleClass="btn-primary"
+                onAction="#handleUpdateInterview"/>
+        <Button fx:id="btnDelete" text="🗑️ Supprimer Entretien" styleClass="btn-danger"
+                onAction="#handleDeleteInterview"/>
+    </HBox>
+
+    <!-- Feedback Panel (Hidden by default, similar to edit dialog) -->
+    <VBox fx:id="feedbackPanel" visible="false" managed="false" spacing="15"
+          style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 25; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 5);">
+
+        <Label text="Retour d'Entretien" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+        <GridPane hgap="15" vgap="15">
+            <columnConstraints>
+                <ColumnConstraints minWidth="120" prefWidth="120"/>
+                <ColumnConstraints/>
+            </columnConstraints>
+
+            <!-- Decision -->
+            <Label text="Décision:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="info-label"/>
+            <ComboBox fx:id="comboFeedbackDecision" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="dialog-input" promptText="Sélectionner décision"/>
+
+            <!-- Overall Score -->
+            <Label text="Score Global:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="info-label"/>
+            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                <TextField fx:id="txtFeedbackScore" promptText="0-100" prefWidth="100" styleClass="dialog-input"/>
+                <Label fx:id="lblScoreIndicator" style="-fx-font-size: 12px; -fx-font-weight: 600;"/>
+            </HBox>
+
+            <!-- Comments -->
+            <Label text="Commentaires:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="info-label"/>
+            <TextArea fx:id="txtFeedbackComments" promptText="Entrez les commentaires détaillés, points forts, axes d'amélioration..."
+                     GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="dialog-input" prefRowCount="5" wrapText="true"/>
+        </GridPane>
+
+        <!-- Feedback Action Buttons -->
+        <HBox spacing="15" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+            <Button fx:id="btnUpdateFeedbackAction" text="💾 Mettre à Jour Retour" styleClass="btn-primary" onAction="#handleUpdateFeedbackAction"/>
+            <Button fx:id="btnDeleteFeedback" text="🗑️ Supprimer Retour" styleClass="btn-danger"
+                   onAction="#handleDeleteFeedback" visible="false" managed="false"/>
+            <Button fx:id="btnCancelFeedback" text="Annuler" styleClass="btn-secondary" onAction="#handleCancelFeedback"/>
+        </HBox>
+    </VBox>
+
+    <!-- Modern Add/Edit Dialog (Hidden by default) -->
+    <VBox fx:id="editDialog" visible="false" managed="false" spacing="15"
+          style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 25; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 5);">
+
+        <Label text="Détails de l'Entretien" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+        <GridPane hgap="15" vgap="15">
+            <columnConstraints>
+                <ColumnConstraints minWidth="120" prefWidth="120"/>
+                <ColumnConstraints/>
+            </columnConstraints>
+
+            <!-- Date and Time -->
+            <Label text="Date et Heure:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="info-label"/>
+            <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                <DatePicker fx:id="datePicker" prefWidth="150" styleClass="dialog-input"/>
+                <TextField fx:id="txtTime" promptText="HH:mm" prefWidth="80" styleClass="dialog-input"/>
+            </HBox>
+
+            <!-- Duration -->
+            <Label text="Durée:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="info-label"/>
+            <TextField fx:id="txtDuration" promptText="Minutes" prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="dialog-input"/>
+
+            <!-- Mode -->
+            <Label text="Mode:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="info-label"/>
+            <ComboBox fx:id="comboMode" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="dialog-input"/>
+
+            <!-- Meeting Link (for ONLINE interviews) -->
+            <Label fx:id="lblMeetingLink" text="Lien de Réunion:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="info-label"/>
+            <HBox spacing="6" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="3" fx:id="meetingLinkBox">
+                <TextField fx:id="txtMeetingLink" promptText="Cliquez sur Générer..." prefWidth="190" styleClass="dialog-input" editable="false"/>
+                <Button fx:id="btnGenerateMeetingLink" text="Générer" onAction="#handleGenerateMeetingLink"
+                        style="-fx-background-color:#28a745;-fx-text-fill:white;-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:6 10;-fx-background-radius:6;"/>
+                <Button fx:id="btnOpenMeetingLink" text="Ouvrir" onAction="#handleOpenMeetingLink"
+                        style="-fx-background-color:#5BA3F5;-fx-text-fill:white;-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:6 10;-fx-background-radius:6;" visible="false" managed="false"/>
+            </HBox>
+
+            <!-- Location (for ON_SITE interviews) -->
+            <Label fx:id="lblLocation" text="Lieu:" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="info-label"/>
+            <TextField fx:id="txtLocation" promptText="Adresse du bureau ou numéro de salle" GridPane.columnIndex="1" GridPane.rowIndex="4" styleClass="dialog-input"/>
+
+            <!-- Notes -->
+            <Label text="Notes:" GridPane.columnIndex="0" GridPane.rowIndex="5" styleClass="info-label"/>
+            <TextArea fx:id="txtNotes" promptText="Notes supplémentaires..." GridPane.columnIndex="1" GridPane.rowIndex="5" styleClass="dialog-input" prefRowCount="3"/>
+
+            <!-- Application ID (Hidden from user, for internal use) -->
+            <TextField fx:id="txtApplicationId" visible="false" managed="false"/>
+            <TextField fx:id="txtRecruiterId" visible="false" managed="false"/>
+            <ComboBox fx:id="comboStatus" visible="false" managed="false"/>
+        </GridPane>
+
+        <!-- Action Buttons -->
+        <HBox spacing="10" alignment="CENTER_RIGHT">
+            <Button text="Annuler" onAction="#handleCancelEdit" styleClass="btn-secondary"/>
+            <Button fx:id="btnSave" text="Enregistrer" onAction="#handleSaveInterview" styleClass="btn-primary"/>
+        </HBox>
+    </VBox>
+
+</VBox>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entretien en ligne - Talent Bridge</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        .container {
+            background: white; border-radius: 20px; padding: 40px;
+            max-width: 600px; width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;
+        }
+        .logo { font-size: 15px; color: #667eea; font-weight: 700; letter-spacing: 2px; margin-bottom: 25px; text-transform: uppercase; }
+        .icon { font-size: 70px; margin-bottom: 15px; }
+        h1 { color: #2c3e50; margin-bottom: 10px; font-size: 26px; }
+        .status { font-size: 16px; color: #7f8c8d; margin-bottom: 25px; line-height: 1.6; }
+        .info-box { background: #f8f9fa; padding: 18px 22px; border-radius: 12px; margin: 20px 0; text-align: left; }
+        .info-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #e9ecef; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #6c757d; font-weight: 600; font-size: 14px; }
+        .info-value { color: #2c3e50; font-weight: 500; font-size: 14px; }
+        .countdown { background: #f0f4ff; padding: 22px; border-radius: 14px; margin: 22px 0; border: 2px solid #c7d4f7; }
+        .countdown-label { color: #667eea; font-size: 12px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .countdown-time { font-size: 42px; font-weight: bold; color: #667eea; font-family: 'Courier New', monospace; }
+        .countdown-sub { color: #95a5a6; font-size: 12px; margin-top: 6px; }
+        .join-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; padding: 16px 45px; font-size: 17px; font-weight: 600;
+            border-radius: 50px; cursor: pointer; transition: all 0.3s ease; margin-top: 20px;
+            display: none; width: 100%;
+        }
+        .join-button:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102,126,234,0.4); }
+        .badge-ok  { background: #d4edda; color: #155724; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; display: inline-block; margin-bottom: 12px; }
+        .badge-wait{ background: #fff3cd; color: #856404; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; display: inline-block; margin-bottom: 12px; }
+        .badge-end { background: #f8d7da; color: #721c24; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; display: inline-block; margin-bottom: 12px; }
+        .footer { font-size: 11px; color: #bdc3c7; margin-top: 28px; }
+        #meetingFrame { display: none; width: 100%; height: 100vh; border: none; position: fixed; top: 0; left: 0; z-index: 1000; }
+    </style>
+</head>
+<body>
+    <div class="container" id="accessContainer">
+        <div class="logo">Talent Bridge</div>
+        <div class="icon" id="statusIcon">&#9200;</div>
+        <div id="statusBadge"></div>
+        <h1 id="statusTitle">Entretien en ligne</h1>
+        <div class="status" id="statusMessage">Verification de l'heure...</div>
+
+        <div class="info-box">
+            <div class="info-row">
+                <span class="info-label">Date prevue</span>
+                <span class="info-value" id="displayDate">--</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Duree</span>
+                <span class="info-value" id="displayDuration">--</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Plateforme</span>
+                <span class="info-value">Jitsi Meet</span>
+            </div>
+        </div>
+
+        <div class="countdown" id="countdownContainer" style="display:none;">
+            <div class="countdown-label">Disponible dans</div>
+            <div class="countdown-time" id="countdownTimer">--:--:--</div>
+            <div class="countdown-sub">La reunion sera accessible 10 minutes avant l'heure prevue</div>
+        </div>
+
+        <button class="join-button" id="joinButton" onclick="joinMeeting()">
+            &#127909; Rejoindre l'entretien
+        </button>
+
+        <div class="footer">Lien unique - accessible uniquement aux heures prevues</div>
+    </div>
+
+    <iframe id="meetingFrame"></iframe>
+
+    <script>
+        // Read config from URL params  e.g. ?scheduled=1740574200000&duration=60&room=Interview_42_abc_123456
+        const params = new URLSearchParams(window.location.search);
+        const scheduledTime = parseInt(params.get('scheduled')) || (Date.now() + 5 * 60 * 1000); // default: 5 min from now for demo
+        const durationMin   = parseInt(params.get('duration'))  || 60;
+        const room          = params.get('room') || 'Interview_Demo_Room';
+        const earlyMin      = 10;
+
+        const endTime       = scheduledTime + (durationMin + 30) * 60 * 1000;
+        const earlyTime     = scheduledTime - earlyMin * 60 * 1000;
+        const meetingUrl    = 'https://meet.jit.si/' + room + '#config.prejoinPageEnabled=false';
+
+        // Fill static info
+        const sd = new Date(scheduledTime);
+        document.getElementById('displayDate').textContent =
+            sd.toLocaleDateString('fr-FR') + ' a ' + sd.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+        document.getElementById('displayDuration').textContent = durationMin + ' minutes';
+
+        function pad(n){ return String(n).padStart(2,'0'); }
+
+        function updateStatus(){
+            const now = Date.now();
+            const icon    = document.getElementById('statusIcon');
+            const badge   = document.getElementById('statusBadge');
+            const title   = document.getElementById('statusTitle');
+            const msg     = document.getElementById('statusMessage');
+            const btn     = document.getElementById('joinButton');
+            const cdBox   = document.getElementById('countdownContainer');
+            const cdTimer = document.getElementById('countdownTimer');
+
+            if(now > endTime){
+                icon.innerHTML  = '&#10060;';
+                badge.innerHTML = '<span class="badge-end">Termine</span>';
+                title.textContent = 'Entretien termine';
+                msg.textContent   = 'Cet entretien est termine. Contactez le recruteur si besoin.';
+                btn.style.display = 'none';
+                cdBox.style.display = 'none';
+                return;
+            }
+            if(now >= earlyTime){
+                icon.innerHTML  = '&#9989;';
+                badge.innerHTML = '<span class="badge-ok">Acces ouvert</span>';
+                title.textContent = 'Pret a commencer';
+                msg.textContent   = 'Vous pouvez maintenant rejoindre la reunion.';
+                btn.style.display = 'block';
+                cdBox.style.display = 'none';
+                return;
+            }
+            // waiting
+            icon.innerHTML  = '&#9200;';
+            badge.innerHTML = '<span class="badge-wait">En attente</span>';
+            title.textContent = 'Entretien programme';
+            msg.textContent   = 'La reunion sera accessible ' + earlyMin + ' minutes avant l\'heure prevue.';
+            btn.style.display = 'none';
+            cdBox.style.display = 'block';
+
+            const diff = earlyTime - now;
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            cdTimer.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+        }
+
+        function joinMeeting(){
+            document.getElementById('accessContainer').style.display = 'none';
+            const frame = document.getElementById('meetingFrame');
+            frame.src = meetingUrl;
+            frame.style.display = 'block';
+        }
+
+        updateStatus();
+        setInterval(updateStatus, 1000);
+    </script>
+</body>
+</html>
+

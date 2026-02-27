@@ -37,3 +37,14 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Email Configuration (Sensitive) ###
+src/main/resources/email.properties
+email.properties
+
+### SMS Configuration (Sensitive - Twilio Credentials) ###
+src/main/resources/sms.properties
+sms.properties
+
+src/main/resources/email.properties
+src/main/resources/email.properties

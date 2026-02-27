@@ -14,6 +14,12 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
+import Services.JobOfferService;
+import Utils.UserContext;
+import javafx.fxml.FXML;
+import javafx.geometry.Pos;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -50,6 +56,8 @@ public class JobOffersController {
         if (cbSearchCriteria != null) {
             cbSearchCriteria.getItems().addAll("Title", "Location", "Contract Type");
             cbSearchCriteria.setValue("Title");
+            cbSearchCriteria.getItems().addAll("Titre", "Lieu", "Type de Contrat");
+            cbSearchCriteria.setValue("Titre");
         }
     }
 
@@ -65,6 +73,7 @@ public class JobOffersController {
 
         if (cbSearchCriteria != null) {
             cbSearchCriteria.setPromptText("Search by...");
+            cbSearchCriteria.setPromptText("Rechercher par...");
             cbSearchCriteria.setStyle("-fx-pref-width: 150px;");
             cbSearchCriteria.setVisible(true);
             cbSearchCriteria.setManaged(true);
@@ -72,6 +81,7 @@ public class JobOffersController {
 
         if (txtSearch != null) {
             txtSearch.setPromptText("Search job offers...");
+            txtSearch.setPromptText("Rechercher des offres d'emploi...");
             txtSearch.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 10 15; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;");
             HBox.setHgrow(txtSearch, Priority.ALWAYS);
             txtSearch.setVisible(true);
@@ -308,6 +318,10 @@ public class JobOffersController {
                 btnApply.setOnMouseEntered(e -> btnApply.setStyle("-fx-background-color: #4A90E2; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.5), 15, 0, 0, 3);"));
                 btnApply.setOnMouseExited(e -> btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);"));
             }
+            btnApply.setOnAction(e -> showAlert("Apply", "Application feature will be integrated later", Alert.AlertType.INFORMATION));
+
+            btnApply.setOnMouseEntered(e -> btnApply.setStyle("-fx-background-color: #4A90E2; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.5), 15, 0, 0, 3);"));
+            btnApply.setOnMouseExited(e -> btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);"));
 
             HBox buttonBox = new HBox(btnApply);
             buttonBox.setAlignment(Pos.CENTER);
@@ -817,4 +831,5 @@ public class JobOffersController {
             }
         }).start();
     }
+}
 }

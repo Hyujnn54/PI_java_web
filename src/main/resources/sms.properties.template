@@ -1,0 +1,80 @@
+# ================================================================
+# SMS Configuration - Talent Bridge
+# SMSMobileAPI - Simple SMS solution for Tunisia
+# ================================================================
+#
+# SETUP INSTRUCTIONS:
+# 1. Copy this file to "sms.properties" (remove .template)
+# 2. Check your email from SMSMobileAPI for API credentials
+# 3. Paste your API URL and API Key below
+# 4. Set sms.enabled=true
+# 5. Add sms.properties to .gitignore (NEVER commit credentials!)
+#
+# ================================================================
+
+# Enable/Disable SMS sending (set to true when configured)
+sms.enabled=false
+
+# ================================================================
+# SMSMOBILEAPI CONFIGURATION
+# ================================================================
+# You should have received an email from SMSMobileAPI with:
+# - API Endpoint URL
+# - API Key
+#
+# If you can't find the email, check your spam/junk folder
+# ================================================================
+
+# API Endpoint URL (from your SMSMobileAPI email)
+# Example formats:
+#   https://api.smsmobileapi.com/send
+#   http://smsmobileapi.com/api/v1/sms
+#   https://api.smsmobileapi.com/v1/send
+sms.api.url=YOUR_API_ENDPOINT_FROM_EMAIL
+
+# API Key (from your SMSMobileAPI email)
+# Example: abc123def456ghi789jkl012
+sms.api.key=YOUR_API_KEY_FROM_EMAIL
+
+# ================================================================
+
+# Sender name (shown as sender - max 11 characters)
+sms.sender.name=TalentBridge
+
+# Test recipient phone number (format: +216XXXXXXXX for Tunisia)
+# Use your own number for testing
+sms.test.recipient=+21612345678
+
+# ================================================================
+# QUICK START:
+# ================================================================
+# 1. Check your email from SMSMobileAPI
+# 2. Copy the API Endpoint URL
+# 3. Copy the API Key
+# 4. Paste both values above
+# 5. Set your phone number in sms.test.recipient
+# 6. Set sms.enabled=true
+# 7. Save this file as sms.properties (remove .template)
+# 8. Run test: src/main/java/test/TestSMSService.java
+# 9. Check your phone for SMS!
+#
+# That's it! Your SMS integration is ready! 🎉
+# ================================================================
+
+# ================================================================
+# TROUBLESHOOTING:
+# ================================================================
+#
+# Problem: "SMS SIMULATION MODE" appears
+# Solution: Make sure sms.enabled=true and credentials are set
+#
+# Problem: Can't find the email
+# Solution: Check spam folder, search for "SMSMobileAPI" or "API Key"
+#
+# Problem: SMS not received
+# Solution: Check phone number format (+216XXXXXXXX)
+#           Check console for error messages
+#           Verify API credentials are correct
+#
+# ================================================================
+

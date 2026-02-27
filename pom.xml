@@ -33,11 +33,13 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>17</version>
+            <classifier>win</classifier>
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
             <version>17</version>
+            <classifier>win</classifier>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>
@@ -54,6 +56,18 @@
             <artifactId>javax.mail</artifactId>
             <version>1.6.2</version>
         </dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>17</version>
+            <classifier>win</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>17</version>
+            <classifier>win</classifier>
+        </dependency>
+        <!-- Mailjet email API uses Java 11 built-in HttpClient (no extra dependency needed) -->
     </dependencies>
     <build>
         <plugins>
@@ -62,7 +76,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>org.example.MainFX</mainClass>
+                    <mainClass>org.example.Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>
