@@ -14,166 +14,171 @@ import org.json.JSONArray;
  */
 public class GrokAIService {
 
-    private static final String GEMINI_API_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    // ⚠️ Replace with a valid API key from https://aistudio.google.com/apikey
+    private static final String API_KEY = "AIzaSyDHr-PkQZ2ZPGd-_JM_mCxEQ-_ijOtdeTc";
 
-    private static final String API_KEY = "AIzaSyAywUmsr4dSE-VJl_H8zvFf6Wp8283pWH8";
+    // Models confirmed available in v1beta (from ListModels API)
+    private static final String[] MODELS = {
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-pro"
+    };
 
     public static String generateCoverLetter(String candidateName, String email, String phone,
                                              String jobTitle, String companyName, String experience,
                                              String education, java.util.List<String> skills, String cvContent) {
-        try {
-            String prompt = buildCoverLetterPrompt(candidateName, email, phone, jobTitle,
-                    companyName, experience, education, skills, cvContent);
+        String prompt = buildPrompt(candidateName, email, phone, jobTitle,
+                companyName, experience, education, skills, cvContent);
 
-            String response = callGeminiAPI(prompt);
-
-            if (response != null && !response.isEmpty()) {
-                String result = extractCoverLetterFromGemini(response);
+        for (String model : MODELS) {
+            try {
+                System.out.println("Trying Gemini model: " + model);
+                String result = callGeminiREST(model, prompt);
                 if (result != null && !result.isEmpty()) {
-                    System.out.println("Cover letter generated successfully using Gemini API");
-                    return result;
+                    System.out.println("Cover letter generated successfully using model: " + model);
+                    return cleanContent(result);
                 }
+            } catch (Exception e) {
+                System.err.println("Model " + model + " failed: " + e.getMessage());
             }
-
-        } catch (Exception e) {
-            System.err.println("Error calling Gemini API: " + e.getMessage());
         }
 
-        System.out.println("Falling back to local cover letter generation...");
+        System.out.println("All Gemini models failed. Falling back to local generation...");
         return LocalCoverLetterService.generateCoverLetter(candidateName, email, phone, jobTitle,
                 companyName, experience, education, skills, cvContent);
     }
 
-    private static String buildCoverLetterPrompt(String candidateName, String email, String phone,
-                                                 String jobTitle, String companyName, String experience,
-                                                 String education, java.util.List<String> skills, String cvContent) {
+    private static String buildPrompt(String candidateName, String email, String phone,
+                                      String jobTitle, String companyName, String experience,
+                                      String education, java.util.List<String> skills, String cvContent) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("Please write a professional cover letter for the following candidate applying for a job.\n\n");
+        prompt.append("You are a professional cover letter writer. Write a compelling, professional cover letter (200-400 words) for the following candidate applying to a job. Output ONLY the cover letter text, nothing else.\n\n");
 
-        prompt.append("Candidate Information:\n");
-        prompt.append("- Name: ").append(candidateName).append("\n");
-        prompt.append("- Email: ").append(email).append("\n");
-        prompt.append("- Phone: ").append(phone).append("\n");
-        prompt.append("- Education: ").append(education).append("\n");
-        prompt.append("- Experience: ").append(experience).append("\n");
+        prompt.append("CANDIDATE:\n");
+        prompt.append("Name: ").append(candidateName).append("\n");
+        prompt.append("Email: ").append(email).append("\n");
+        prompt.append("Phone: ").append(phone).append("\n");
+        prompt.append("Education: ").append(education).append("\n");
+        prompt.append("Experience: ").append(experience).append("\n");
 
         if (skills != null && !skills.isEmpty()) {
-            prompt.append("- Skills: ");
-            for (int i = 0; i < skills.size(); i++) {
-                if (i > 0) prompt.append(", ");
-                prompt.append(skills.get(i));
-            }
-            prompt.append("\n");
+            prompt.append("Skills: ").append(String.join(", ", skills)).append("\n");
         }
 
-        if (cvContent != null && !cvContent.isEmpty() && cvContent.length() > 50) {
-            prompt.append("\nCV/Resume Content:\n");
-            String limitedCvContent = cvContent.length() > 2000 ? cvContent.substring(0, 2000) + "..." : cvContent;
-            prompt.append(limitedCvContent).append("\n");
+        if (cvContent != null && cvContent.length() > 50) {
+            String cv = cvContent.length() > 2000 ? cvContent.substring(0, 2000) + "..." : cvContent;
+            prompt.append("CV Summary: ").append(cv).append("\n");
         }
 
-        prompt.append("\nJob Details:\n");
-        prompt.append("- Position: ").append(jobTitle).append("\n");
-        prompt.append("- Company: ").append(companyName).append("\n");
+        prompt.append("\nJOB:\n");
+        prompt.append("Position: ").append(jobTitle).append("\n");
+        prompt.append("Company: ").append(companyName).append("\n");
 
-        prompt.append("\nPlease generate a compelling, professional cover letter (150-400 words).\n");
-        prompt.append("Generate ONLY the cover letter text.");
         return prompt.toString();
     }
 
-    private static String callGeminiAPI(String prompt) throws Exception {
-        if (API_KEY == null || API_KEY.isEmpty()) {
-            throw new IllegalStateException("GEMINI_API_KEY is missing.");
-        }
+    private static String callGeminiREST(String model, String prompt) throws Exception {
+        String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/"
+                + model + ":generateContent?key=" + API_KEY;
 
-        String urlWithKey = GEMINI_API_URL + "?key=" + API_KEY;
-        URL url = new URL(urlWithKey);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        URL url = new URL(endpoint);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(30000);
 
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json");
-        connection.setDoOutput(true);
-
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(20000);
-
-        JSONObject requestBody = new JSONObject();
-
-        JSONArray contents = new JSONArray();
-        JSONObject content = new JSONObject();
-        JSONArray parts = new JSONArray();
+        // Build Gemini request body
         JSONObject part = new JSONObject();
         part.put("text", prompt);
+
+        JSONArray parts = new JSONArray();
         parts.put(part);
 
+        JSONObject content = new JSONObject();
         content.put("parts", parts);
-        contents.put(content);
 
-        requestBody.put("contents", contents);
+        JSONArray contents = new JSONArray();
+        contents.put(content);
 
         JSONObject generationConfig = new JSONObject();
         generationConfig.put("temperature", 0.7);
         generationConfig.put("maxOutputTokens", 1024);
-        requestBody.put("generationConfig", generationConfig);
 
-        try (OutputStream os = connection.getOutputStream()) {
-            byte[] input = requestBody.toString().getBytes(StandardCharsets.UTF_8);
-            os.write(input);
+        JSONObject body = new JSONObject();
+        body.put("contents", contents);
+        body.put("generationConfig", generationConfig);
+
+        // Send request
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(body.toString().getBytes(StandardCharsets.UTF_8));
         }
 
-        int responseCode = connection.getResponseCode();
-        if (responseCode != 200) {
-            System.err.println("Gemini API error. Response code: " + responseCode);
-            try (BufferedReader errorReader = new BufferedReader(
-                    new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8))) {
+        int code = conn.getResponseCode();
+        if (code != 200) {
+            StringBuilder err = new StringBuilder();
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
                 String line;
-                StringBuilder errorBody = new StringBuilder();
-                while ((line = errorReader.readLine()) != null) errorBody.append(line);
-                System.err.println("Error response: " + errorBody);
+                while ((line = br.readLine()) != null) err.append(line);
             }
+            System.err.println("Gemini HTTP " + code + " for model " + model + ": " + err);
             return null;
         }
 
+        // Read response
         StringBuilder response = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
-            while ((line = reader.readLine()) != null) response.append(line);
+            while ((line = br.readLine()) != null) response.append(line);
         }
-        return response.toString();
-    }
 
-    private static String extractCoverLetterFromGemini(String apiResponse) {
-        try {
-            JSONObject jsonResponse = new JSONObject(apiResponse);
-
-            JSONArray candidates = jsonResponse.optJSONArray("candidates");
-            if (candidates != null && candidates.length() > 0) {
-                JSONObject firstCandidate = candidates.getJSONObject(0);
-                JSONObject content = firstCandidate.optJSONObject("content");
-                if (content != null) {
-                    JSONArray parts = content.optJSONArray("parts");
-                    if (parts != null && parts.length() > 0) {
-                        JSONObject firstPart = parts.getJSONObject(0);
-                        String text = firstPart.optString("text", "");
-                        return cleanContent(text);
-                    }
+        // Parse response: candidates[0].content.parts[0].text
+        JSONObject json = new JSONObject(response.toString());
+        JSONArray candidates = json.optJSONArray("candidates");
+        if (candidates != null && candidates.length() > 0) {
+            JSONObject firstCandidate = candidates.getJSONObject(0);
+            JSONObject contentObj = firstCandidate.optJSONObject("content");
+            if (contentObj != null) {
+                JSONArray partsArr = contentObj.optJSONArray("parts");
+                if (partsArr != null && partsArr.length() > 0) {
+                    return partsArr.getJSONObject(0).optString("text", "");
                 }
             }
-        } catch (Exception e) {
-            System.err.println("Error parsing Gemini API response: " + e.getMessage());
         }
         return null;
     }
 
-
     private static String cleanContent(String content) {
         if (content == null) return null;
-        content = content.replaceAll("```[a-zA-Z]*\\n?", "");
-        content = content.replaceAll("```", "");
-        content = content.trim();
+        content = content.replaceAll("```[a-zA-Z]*\\n?", "").replaceAll("```", "").trim();
         return content.isEmpty() ? null : content;
     }
-}
 
+    public static String translateCoverLetter(String coverLetter, String targetLanguage) {
+        if (coverLetter == null || coverLetter.trim().isEmpty()) return coverLetter;
+
+        String prompt = "Translate the following cover letter to " + targetLanguage + ".\n"
+                + "Output ONLY the translated cover letter text, nothing else. Do not add any explanation.\n\n"
+                + coverLetter;
+
+        for (String model : MODELS) {
+            try {
+                System.out.println("Translating cover letter using model: " + model);
+                String result = callGeminiREST(model, prompt);
+                if (result != null && !result.isEmpty()) {
+                    System.out.println("Translation successful using model: " + model);
+                    return cleanContent(result);
+                }
+            } catch (Exception e) {
+                System.err.println("Model " + model + " failed for translation: " + e.getMessage());
+            }
+        }
+
+        System.err.println("All models failed for translation. Returning original.");
+        return coverLetter;
+    }
+}

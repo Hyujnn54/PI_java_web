@@ -7,3 +7,4 @@ public class Main {
         Application.launch(MainFX.class, args);
     }
 }
+

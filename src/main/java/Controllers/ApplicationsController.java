@@ -521,8 +521,13 @@ public class ApplicationsController {
             VBox coverLetterBox = new VBox(5);
             coverLetterBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15;");
 
+            HBox coverHeaderBox = new HBox(10);
+            coverHeaderBox.setAlignment(Pos.CENTER_LEFT);
+
             Label coverLabel = new Label("Cover Letter:");
             coverLabel.setStyle("-fx-font-weight: bold;");
+
+            coverHeaderBox.getChildren().add(coverLabel);
 
             TextArea coverText = new TextArea(app.coverLetter());
             coverText.setEditable(false);
@@ -530,7 +535,67 @@ public class ApplicationsController {
             coverText.setPrefRowCount(5);
             coverText.setStyle("-fx-control-inner-background: #f8f9fa; -fx-text-fill: #333;");
 
-            coverLetterBox.getChildren().addAll(coverLabel, coverText);
+            // Translate + Original buttons only for ADMIN and RECRUITER
+            if (role == UserContext.Role.ADMIN || role == UserContext.Role.RECRUITER) {
+                final String originalText = app.coverLetter();
+
+                Button btnTranslate = new Button("🌐 Translate");
+                btnTranslate.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 4 10; -fx-cursor: hand; -fx-background-radius: 4;");
+
+                Button btnOriginal = new Button("🔄 Original");
+                btnOriginal.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 4 10; -fx-cursor: hand; -fx-background-radius: 4;");
+                btnOriginal.setDisable(true); // disabled until a translation is shown
+
+                btnOriginal.setOnAction(e -> {
+                    coverText.setText(originalText);
+                    coverLabel.setText("Cover Letter:");
+                    btnOriginal.setDisable(true);
+                });
+
+                btnTranslate.setOnAction(e -> {
+                    ChoiceDialog<String> dialog = new ChoiceDialog<>("French", "French", "English", "Arabic");
+                    dialog.setTitle("Translate Cover Letter");
+                    dialog.setHeaderText("Select target language");
+                    dialog.setContentText("Language:");
+
+                    dialog.showAndWait().ifPresent(language -> {
+                        btnTranslate.setText("Translating...");
+                        btnTranslate.setDisable(true);
+                        btnOriginal.setDisable(true);
+
+                        javafx.concurrent.Task<String> task = new javafx.concurrent.Task<>() {
+                            @Override
+                            protected String call() {
+                                return GrokAIService.translateCoverLetter(originalText, language);
+                            }
+                        };
+
+                        task.setOnSucceeded(ev -> {
+                            String translated = task.getValue();
+                            if (translated != null && !translated.isEmpty()) {
+                                coverText.setText(translated);
+                                coverLabel.setText("Cover Letter (" + language + "):");
+                                btnOriginal.setDisable(false);
+                            }
+                            btnTranslate.setText("🌐 Translate");
+                            btnTranslate.setDisable(false);
+                        });
+
+                        task.setOnFailed(ev -> {
+                            btnTranslate.setText("🌐 Translate");
+                            btnTranslate.setDisable(false);
+                            Alert alert = new Alert(Alert.AlertType.ERROR, "Translation failed. Please try again.", ButtonType.OK);
+                            alert.showAndWait();
+                        });
+
+                        new Thread(task).start();
+                    });
+                });
+
+                coverHeaderBox.getChildren().addAll(btnTranslate, btnOriginal);
+            }
+
+            coverLetterBox.getChildren().addAll(coverHeaderBox, coverText);
             detailContainer.getChildren().add(coverLetterBox);
         }
 
