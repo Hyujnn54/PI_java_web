@@ -8,6 +8,8 @@ public class JobOffer {
     private String title;
     private String description;
     private String location;
+    private Double latitude;
+    private Double longitude;
     private ContractType contractType;
     private LocalDateTime createdAt;
     private LocalDateTime deadline;
@@ -92,6 +94,26 @@ public class JobOffer {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
+
+    public boolean hasCoordinates() {
+        return latitude != null && longitude != null;
     }
 
     public ContractType getContractType() {

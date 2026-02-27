@@ -4,10 +4,12 @@ import Models.JobOffer;
 import Models.OfferSkill;
 import Models.ContractType;
 import Models.Status;
+import Models.MatchingResult;
 import Services.JobOfferService;
 import Services.OfferSkillService;
+import Services.GeoLocationService;
+import Services.MatchingService;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -15,6 +17,7 @@ import javafx.scene.layout.*;
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Contrôleur pour la vue Candidat - Lecture seule avec recherche avancée intégrée
@@ -33,9 +36,15 @@ public class JobOffersBrowseController {
     private JobOffer selectedJob;
     private ComboBox<String> cbFilterType;
     private ComboBox<String> cbFilterLocation;
+    private ComboBox<String> cbSortBy;
 
     private JobOfferService jobOfferService;
     private OfferSkillService offerSkillService;
+    private MatchingWidgetController matchingWidget;
+
+    // Position du candidat (pour le calcul de distance)
+    private Double candidateLatitude = null;
+    private Double candidateLongitude = null;
 
     // Filtres actifs
     private ContractType selectedContractType = null;
@@ -45,6 +54,14 @@ public class JobOffersBrowseController {
     public void initialize() {
         jobOfferService = new JobOfferService();
         offerSkillService = new OfferSkillService();
+        matchingWidget = new MatchingWidgetController();
+        matchingWidget.setOnProfileUpdated(() -> {
+            // Rafraîchir l'affichage quand le profil change
+            if (selectedJob != null) {
+                displayJobDetails(selectedJob);
+            }
+            loadJobOffers();
+        });
         buildUI();
         loadJobOffers();
     }
@@ -407,6 +424,29 @@ public class JobOffersBrowseController {
 
         badges.getChildren().addAll(typeBadge, locationBadge);
 
+        // Distance si coordonnées disponibles
+        if (job.hasCoordinates() && candidateLatitude != null && candidateLongitude != null) {
+            double distance = GeoLocationService.calculateDistance(
+                candidateLatitude, candidateLongitude,
+                job.getLatitude(), job.getLongitude()
+            );
+            int travelTime = GeoLocationService.estimateTravelTime(distance);
+
+            Label distanceBadge = new Label("🚗 " + GeoLocationService.formatDistance(distance) +
+                                           " (" + GeoLocationService.formatTravelTime(travelTime) + ")");
+            distanceBadge.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-padding: 3 8; " +
+                                  "-fx-background-radius: 10; -fx-font-size: 10px;");
+            badges.getChildren().add(distanceBadge);
+        }
+
+        // Score de matching si profil configuré
+        if (matchingWidget != null && matchingWidget.getCandidateProfile() != null
+            && !matchingWidget.getCandidateProfile().getSkills().isEmpty()) {
+            MatchingResult matchResult = matchingWidget.calculateMatch(job);
+            HBox scoreBadge = matchingWidget.createCompactScoreBadge(matchResult.getOverallScore());
+            badges.getChildren().add(scoreBadge);
+        }
+
         // Date
         if (job.getCreatedAt() != null) {
             Label date = new Label("Publié " + job.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
@@ -489,6 +529,13 @@ public class JobOffersBrowseController {
         headerCard.getChildren().addAll(title, metaFlow);
         detailContainer.getChildren().add(headerCard);
 
+        // === WIDGET DE MATCHING ===
+        if (matchingWidget != null) {
+            MatchingResult matchResult = matchingWidget.calculateMatch(job);
+            VBox matchingSection = matchingWidget.createMatchingScoreWidget(matchResult);
+            detailContainer.getChildren().add(matchingSection);
+        }
+
         // Description
         if (job.getDescription() != null && !job.getDescription().isBlank()) {
             VBox descSection = new VBox(10);
@@ -531,6 +578,54 @@ public class JobOffersBrowseController {
             System.err.println("Erreur chargement compétences: " + e.getMessage());
         }
 
+        // Section Localisation avec bouton carte (toujours visible si location existe)
+        if (job.getLocation() != null && !job.getLocation().trim().isEmpty()) {
+            VBox distanceSection = new VBox(10);
+            distanceSection.setStyle("-fx-background-color: #e8f5e9; -fx-background-radius: 10; -fx-padding: 15;");
+
+            HBox distanceInfo = new HBox(15);
+            distanceInfo.setAlignment(Pos.CENTER_LEFT);
+
+            Label locationIcon = new Label("📍");
+            locationIcon.setStyle("-fx-font-size: 20px;");
+
+            if (job.hasCoordinates() && candidateLatitude != null && candidateLongitude != null) {
+                double distance = GeoLocationService.calculateDistance(
+                    candidateLatitude, candidateLongitude,
+                    job.getLatitude(), job.getLongitude()
+                );
+                int travelTime = GeoLocationService.estimateTravelTime(distance);
+
+                Label distanceLabel = new Label(job.getLocation() + " - Distance: " +
+                    GeoLocationService.formatDistance(distance) + " (" +
+                    GeoLocationService.formatTravelTime(travelTime) + ")");
+                distanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #2e7d32;");
+                distanceInfo.getChildren().addAll(locationIcon, distanceLabel);
+            } else {
+                Label locationLabel = new Label(job.getLocation());
+                locationLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #2e7d32;");
+
+                Button btnSetLocation = new Button("📌 Définir ma position");
+                btnSetLocation.setStyle("-fx-background-color: #4caf50; -fx-text-fill: white; " +
+                                       "-fx-padding: 6 12; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 11px;");
+                btnSetLocation.setOnAction(e -> showSetLocationDialog());
+
+                distanceInfo.getChildren().addAll(locationIcon, locationLabel, btnSetLocation);
+            }
+
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+
+            Button btnMap = new Button("🗺️ Voir sur la carte");
+            btnMap.setStyle("-fx-background-color: #2196f3; -fx-text-fill: white; -fx-font-weight: 600; " +
+                          "-fx-padding: 8 16; -fx-background-radius: 6; -fx-cursor: hand;");
+            btnMap.setOnAction(e -> showMapDialog(job));
+
+            distanceInfo.getChildren().addAll(spacer, btnMap);
+            distanceSection.getChildren().add(distanceInfo);
+            detailContainer.getChildren().add(distanceSection);
+        }
+
         // Date de publication
         if (job.getCreatedAt() != null) {
             Label posted = new Label("📅 Publié le " + job.getCreatedAt().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")));
@@ -551,6 +646,86 @@ public class JobOffersBrowseController {
 
         actionBox.getChildren().add(btnApply);
         detailContainer.getChildren().add(actionBox);
+    }
+
+    /**
+     * Affiche un dialogue pour définir la position du candidat
+     */
+    private void showSetLocationDialog() {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Définir ma position");
+        dialog.setHeaderText("Entrez votre ville");
+        dialog.setContentText("Ville:");
+
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(city -> {
+            GeoLocationService geoService = new GeoLocationService();
+            GeoLocationService.GeoLocation location = geoService.geocode(city);
+            if (location != null) {
+                candidateLatitude = location.getLatitude();
+                candidateLongitude = location.getLongitude();
+                showAlert("Succès", "Position définie: " + location.getFullLocation(), Alert.AlertType.INFORMATION);
+                loadJobOffers(); // Recharger pour afficher les distances
+            } else {
+                showAlert("Erreur", "Ville non trouvée. Essayez une autre ville.", Alert.AlertType.WARNING);
+            }
+        });
+    }
+
+    /**
+     * Affiche une fenêtre modale avec la carte Leaflet (WebView) de l'entreprise
+     * Géocode automatiquement si les coordonnées ne sont pas disponibles
+     */
+    private void showMapDialog(JobOffer job) {
+        if (job.hasCoordinates()) {
+            // Coordonnées disponibles - afficher directement
+            if (candidateLatitude != null && candidateLongitude != null) {
+                MapViewController.showMapWithDistance(
+                    job.getLatitude(), job.getLongitude(),
+                    job.getLocation(), job.getTitle(),
+                    candidateLatitude, candidateLongitude
+                );
+            } else {
+                MapViewController.showMap(
+                    job.getLatitude(), job.getLongitude(),
+                    job.getLocation(), job.getTitle()
+                );
+            }
+        } else if (job.getLocation() != null && !job.getLocation().trim().isEmpty()) {
+            // Géocoder la localisation
+            new Thread(() -> {
+                GeoLocationService geoService = new GeoLocationService();
+                GeoLocationService.GeoLocation geoResult = geoService.geocode(job.getLocation());
+
+                javafx.application.Platform.runLater(() -> {
+                    if (geoResult != null) {
+                        // Mettre à jour les coordonnées de l'offre en mémoire
+                        job.setLatitude(geoResult.getLatitude());
+                        job.setLongitude(geoResult.getLongitude());
+
+                        // Afficher la carte
+                        if (candidateLatitude != null && candidateLongitude != null) {
+                            MapViewController.showMapWithDistance(
+                                geoResult.getLatitude(), geoResult.getLongitude(),
+                                job.getLocation(), job.getTitle(),
+                                candidateLatitude, candidateLongitude
+                            );
+                        } else {
+                            MapViewController.showMap(
+                                geoResult.getLatitude(), geoResult.getLongitude(),
+                                job.getLocation(), job.getTitle()
+                            );
+                        }
+                    } else {
+                        showAlert("Erreur",
+                            "Impossible de trouver les coordonnées pour: " + job.getLocation(),
+                            Alert.AlertType.WARNING);
+                    }
+                });
+            }).start();
+        } else {
+            showAlert("Erreur", "Aucune localisation définie pour cette offre.", Alert.AlertType.WARNING);
+        }
     }
 
     private void handleApply(JobOffer job) {

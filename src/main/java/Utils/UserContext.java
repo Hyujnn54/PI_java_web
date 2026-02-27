@@ -118,6 +118,27 @@ public class UserContext {
         return 1L; // ID par défaut pour les tests
     }
 
+    /**
+     * Vérifie si l'utilisateur actuel est un administrateur
+     */
+    public static boolean isAdmin() {
+        return getInstance().currentRole == Role.ADMIN;
+    }
+
+    /**
+     * Vérifie si l'utilisateur actuel est un recruteur
+     */
+    public static boolean isRecruiter() {
+        return getInstance().currentRole == Role.RECRUITER;
+    }
+
+    /**
+     * Vérifie si l'utilisateur actuel est un candidat
+     */
+    public static boolean isCandidate() {
+        return getInstance().currentRole == Role.CANDIDATE;
+    }
+
     public static Long getAdminId() {
         // Si l'utilisateur est un admin, retourne son ID
         if (getInstance().currentRole == Role.ADMIN) {

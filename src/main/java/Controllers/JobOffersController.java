@@ -11,6 +11,8 @@ import Services.JobOfferService;
 import Services.JobOfferWarningService;
 import Services.WarningCorrectionService;
 import Services.OfferSkillService;
+import Services.GeoLocationService;
+import Services.GeoLocationService.GeoLocation;
 import Utils.UserContext;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -24,6 +26,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class JobOffersController {
 
@@ -47,6 +51,7 @@ public class JobOffersController {
     private OfferSkillService offerSkillService;
     private JobOfferWarningService warningService;
     private WarningCorrectionService correctionService;
+    private GeoLocationService geoLocationService;
 
     // Form elements
     private TextField formTitleField;
@@ -55,6 +60,12 @@ public class JobOffersController {
     private ComboBox<ContractType> formContractType;
     private DatePicker formDeadline;
     private ComboBox<Status> formStatus;
+
+    // Géolocalisation
+    private Double selectedLatitude = null;
+    private Double selectedLongitude = null;
+    private ListView<GeoLocation> locationSuggestions;
+    private Timer autocompleteTimer;
 
     // Error labels for each field
     private Label titleErrorLabel;
@@ -75,6 +86,7 @@ public class JobOffersController {
         offerSkillService = new OfferSkillService();
         warningService = new JobOfferWarningService();
         correctionService = new WarningCorrectionService();
+        geoLocationService = new GeoLocationService();
         skillRows = new ArrayList<>();
         buildUI();
         loadJobOffers();
@@ -853,9 +865,42 @@ public class JobOffersController {
 
         // Posted date
         if (job.getCreatedAt() != null) {
-            Label posted = new Label("Posted on: " + job.getCreatedAt().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy")));
+            Label posted = new Label("Publié le: " + job.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             posted.setStyle("-fx-text-fill: #8e9ba8; -fx-font-size: 12px; -fx-padding: 15 0;");
             detailContainer.getChildren().add(posted);
+        }
+
+        // Section Localisation avec bouton carte (toujours visible si location existe)
+        if (job.getLocation() != null && !job.getLocation().trim().isEmpty()) {
+            VBox locationSection = new VBox(10);
+            locationSection.setStyle("-fx-background-color: #e8f5e9; -fx-background-radius: 10; -fx-padding: 15;");
+
+            HBox locationInfo = new HBox(15);
+            locationInfo.setAlignment(Pos.CENTER_LEFT);
+
+            Label locationIcon = new Label("📍");
+            locationIcon.setStyle("-fx-font-size: 20px;");
+
+            Label locationText = new Label(job.getLocation());
+            locationText.setStyle("-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #2e7d32;");
+            HBox.setHgrow(locationText, Priority.ALWAYS);
+
+            Button btnMap = new Button("🗺️ Voir sur la carte");
+            btnMap.setStyle("-fx-background-color: #2196f3; -fx-text-fill: white; -fx-font-weight: 600; " +
+                          "-fx-font-size: 13px; -fx-padding: 8 16; -fx-background-radius: 6; -fx-cursor: hand;");
+            btnMap.setOnAction(e -> showMapDialog(job));
+
+            locationInfo.getChildren().addAll(locationIcon, locationText, btnMap);
+            locationSection.getChildren().add(locationInfo);
+
+            // Afficher les coordonnées si disponibles
+            if (job.hasCoordinates()) {
+                Label coordsLabel = new Label(String.format("Coordonnées: %.4f, %.4f", job.getLatitude(), job.getLongitude()));
+                coordsLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+                locationSection.getChildren().add(coordsLabel);
+            }
+
+            detailContainer.getChildren().add(locationSection);
         }
 
         // Action buttons
@@ -863,17 +908,17 @@ public class JobOffersController {
         actionButtons.setAlignment(Pos.CENTER);
         actionButtons.setStyle("-fx-padding: 25 0;");
 
-        Button btnEdit = new Button("✏️ Edit");
+        Button btnEdit = new Button("✏️ Modifier");
         btnEdit.setStyle("-fx-background-color: #ffc107; -fx-text-fill: white; -fx-font-weight: 600; " +
                         "-fx-font-size: 14px; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
         btnEdit.setOnAction(e -> showEditForm(job));
 
-        Button btnDelete = new Button("🗑️ Delete");
+        Button btnDelete = new Button("🗑️ Supprimer");
         btnDelete.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: 600; " +
                           "-fx-font-size: 14px; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
         btnDelete.setOnAction(e -> handleDeleteJobOffer(job));
 
-        Button btnToggleStatus = new Button(job.getStatus() == Status.OPEN ? "🔒 Close" : "🔓 Open");
+        Button btnToggleStatus = new Button(job.getStatus() == Status.OPEN ? "🔒 Fermer" : "🔓 Ouvrir");
         btnToggleStatus.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-weight: 600; " +
                                 "-fx-font-size: 14px; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
         btnToggleStatus.setOnAction(e -> handleToggleStatus(job));
@@ -882,28 +927,85 @@ public class JobOffersController {
         detailContainer.getChildren().add(actionButtons);
     }
 
+    /**
+     * Affiche une fenêtre modale avec la carte Leaflet (WebView) de l'entreprise
+     * Géocode automatiquement si les coordonnées ne sont pas disponibles
+     */
+    private void showMapDialog(JobOffer job) {
+        double lat, lon;
+
+        if (job.hasCoordinates()) {
+            // Utiliser les coordonnées existantes
+            lat = job.getLatitude();
+            lon = job.getLongitude();
+            MapViewController.showMap(lat, lon, job.getLocation(), job.getTitle());
+        } else if (job.getLocation() != null && !job.getLocation().trim().isEmpty()) {
+            // Géocoder la localisation
+            showAlert("Information", "Géocodage de la localisation en cours...", Alert.AlertType.INFORMATION);
+
+            new Thread(() -> {
+                GeoLocationService.GeoLocation geoResult = geoLocationService.geocode(job.getLocation());
+
+                javafx.application.Platform.runLater(() -> {
+                    if (geoResult != null) {
+                        // Mettre à jour les coordonnées dans la base de données
+                        try {
+                            job.setLatitude(geoResult.getLatitude());
+                            job.setLongitude(geoResult.getLongitude());
+                            jobOfferService.updateJobOffer(job);
+
+                            // Afficher la carte
+                            MapViewController.showMap(
+                                geoResult.getLatitude(),
+                                geoResult.getLongitude(),
+                                job.getLocation(),
+                                job.getTitle()
+                            );
+                        } catch (SQLException e) {
+                            System.err.println("Erreur mise à jour coordonnées: " + e.getMessage());
+                            // Afficher quand même la carte
+                            MapViewController.showMap(
+                                geoResult.getLatitude(),
+                                geoResult.getLongitude(),
+                                job.getLocation(),
+                                job.getTitle()
+                            );
+                        }
+                    } else {
+                        showAlert("Erreur",
+                            "Impossible de trouver les coordonnées pour: " + job.getLocation() +
+                            "\n\nVeuillez modifier l'offre et sélectionner une ville dans les suggestions.",
+                            Alert.AlertType.WARNING);
+                    }
+                });
+            }).start();
+        } else {
+            showAlert("Erreur", "Aucune localisation définie pour cette offre.", Alert.AlertType.WARNING);
+        }
+    }
+
     private void showCreateForm() {
         isEditMode = false;
         editingJob = null;
-        showJobForm("Create Job Offer");
+        showJobForm("Créer une offre");
     }
 
     private void showEditForm(JobOffer job) {
         // Check if the current user owns this job offer
         if (!job.getRecruiterId().equals(UserContext.getRecruiterId())) {
-            showAlert("Permission Denied", "You can only edit job offers that you created.", Alert.AlertType.WARNING);
+            showAlert("Permission refusée", "Vous ne pouvez modifier que vos propres offres.", Alert.AlertType.WARNING);
             return;
         }
 
         isEditMode = true;
         editingJob = job;
-        showJobForm("Edit Job Offer");
+        showJobForm("Modifier l'offre");
     }
 
     private void showJobForm(String formTitle) {
         detailContainer.getChildren().clear();
 
-        Button btnBack = new Button("← Back");
+        Button btnBack = new Button("← Retour");
         btnBack.setStyle("-fx-background-color: transparent; -fx-text-fill: #5BA3F5; -fx-font-size: 14px; -fx-cursor: hand;");
         btnBack.setOnAction(e -> {
             if (selectedJob != null) displayJobDetails(selectedJob);
@@ -961,15 +1063,114 @@ public class JobOffersController {
         descriptionErrorLabel.setVisible(false);
         descriptionErrorLabel.setManaged(false);
 
-        // Location field with help and error labels
+        // Location field with autocomplete
         Label locationLabel = new Label("Localisation *");
         locationLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
+        // Container pour le champ location avec autocomplete
+        VBox locationContainer = new VBox(0);
+
         formLocation = new TextField();
-        formLocation.setPromptText("Localisation (ex: Paris, France ou Remote)");
+        formLocation.setPromptText("Tapez pour rechercher une ville...");
         formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
 
-        Label locationHelpLabel = new Label("ℹ️ 2-100 caractères. Ville, pays ou 'Remote'.");
+        // Liste de suggestions
+        locationSuggestions = new ListView<>();
+        locationSuggestions.setPrefHeight(150);
+        locationSuggestions.setVisible(false);
+        locationSuggestions.setManaged(false);
+        locationSuggestions.setStyle("-fx-background-color: white; -fx-border-color: #5BA3F5; -fx-border-radius: 0 0 5 5;");
+
+        // Réinitialiser les coordonnées
+        selectedLatitude = null;
+        selectedLongitude = null;
+
+        // Autocomplete avec délai
+        formLocation.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (autocompleteTimer != null) {
+                autocompleteTimer.cancel();
+            }
+
+            // Réinitialiser les coordonnées si l'utilisateur modifie le texte
+            if (!newVal.equals(oldVal)) {
+                selectedLatitude = null;
+                selectedLongitude = null;
+            }
+
+            if (newVal.length() >= 2 && !newVal.equalsIgnoreCase("remote")) {
+                autocompleteTimer = new Timer();
+                autocompleteTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        javafx.application.Platform.runLater(() -> {
+                            List<GeoLocation> suggestions = geoLocationService.autocomplete(newVal);
+                            if (!suggestions.isEmpty()) {
+                                locationSuggestions.getItems().clear();
+                                locationSuggestions.getItems().addAll(suggestions);
+                                locationSuggestions.setVisible(true);
+                                locationSuggestions.setManaged(true);
+                            } else {
+                                locationSuggestions.setVisible(false);
+                                locationSuggestions.setManaged(false);
+                            }
+                        });
+                    }
+                }, 300);
+            } else {
+                locationSuggestions.setVisible(false);
+                locationSuggestions.setManaged(false);
+            }
+        });
+
+        // Label pour afficher les coordonnées sélectionnées (déclaré ici pour être accessible dans les listeners)
+        Label coordsLabel = new Label("");
+        coordsLabel.setStyle("-fx-text-fill: #28a745; -fx-font-size: 12px; -fx-font-weight: 600;");
+        coordsLabel.setVisible(false);
+
+        // Sélection d'une suggestion
+        locationSuggestions.setOnMouseClicked(e -> {
+            GeoLocation selected = locationSuggestions.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                formLocation.setText(selected.getFullLocation());
+                selectedLatitude = selected.getLatitude();
+                selectedLongitude = selected.getLongitude();
+                locationSuggestions.setVisible(false);
+                locationSuggestions.setManaged(false);
+                coordsLabel.setText("📍 Coordonnées: " + String.format("%.4f, %.4f", selectedLatitude, selectedLongitude));
+                coordsLabel.setVisible(true);
+            }
+        });
+
+        locationContainer.getChildren().addAll(formLocation, locationSuggestions);
+
+        // Bouton pour choisir sur la carte
+        Button btnPickOnMap = new Button("🗺️ Choisir sur la carte");
+        btnPickOnMap.setStyle("-fx-background-color: #2196f3; -fx-text-fill: white; -fx-font-weight: 600; " +
+                             "-fx-padding: 10 15; -fx-background-radius: 6; -fx-cursor: hand;");
+
+        // Action du bouton pour ouvrir le sélecteur de carte
+        btnPickOnMap.setOnAction(e -> {
+            LocationPickerController.pickLocation((lat, lon, address) -> {
+                // Remplir le champ de localisation avec l'adresse
+                formLocation.setText(address);
+                selectedLatitude = lat;
+                selectedLongitude = lon;
+                coordsLabel.setText("📍 Coordonnées: " + String.format("%.4f, %.4f", lat, lon));
+                coordsLabel.setVisible(true);
+
+                // Fermer la liste de suggestions si ouverte
+                locationSuggestions.setVisible(false);
+                locationSuggestions.setManaged(false);
+            });
+        });
+
+        // Ligne avec le champ et le bouton carte
+        HBox locationRow = new HBox(10);
+        locationRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(locationContainer, Priority.ALWAYS);
+        locationRow.getChildren().addAll(locationContainer, btnPickOnMap);
+
+        Label locationHelpLabel = new Label("ℹ️ Tapez une ville ou cliquez sur 'Choisir sur la carte' pour sélectionner la localisation");
         locationHelpLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px; -fx-padding: 2 0 0 5;");
 
         locationErrorLabel = new Label();
@@ -983,7 +1184,7 @@ public class JobOffersController {
 
         formContractType = new ComboBox<>();
         formContractType.getItems().addAll(ContractType.values());
-        formContractType.setPromptText("Sélectionner le type de contrat");
+        formContractType.setPromptText("Sélectionner le type de contrat");;
         formContractType.setStyle("-fx-font-size: 14px;");
 
         formStatus = new ComboBox<>();
@@ -1035,6 +1236,8 @@ public class JobOffersController {
             formTitleField.setText(editingJob.getTitle());
             formDescription.setText(editingJob.getDescription());
             formLocation.setText(editingJob.getLocation());
+            selectedLatitude = editingJob.getLatitude();
+            selectedLongitude = editingJob.getLongitude();
             formContractType.setValue(editingJob.getContractType());
             formStatus.setValue(editingJob.getStatus());
             if (editingJob.getDeadline() != null) {
@@ -1103,7 +1306,7 @@ public class JobOffersController {
         formContainer.getChildren().addAll(
                 titleLabel, titleRow, titleHelpLabel, aiStatusLabel, titleErrorLabel,
                 descLabel, formDescription, descHelpLabel, descriptionErrorLabel,
-                locationLabel, formLocation, locationHelpLabel, locationErrorLabel,
+                locationLabel, locationRow, coordsLabel, locationHelpLabel, locationErrorLabel,
                 contractLabel, formContractType,
                 new Label("Statut *"), formStatus,
                 new Label("Date limite (Optionnel)"), formDeadline, deadlineHelpLabel, deadlineErrorLabel,
@@ -1195,6 +1398,8 @@ public class JobOffersController {
             newJob.setTitle(formTitleField.getText().trim());
             newJob.setDescription(formDescription.getText().trim());
             newJob.setLocation(formLocation.getText().trim());
+            newJob.setLatitude(selectedLatitude);
+            newJob.setLongitude(selectedLongitude);
             newJob.setContractType(formContractType.getValue());
             newJob.setStatus(formStatus.getValue());
             newJob.setCreatedAt(LocalDateTime.now());
@@ -1212,7 +1417,7 @@ public class JobOffersController {
                 offerSkillService.createOfferSkills(skills);
             }
 
-            showAlert("Success", "Job offer created successfully!", Alert.AlertType.INFORMATION);
+            showAlert("Succès", "Offre d'emploi créée avec succès!", Alert.AlertType.INFORMATION);
             loadJobOffers();
 
             // Select the newly created job
@@ -1220,7 +1425,7 @@ public class JobOffersController {
             displayJobDetails(savedJob);
 
         } catch (SQLException e) {
-            showAlert("Error", "Failed to create job offer: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec de la création: " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
     }
@@ -1235,6 +1440,8 @@ public class JobOffersController {
             editingJob.setTitle(formTitleField.getText().trim());
             editingJob.setDescription(formDescription.getText().trim());
             editingJob.setLocation(formLocation.getText().trim());
+            editingJob.setLatitude(selectedLatitude);
+            editingJob.setLongitude(selectedLongitude);
             editingJob.setContractType(formContractType.getValue());
             editingJob.setStatus(formStatus.getValue());
 
@@ -1252,16 +1459,16 @@ public class JobOffersController {
                 List<OfferSkill> newSkills = getSkillsFromForm(editingJob.getId());
                 offerSkillService.replaceOfferSkills(editingJob.getId(), newSkills);
 
-                showAlert("Success", "Job offer updated successfully!", Alert.AlertType.INFORMATION);
+                showAlert("Succès", "Offre mise à jour avec succès!", Alert.AlertType.INFORMATION);
                 loadJobOffers();
                 selectedJob = editingJob;
                 displayJobDetails(editingJob);
             } else {
-                showAlert("Error", "Failed to update job offer", Alert.AlertType.ERROR);
+                showAlert("Erreur", "Échec de la mise à jour", Alert.AlertType.ERROR);
             }
 
         } catch (SQLException e) {
-            showAlert("Error", "Failed to update job offer: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec de la mise à jour: " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
     }

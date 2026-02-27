@@ -77,7 +77,8 @@ public class MainShellController {
 
     @FXML
     private void handleStatistics() {
-        activePage = "/Statistics.fxml";
+        // Charger le nouveau tableau de bord Analytics
+        activePage = "/AnalyticsDashboard.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnStatistics);
     }

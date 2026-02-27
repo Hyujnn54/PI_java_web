@@ -39,6 +39,11 @@
             <artifactId>javafx-controls</artifactId>
             <version>17</version>
         </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-web</artifactId>
+            <version>17</version>
+        </dependency>
     </dependencies>
     <build>
         <resources>
@@ -49,6 +54,8 @@
                     <include>**/*.css</include>
                     <include>**/*.jpg</include>
                     <include>**/*.png</include>
+                    <include>**/*.properties</include>
+                    <include>**/*.sql</include>
                 </includes>
             </resource>
         </resources>

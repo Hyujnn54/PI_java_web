@@ -21,18 +21,28 @@ public class JobOfferService {
 
     // CREATE
     public JobOffer createJobOffer(JobOffer jobOffer) throws SQLException {
-        String query = "INSERT INTO job_offer (recruiter_id, title, description, location, contract_type, created_at, deadline, status) " +
-                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO job_offer (recruiter_id, title, description, location, latitude, longitude, contract_type, created_at, deadline, status) " +
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, jobOffer.getRecruiterId());
             ps.setString(2, jobOffer.getTitle());
             ps.setString(3, jobOffer.getDescription());
             ps.setString(4, jobOffer.getLocation());
-            ps.setString(5, jobOffer.getContractType().name());
-            ps.setTimestamp(6, Timestamp.valueOf(jobOffer.getCreatedAt()));
-            ps.setTimestamp(7, jobOffer.getDeadline() != null ? Timestamp.valueOf(jobOffer.getDeadline()) : null);
-            ps.setString(8, jobOffer.getStatus().name());
+            if (jobOffer.getLatitude() != null) {
+                ps.setDouble(5, jobOffer.getLatitude());
+            } else {
+                ps.setNull(5, Types.DOUBLE);
+            }
+            if (jobOffer.getLongitude() != null) {
+                ps.setDouble(6, jobOffer.getLongitude());
+            } else {
+                ps.setNull(6, Types.DOUBLE);
+            }
+            ps.setString(7, jobOffer.getContractType().name());
+            ps.setTimestamp(8, Timestamp.valueOf(jobOffer.getCreatedAt()));
+            ps.setTimestamp(9, jobOffer.getDeadline() != null ? Timestamp.valueOf(jobOffer.getDeadline()) : null);
+            ps.setString(10, jobOffer.getStatus().name());
 
             int affectedRows = ps.executeUpdate();
 
@@ -128,17 +138,27 @@ public class JobOfferService {
     // UPDATE
     public boolean updateJobOffer(JobOffer jobOffer) throws SQLException {
         String query = "UPDATE job_offer SET recruiter_id = ?, title = ?, description = ?, location = ?, " +
-                      "contract_type = ?, deadline = ?, status = ? WHERE id = ?";
+                      "latitude = ?, longitude = ?, contract_type = ?, deadline = ?, status = ? WHERE id = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setLong(1, jobOffer.getRecruiterId());
             ps.setString(2, jobOffer.getTitle());
             ps.setString(3, jobOffer.getDescription());
             ps.setString(4, jobOffer.getLocation());
-            ps.setString(5, jobOffer.getContractType().name());
-            ps.setTimestamp(6, jobOffer.getDeadline() != null ? Timestamp.valueOf(jobOffer.getDeadline()) : null);
-            ps.setString(7, jobOffer.getStatus().name());
-            ps.setLong(8, jobOffer.getId());
+            if (jobOffer.getLatitude() != null) {
+                ps.setDouble(5, jobOffer.getLatitude());
+            } else {
+                ps.setNull(5, Types.DOUBLE);
+            }
+            if (jobOffer.getLongitude() != null) {
+                ps.setDouble(6, jobOffer.getLongitude());
+            } else {
+                ps.setNull(6, Types.DOUBLE);
+            }
+            ps.setString(7, jobOffer.getContractType().name());
+            ps.setTimestamp(8, jobOffer.getDeadline() != null ? Timestamp.valueOf(jobOffer.getDeadline()) : null);
+            ps.setString(9, jobOffer.getStatus().name());
+            ps.setLong(10, jobOffer.getId());
 
             return ps.executeUpdate() > 0;
         }
@@ -173,6 +193,21 @@ public class JobOfferService {
         jobOffer.setTitle(rs.getString("title"));
         jobOffer.setDescription(rs.getString("description"));
         jobOffer.setLocation(rs.getString("location"));
+
+        // Coordonnées GPS
+        try {
+            double lat = rs.getDouble("latitude");
+            if (!rs.wasNull()) {
+                jobOffer.setLatitude(lat);
+            }
+            double lon = rs.getDouble("longitude");
+            if (!rs.wasNull()) {
+                jobOffer.setLongitude(lon);
+            }
+        } catch (SQLException e) {
+            // Les colonnes n'existent peut-être pas encore
+        }
+
         jobOffer.setContractType(ContractType.valueOf(rs.getString("contract_type")));
 
         Timestamp createdAt = rs.getTimestamp("created_at");
