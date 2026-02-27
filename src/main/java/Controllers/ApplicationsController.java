@@ -286,66 +286,69 @@ public class ApplicationsController {
     }
 
     private void createAndShowBulkActionPanel(VBox container) {
-        bulkActionPanel = new VBox(12);
-        bulkActionPanel.setStyle("-fx-border-color: #007bff; -fx-border-radius: 4; -fx-padding: 15; -fx-background-color: #e7f3ff; -fx-border-width: 2;");
+        bulkActionPanel = new VBox(14);
+        bulkActionPanel.setStyle("-fx-background-color: #EBF3FE; -fx-background-radius: 12; "
+                + "-fx-border-color: #5BA3F5; -fx-border-width: 1.5; -fx-border-radius: 12; "
+                + "-fx-padding: 18;");
         bulkActionPanel.setVisible(false);
         bulkActionPanel.setManaged(false);
 
-        Label titleLabel = new Label("Bulk Actions");
-        titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #004085;");
+        Label titleLabel = new Label("Actions groupées");
+        titleLabel.setStyle("-fx-font-weight: 700; -fx-font-size: 15px; -fx-text-fill: #1565C0;");
 
-        HBox selectionInfo = new HBox(10);
-        selectionTextLabel = new Label("No applications selected");
-        selectionTextLabel.setStyle("-fx-text-fill: #004085;");
-        selectionInfo.getChildren().add(selectionTextLabel);
+        selectionTextLabel = new Label("Aucune candidature sélectionnée");
+        selectionTextLabel.setStyle("-fx-text-fill: #1565C0; -fx-font-size: 13px;");
 
-        HBox actionRow = new HBox(10);
-        actionRow.setAlignment(Pos.CENTER_LEFT);
-
-        Label statusLabel = new Label("Change Status:");
-        statusLabel.setStyle("-fx-font-weight: bold;");
+        // Status change row — stacked vertically so text never clips
+        Label statusLabel = new Label("Changer le statut :");
+        statusLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
 
         ComboBox<String> statusCombo = new ComboBox<>();
         statusCombo.getItems().addAll("SUBMITTED", "IN_REVIEW", "SHORTLISTED", "REJECTED", "INTERVIEW", "HIRED");
-        statusCombo.setPrefWidth(180);
-        statusCombo.setPromptText("Select status...");
+        statusCombo.setPrefWidth(220);
+        statusCombo.setPromptText("Sélectionner un statut...");
+        statusCombo.setStyle("-fx-font-size: 13px;");
 
         TextArea noteArea = new TextArea();
-        noteArea.setPromptText("Add note (optional)");
+        noteArea.setPromptText("Ajouter une note (optionnel)");
         noteArea.setPrefRowCount(2);
         noteArea.setWrapText(true);
-        noteArea.setStyle("-fx-font-size: 12px;");
+        noteArea.setStyle("-fx-font-size: 13px;");
 
-        Button btnBulkUpdate = new Button("Update");
-        btnBulkUpdate.setStyle("-fx-padding: 6 12; -fx-background-color: #007bff; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+        Button btnBulkUpdate = new Button("✔ Mettre à jour");
+        btnBulkUpdate.setStyle("-fx-padding: 10 20; -fx-background-color: #5BA3F5; -fx-text-fill: white; "
+                + "-fx-cursor: hand; -fx-font-weight: 700; -fx-font-size: 13px; -fx-background-radius: 8;");
         btnBulkUpdate.setOnAction(e -> {
             if (selectedApplicationIds.isEmpty()) {
-                showAlert("Warning", "No applications selected", Alert.AlertType.WARNING);
+                showAlert("Avertissement", "Aucune candidature sélectionnée", Alert.AlertType.WARNING);
                 return;
             }
             if (statusCombo.getValue() == null) {
-                showAlert("Warning", "Please select a status", Alert.AlertType.WARNING);
+                showAlert("Avertissement", "Veuillez sélectionner un statut", Alert.AlertType.WARNING);
                 return;
             }
             bulkUpdateStatus(new ArrayList<>(selectedApplicationIds), statusCombo.getValue(), noteArea.getText());
         });
 
-        actionRow.getChildren().addAll(statusLabel, statusCombo, btnBulkUpdate);
-        VBox.setVgrow(actionRow, Priority.NEVER);
+        HBox statusRow = new HBox(10);
+        statusRow.setAlignment(Pos.CENTER_LEFT);
+        statusRow.getChildren().addAll(statusCombo, btnBulkUpdate);
 
-        HBox rankingRow = new HBox(10);
-        rankingRow.setAlignment(Pos.CENTER_LEFT);
-
-        Button btnRank = new Button("Rank with AI");
-        btnRank.setStyle("-fx-padding: 6 12; -fx-background-color: #6f42c1; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+        // AI ranking row
+        Button btnRank = new Button("🤖 Classer avec l'IA");
+        btnRank.setStyle("-fx-padding: 10 18; -fx-background-color: #6f42c1; -fx-text-fill: white; "
+                + "-fx-cursor: hand; -fx-font-weight: 700; -fx-font-size: 13px; -fx-background-radius: 8;");
         btnRank.setOnAction(e -> rankApplicationsWithAI());
 
-        rankingStatusLabel = new Label("Ranking: OFF");
-        rankingStatusLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-weight: bold;");
+        rankingStatusLabel = new Label("Classement: DÉSACTIVÉ");
+        rankingStatusLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-weight: 700; -fx-font-size: 13px;");
 
+        HBox rankingRow = new HBox(12);
+        rankingRow.setAlignment(Pos.CENTER_LEFT);
         rankingRow.getChildren().addAll(btnRank, rankingStatusLabel);
 
-        bulkActionPanel.getChildren().addAll(titleLabel, selectionInfo, actionRow, rankingRow);
+        bulkActionPanel.getChildren().addAll(titleLabel, selectionTextLabel,
+                statusLabel, statusRow, noteArea, rankingRow);
         container.getChildren().add(0, bulkActionPanel);
     }
 
@@ -361,37 +364,57 @@ public class ApplicationsController {
 
     private void updateBulkActionPanelUI() {
         if (bulkActionPanel == null || selectionTextLabel == null) return;
-
         if (selectedApplicationIds.isEmpty()) {
-            selectionTextLabel.setText("No applications selected");
+            selectionTextLabel.setText("Aucune candidature sélectionnée");
         } else {
-            selectionTextLabel.setText(selectedApplicationIds.size() + " application(s) selected");
+            selectionTextLabel.setText(selectedApplicationIds.size() + " candidature(s) sélectionnée(s)");
         }
     }
 
     private VBox createApplicationCard(ApplicationService.ApplicationRow app) {
-        VBox card = new VBox(8);
-        card.setStyle("-fx-border-color: #ddd; -fx-border-radius: 4; -fx-padding: 12; -fx-background-color: white; -fx-cursor: hand;");
+        VBox card = new VBox(0);
+        String normalStyle = "-fx-background-color: white; -fx-background-radius: 12; "
+                + "-fx-border-color: #e9ecef; -fx-border-width: 1; -fx-border-radius: 12; "
+                + "-fx-padding: 14 16; -fx-cursor: hand; "
+                + "-fx-effect: dropshadow(gaussian,rgba(0,0,0,0.04),6,0,0,2);";
+        card.setStyle(normalStyle);
         card.setUserData(app);
 
-        HBox cardContent = new HBox(10);
-        cardContent.setAlignment(Pos.CENTER_LEFT);
+        // Hover animations
+        card.setOnMouseEntered(e -> {
+            if (!card.getStyleClass().contains("app-card-selected")) {
+                card.setStyle("-fx-background-color: #F7FBFF; -fx-background-radius: 12; "
+                        + "-fx-border-color: #5BA3F5; -fx-border-width: 1.5; -fx-border-radius: 12; "
+                        + "-fx-padding: 14 16; -fx-cursor: hand; "
+                        + "-fx-effect: dropshadow(gaussian,rgba(91,163,245,0.18),10,0,0,3);");
+            }
+        });
+        card.setOnMouseExited(e -> {
+            if (!card.getStyleClass().contains("app-card-selected")) {
+                card.setStyle(normalStyle);
+            }
+        });
+
+        HBox row = new HBox(12);
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        // Avatar circle with initials
+        Label avatar = new Label(getInitials(app.candidateName()));
+        avatar.setStyle("-fx-background-color: #EBF3FE; -fx-text-fill: #5BA3F5; "
+                + "-fx-font-weight: 700; -fx-font-size: 13px; -fx-alignment: center; "
+                + "-fx-min-width: 40; -fx-max-width: 40; -fx-min-height: 40; -fx-max-height: 40; "
+                + "-fx-background-radius: 20;");
 
         // Checkbox for recruiter bulk select
         if (UserContext.getRole() == UserContext.Role.RECRUITER) {
             CheckBox selectCheckbox = new CheckBox();
-            selectCheckbox.setStyle("-fx-font-size: 14px;");
+            selectCheckbox.setStyle("-fx-font-size: 13px;");
             selectCheckbox.selectedProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal) {
-                    if (!selectedApplicationIds.contains(app.id())) {
-                        selectedApplicationIds.add(app.id());
-                    }
-                } else {
-                    selectedApplicationIds.remove(app.id());
-                }
+                if (newVal) { if (!selectedApplicationIds.contains(app.id())) selectedApplicationIds.add(app.id()); }
+                else          selectedApplicationIds.remove(app.id());
                 updateBulkActionPanelUI();
             });
-            cardContent.getChildren().add(selectCheckbox);
+            row.getChildren().add(selectCheckbox);
             card.setUserData(new Object[]{app, selectCheckbox});
         }
 
@@ -399,63 +422,127 @@ public class ApplicationsController {
         HBox.setHgrow(infoBox, Priority.ALWAYS);
 
         Label candidateName = new Label(app.candidateName() != null && !app.candidateName().trim().isEmpty()
-                ? app.candidateName()
-                : "Candidate #" + app.id());
-        candidateName.setStyle("-fx-font-weight: bold; -fx-font-size: 13;");
+                ? app.candidateName() : "Candidat #" + app.id());
+        candidateName.setStyle("-fx-font-weight: 700; -fx-font-size: 13.5px; -fx-text-fill: #2c3e50;");
 
-        Label jobTitle = new Label(app.jobTitle() != null ? app.jobTitle() : "Job Application");
-        jobTitle.setStyle("-fx-text-fill: #666; -fx-font-size: 12;");
+        Label jobTitle = new Label(app.jobTitle() != null ? app.jobTitle() : "Candidature");
+        jobTitle.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 12px;");
 
-        HBox statusBox = new HBox(10);
-        Label statusBadge = new Label(app.currentStatus());
-        statusBadge.setStyle("-fx-padding: 4 8; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-border-radius: 3; -fx-font-size: 11;");
+        HBox badgeRow = new HBox(6);
+        badgeRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Color-coded status badge
+        Label statusBadge = new Label(translateStatus(app.currentStatus()));
+        statusBadge.setStyle("-fx-padding: 3 9; -fx-background-radius: 20; -fx-font-size: 11px; -fx-font-weight: 600; "
+                + getStatusBadgeStyle(app.currentStatus()));
 
         if (UserContext.getRole() == UserContext.Role.RECRUITER && rankingActive) {
             OllamaRankingService.RankResult rankResult = rankingCache.get(app.id());
             if (rankResult != null) {
-                Label rankBadge = new Label("AI " + rankResult.score());
-                rankBadge.setStyle("-fx-padding: 4 8; -fx-background-color: #6f42c1; -fx-text-fill: white; -fx-border-radius: 3; -fx-font-size: 11; -fx-font-weight: bold;");
-                statusBox.getChildren().add(rankBadge);
+                Label rankBadge = new Label("IA " + rankResult.score());
+                rankBadge.setStyle("-fx-padding: 3 9; -fx-background-color: #6f42c1; -fx-text-fill: white; "
+                        + "-fx-background-radius: 20; -fx-font-size: 11px; -fx-font-weight: bold;");
+                badgeRow.getChildren().add(rankBadge);
             }
         }
 
-        // Archived badge
         if (app.isArchived()) {
-            Label archivedBadge = new Label("ARCHIVED");
-            archivedBadge.setStyle("-fx-padding: 4 8; -fx-background-color: #6c757d; -fx-text-fill: white; -fx-border-radius: 3; -fx-font-size: 11;");
-            statusBox.getChildren().addAll(statusBadge, archivedBadge);
+            Label archivedBadge = new Label("ARCHIVÉ");
+            archivedBadge.setStyle("-fx-padding: 3 9; -fx-background-color: #6c757d; -fx-text-fill: white; "
+                    + "-fx-background-radius: 20; -fx-font-size: 11px;");
+            badgeRow.getChildren().addAll(statusBadge, archivedBadge);
         } else {
-            statusBox.getChildren().addAll(statusBadge);
+            badgeRow.getChildren().add(statusBadge);
         }
 
-        Label appliedDate = new Label(app.appliedAt() != null
-                ? app.appliedAt().format(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
-                : "N/A");
-        appliedDate.setStyle("-fx-text-fill: #999; -fx-font-size: 11;");
+        // Date label on the right
+        Label dateLabel = new Label(app.appliedAt() != null
+                ? app.appliedAt().format(DateTimeFormatter.ofPattern("dd/MM/yy")) : "");
+        dateLabel.setStyle("-fx-text-fill: #adb5bd; -fx-font-size: 11px;");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        statusBox.getChildren().add(appliedDate);
+        HBox footerRow = new HBox(spacer, dateLabel);
+        footerRow.setAlignment(Pos.CENTER_RIGHT);
 
-        infoBox.getChildren().addAll(candidateName, jobTitle, statusBox);
-        cardContent.getChildren().add(infoBox);
-        card.getChildren().add(cardContent);
+        infoBox.getChildren().addAll(candidateName, jobTitle, badgeRow, footerRow);
+        row.getChildren().addAll(avatar, infoBox);
+        card.getChildren().add(row);
+
         card.setOnMouseClicked(e -> {
-            // Only select if not clicking on checkbox
-            if (!(e.getTarget() instanceof CheckBox)) {
-                selectApplication(app, card);
-            }
+            if (!(e.getTarget() instanceof CheckBox)) selectApplication(app, card);
         });
 
         return card;
     }
 
+    /** Returns initials from a full name */
+    private String getInitials(String name) {
+        if (name == null || name.isBlank()) return "?";
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length == 1) return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
+        return (parts[0].charAt(0) + "" + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
+    /** Color style for status badges */
+    private String getStatusBadgeStyle(String status) {
+        if (status == null) return "-fx-background-color: #e9ecef; -fx-text-fill: #6c757d;";
+        return switch (status.toUpperCase()) {
+            case "SUBMITTED"   -> "-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;";
+            case "IN_REVIEW"   -> "-fx-background-color: #FFF8E1; -fx-text-fill: #E65100;";
+            case "SHORTLISTED" -> "-fx-background-color: #E8F5E9; -fx-text-fill: #2E7D32;";
+            case "INTERVIEW"   -> "-fx-background-color: #EDE7F6; -fx-text-fill: #4527A0;";
+            case "HIRED"       -> "-fx-background-color: #E0F2F1; -fx-text-fill: #00695C;";
+            case "REJECTED"    -> "-fx-background-color: #FFEBEE; -fx-text-fill: #B71C1C;";
+            default            -> "-fx-background-color: #e9ecef; -fx-text-fill: #6c757d;";
+        };
+    }
+
+    /** Translate status to French */
+    private String translateStatus(String status) {
+        if (status == null) return "SOUMIS";
+        return switch (status.toUpperCase()) {
+            case "SUBMITTED"   -> "Soumis";
+            case "IN_REVIEW"   -> "En révision";
+            case "SHORTLISTED" -> "Présélectionné";
+            case "INTERVIEW"   -> "Entretien";
+            case "HIRED"       -> "Embauché";
+            case "REJECTED"    -> "Rejeté";
+            default -> status;
+        };
+    }
+
+    /** Creates a small label+value box for the detail header grid */
+    private VBox makeDetailItem(String labelText, String valueText) {
+        VBox box = new VBox(3);
+        Label lbl = new Label(labelText);
+        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d; -fx-font-weight: 600;");
+        Label val = new Label(valueText);
+        val.setStyle("-fx-font-size: 13px; -fx-text-fill: #2c3e50;");
+        val.setWrapText(true);
+        box.getChildren().addAll(lbl, val);
+        return box;
+    }
+
     private void selectApplication(ApplicationService.ApplicationRow app, VBox card) {
+        String normalStyle = "-fx-background-color: white; -fx-background-radius: 12; "
+                + "-fx-border-color: #e9ecef; -fx-border-width: 1; -fx-border-radius: 12; "
+                + "-fx-padding: 14 16; -fx-cursor: hand; "
+                + "-fx-effect: dropshadow(gaussian,rgba(0,0,0,0.04),6,0,0,2);";
+        String selectedStyle = "-fx-background-color: #EBF3FE; -fx-background-radius: 12; "
+                + "-fx-border-color: #5BA3F5; -fx-border-width: 2; -fx-border-radius: 12; "
+                + "-fx-padding: 14 16; -fx-cursor: hand; "
+                + "-fx-effect: dropshadow(gaussian,rgba(91,163,245,0.25),12,0,0,3);";
+
         candidateListContainer.getChildren().forEach(node -> {
-            if (node instanceof VBox) {
-                node.setStyle("-fx-border-color: #ddd; -fx-border-radius: 4; -fx-padding: 12; -fx-background-color: white; -fx-cursor: hand;");
+            if (node instanceof VBox v) {
+                v.getStyleClass().remove("app-card-selected");
+                v.setStyle(normalStyle);
             }
         });
 
-        card.setStyle("-fx-border-color: #5BA3F5; -fx-border-radius: 4; -fx-padding: 12; -fx-background-color: #f0f4ff; -fx-cursor: hand;");
+        card.getStyleClass().add("app-card-selected");
+        card.setStyle(selectedStyle);
         selectedApplication = app;
         displayApplicationDetails(app);
     }
@@ -468,29 +555,45 @@ public class ApplicationsController {
 
         // Header section
         VBox headerBox = new VBox(10);
-        headerBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15; -fx-background-color: #f8f9fa;");
+        headerBox.setStyle("-fx-background-color: white; -fx-background-radius: 12; "
+                + "-fx-border-color: #e9ecef; -fx-border-width: 1; -fx-border-radius: 12; "
+                + "-fx-padding: 20; -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.05),8,0,0,2);");
 
-        Label candidateName = new Label(app.candidateName());
-        candidateName.setStyle("-fx-font-weight: bold; -fx-font-size: 16;");
+        // Avatar + name row
+        HBox nameRow = new HBox(14);
+        nameRow.setAlignment(Pos.CENTER_LEFT);
+        Label avatarBig = new Label(getInitials(app.candidateName()));
+        avatarBig.setStyle("-fx-background-color: #EBF3FE; -fx-text-fill: #5BA3F5; "
+                + "-fx-font-weight: 700; -fx-font-size: 18px; -fx-alignment: center; "
+                + "-fx-min-width: 54; -fx-max-width: 54; -fx-min-height: 54; -fx-max-height: 54; "
+                + "-fx-background-radius: 27;");
 
-        Label jobPosition = new Label("Position: " + (app.jobTitle() != null ? app.jobTitle() : "N/A"));
-        jobPosition.setStyle("-fx-text-fill: #666;");
+        VBox nameBox = new VBox(4);
+        Label candidateName = new Label(app.candidateName() != null && !app.candidateName().isBlank()
+                ? app.candidateName() : "Candidat #" + app.id());
+        candidateName.setStyle("-fx-font-weight: 700; -fx-font-size: 18px; -fx-text-fill: #2c3e50;");
 
-        Label email = new Label("Email: " + (app.candidateEmail() != null ? app.candidateEmail() : "N/A"));
-        email.setStyle("-fx-text-fill: #666;");
+        Label jobPosition = new Label(app.jobTitle() != null ? app.jobTitle() : "Candidature");
+        jobPosition.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
+        nameBox.getChildren().addAll(candidateName, jobPosition);
+        nameRow.getChildren().addAll(avatarBig, nameBox);
 
-        Label phone = new Label("Phone: " + (app.phone() != null ? app.phone() : "N/A"));
-        phone.setStyle("-fx-text-fill: #666;");
+        // Info grid
+        HBox infoGrid = new HBox(30);
+        infoGrid.setStyle("-fx-padding: 10 0 0 0;");
+        infoGrid.getChildren().addAll(
+            makeDetailItem("📧 Email",  app.candidateEmail() != null ? app.candidateEmail() : "N/A"),
+            makeDetailItem("📞 Tél.",   app.phone() != null ? app.phone() : "N/A"),
+            makeDetailItem("📅 Posté",  app.appliedAt() != null
+                    ? app.appliedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy")) : "N/A")
+        );
 
-        Label appliedDate = new Label("Applied: " + (app.appliedAt() != null
-                ? app.appliedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"))
-                : "N/A"));
-        appliedDate.setStyle("-fx-text-fill: #666; -fx-font-size: 12;");
+        // Status badge
+        Label currentStatus = new Label(translateStatus(app.currentStatus()));
+        currentStatus.setStyle("-fx-padding: 5 14; -fx-background-radius: 20; -fx-font-weight: 700; -fx-font-size: 12px; "
+                + getStatusBadgeStyle(app.currentStatus()));
 
-        Label currentStatus = new Label("Current Status: " + app.currentStatus());
-        currentStatus.setStyle("-fx-font-weight: bold; -fx-text-fill: #5BA3F5;");
-
-        headerBox.getChildren().addAll(candidateName, jobPosition, email, phone, appliedDate, currentStatus);
+        headerBox.getChildren().addAll(nameRow, infoGrid, currentStatus);
         detailContainer.getChildren().add(headerBox);
 
         if (role == UserContext.Role.RECRUITER && rankingActive) {

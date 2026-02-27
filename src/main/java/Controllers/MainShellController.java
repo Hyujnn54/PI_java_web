@@ -1,6 +1,5 @@
 package Controllers;
 
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -32,12 +31,6 @@ public class MainShellController {
 
     @FXML private Label lblUserName;
     @FXML private Label lblUserRole;
-
-    // Test / debug buttons (sidebar)
-    @FXML private Button btnTestEmail;
-    @FXML private Button btnTestSMS;
-    @FXML private Button btnTestReminders;
-    @FXML private Button btnDiagnostics;
 
     @FXML private StackPane contentArea;
 
@@ -134,70 +127,6 @@ public class MainShellController {
     }
 
     // -------------------------------------------------------------------------
-    // Test / Debug sidebar buttons
-    // -------------------------------------------------------------------------
-
-    @FXML
-    private void handleTestEmail() {
-        showInfo("Test Email", "Envoi en cours...",
-            "Un email de rappel est envoyé au candidat du premier entretien trouvé en BD.\nVérifiez la console.");
-        new Thread(() -> {
-            try {
-                Services.EmailService.sendTestFromDatabase();
-                Platform.runLater(() -> showInfo("Test Email", "Email dispatché",
-                    "Vérifiez la console pour confirmer."));
-            } catch (Exception e) {
-                Platform.runLater(() -> showError("Test Email échoué", e.getMessage()));
-            }
-        }, "TestEmailThread").start();
-    }
-
-    @FXML
-    private void handleTestSMS() {
-        showInfo("Test SMS", "Envoi en cours...",
-            "Un SMS est envoyé au candidat du premier entretien trouvé en BD.\nVérifiez la console.");
-        new Thread(() -> {
-            Services.SMSService.sendTestFromDatabase();
-            Platform.runLater(() -> showInfo("Test SMS", "Terminé",
-                "Vérifiez la console."));
-        }, "TestSMSThread").start();
-    }
-
-    @FXML
-    private void handleTestReminders() {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Forcer Rappels");
-        confirm.setHeaderText("Envoyer des rappels maintenant ?");
-        confirm.setContentText(
-            "Ceci va envoyer des rappels (email + SMS) pour TOUS les entretiens à venir.\n\n"
-            + "Scheduler actif : " + Services.InterviewReminderScheduler.isRunning() + "\n"
-            + "Rappels déjà envoyés cette session : "
-            + Services.InterviewReminderScheduler.getSentCount()
-        );
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                new Thread(() -> {
-                    Services.InterviewReminderScheduler.resetAllReminders();
-                    Services.InterviewReminderScheduler.runTestNow();
-                    Platform.runLater(() -> showInfo("Rappels envoyés", "Test terminé",
-                        "Vérifiez la console pour les logs détaillés."));
-                }, "ForceRemindersThread").start();
-            }
-        });
-    }
-
-    @FXML
-    private void handleDiagnostics() {
-        Services.InterviewReminderScheduler.printDiagnostics();
-        showInfo("Diagnostics Scheduler", "Statut du système de rappels",
-            "Scheduler actif : " + Services.InterviewReminderScheduler.isRunning() + "\n"
-            + "Rappels envoyés cette session : " + Services.InterviewReminderScheduler.getSentCount() + "\n\n"
-            + "Fenêtre de rappel : 20h - 26h avant l'entretien\n"
-            + "Intervalle de vérification : toutes les 5 minutes\n\n"
-            + "Le détail complet est affiché dans la console.");
-    }
-
-    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
@@ -220,17 +149,17 @@ public class MainShellController {
     private void highlightActiveButton(Button activeBtn) {
         resetButtonStyles();
         if (activeBtn == null) return;
-        activeBtn.getStyleClass().removeAll("sidebar-button");
-        activeBtn.getStyleClass().add("sidebar-button-active");
+        activeBtn.getStyleClass().removeAll("sidebar-nav-btn");
+        activeBtn.getStyleClass().add("sidebar-nav-btn-active");
     }
 
     private void resetButtonStyles() {
-        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers, btnDashboard};
+        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers, btnDashboard, btnFullscreenToggle};
         for (Button btn : navButtons) {
             if (btn == null) continue;
-            btn.getStyleClass().removeAll("sidebar-button-active");
-            if (!btn.getStyleClass().contains("sidebar-button"))
-                btn.getStyleClass().add("sidebar-button");
+            btn.getStyleClass().removeAll("sidebar-nav-btn-active");
+            if (!btn.getStyleClass().contains("sidebar-nav-btn"))
+                btn.getStyleClass().add("sidebar-nav-btn");
         }
     }
 
