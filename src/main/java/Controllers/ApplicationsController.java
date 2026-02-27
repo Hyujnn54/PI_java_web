@@ -248,7 +248,9 @@ public class ApplicationsController {
         selectedApplicationIds.clear();
 
         if (applications == null || applications.isEmpty()) {
-            Label empty = new Label(showBulkPanel ? "No applications found" : "No applications found matching your search");
+            Label empty = new Label(showBulkPanel
+                    ? "Aucune candidature trouvée."
+                    : "Aucune candidature ne correspond à votre recherche.");
             empty.setStyle("-fx-text-fill: #999; -fx-font-size: 14px; -fx-padding: 30;");
             candidateListContainer.getChildren().add(empty);
             return;
@@ -500,14 +502,14 @@ public class ApplicationsController {
 
     /** Translate status to French */
     private String translateStatus(String status) {
-        if (status == null) return "SOUMIS";
+        if (status == null) return "Soumise";
         return switch (status.toUpperCase()) {
-            case "SUBMITTED"   -> "Soumis";
+            case "SUBMITTED"   -> "Soumise";
             case "IN_REVIEW"   -> "En révision";
-            case "SHORTLISTED" -> "Présélectionné";
-            case "INTERVIEW"   -> "Entretien";
-            case "HIRED"       -> "Embauché";
-            case "REJECTED"    -> "Rejeté";
+            case "SHORTLISTED" -> "Présélectionné(e)";
+            case "INTERVIEW"   -> "Entretien planifié";
+            case "HIRED"       -> "Embauché(e)";
+            case "REJECTED"    -> "Rejetée";
             default -> status;
         };
     }
@@ -600,21 +602,19 @@ public class ApplicationsController {
             VBox aiBox = new VBox(6);
             aiBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 12; -fx-background-color: #f8f0ff;");
 
-            Label aiLabel = new Label("AI Ranking");
+            Label aiLabel = new Label("Classement IA");
             aiLabel.setStyle("-fx-font-weight: bold;");
 
             OllamaRankingService.RankResult rankResult = rankingCache.get(app.id());
             if (rankResult != null) {
-                Label scoreLabel = new Label("Score: " + rankResult.score() + "/100");
+                Label scoreLabel = new Label("Score : " + rankResult.score() + "/100");
                 scoreLabel.setStyle("-fx-text-fill: #6f42c1; -fx-font-weight: bold;");
-
                 Label rationaleLabel = new Label(rankResult.rationale());
                 rationaleLabel.setWrapText(true);
                 rationaleLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 12;");
-
                 aiBox.getChildren().addAll(aiLabel, scoreLabel, rationaleLabel);
             } else {
-                Label noRankLabel = new Label("Not ranked yet.");
+                Label noRankLabel = new Label("Pas encore classé.");
                 noRankLabel.setStyle("-fx-text-fill: #999;");
                 aiBox.getChildren().addAll(aiLabel, noRankLabel);
             }
@@ -630,7 +630,7 @@ public class ApplicationsController {
             HBox coverHeaderBox = new HBox(10);
             coverHeaderBox.setAlignment(Pos.CENTER_LEFT);
 
-            Label coverLabel = new Label("Cover Letter:");
+            Label coverLabel = new Label("Lettre de motivation :");
             coverLabel.setStyle("-fx-font-weight: bold;");
 
             coverHeaderBox.getChildren().add(coverLabel);
@@ -641,38 +641,45 @@ public class ApplicationsController {
             coverText.setPrefRowCount(5);
             coverText.setStyle("-fx-control-inner-background: #f8f9fa; -fx-text-fill: #333;");
 
-            // Translate + Original buttons only for ADMIN and RECRUITER
             if (role == UserContext.Role.ADMIN || role == UserContext.Role.RECRUITER) {
                 final String originalText = app.coverLetter();
 
-                Button btnTranslate = new Button("🌐 Translate");
+                Button btnTranslate = new Button("🌐 Traduire");
                 btnTranslate.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 4 10; -fx-cursor: hand; -fx-background-radius: 4;");
 
                 Button btnOriginal = new Button("🔄 Original");
                 btnOriginal.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 4 10; -fx-cursor: hand; -fx-background-radius: 4;");
-                btnOriginal.setDisable(true); // disabled until a translation is shown
+                btnOriginal.setDisable(true);
 
                 btnOriginal.setOnAction(e -> {
                     coverText.setText(originalText);
-                    coverLabel.setText("Cover Letter:");
+                    coverLabel.setText("Lettre de motivation :");
                     btnOriginal.setDisable(true);
                 });
 
                 btnTranslate.setOnAction(e -> {
-                    ChoiceDialog<String> dialog = new ChoiceDialog<>("French", "French", "English", "Arabic");
-                    dialog.setTitle("Translate Cover Letter");
-                    dialog.setHeaderText("Select target language");
-                    dialog.setContentText("Language:");
+                    ChoiceDialog<String> dialog = new ChoiceDialog<>("Français", "Français", "Anglais", "Arabe");
+                    dialog.setTitle("Traduire la lettre de motivation");
+                    dialog.setHeaderText("Sélectionnez la langue cible");
+                    dialog.setContentText("Langue :");
 
                     dialog.showAndWait().ifPresent(language -> {
-                        btnTranslate.setText("Translating...");
+                        btnTranslate.setText("Traduction...");
                         btnTranslate.setDisable(true);
                         btnOriginal.setDisable(true);
+
+                        // Map French display name to English for the API
+                        String apiLang = switch (language) {
+                            case "Français" -> "French";
+                            case "Anglais"  -> "English";
+                            case "Arabe"    -> "Arabic";
+                            default         -> language;
+                        };
 
                         javafx.concurrent.Task<String> task = new javafx.concurrent.Task<>() {
                             @Override
                             protected String call() {
-                                return GrokAIService.translateCoverLetter(originalText, language);
+                                return GrokAIService.translateCoverLetter(originalText, apiLang);
                             }
                         };
 
@@ -680,17 +687,18 @@ public class ApplicationsController {
                             String translated = task.getValue();
                             if (translated != null && !translated.isEmpty()) {
                                 coverText.setText(translated);
-                                coverLabel.setText("Cover Letter (" + language + "):");
+                                coverLabel.setText("Lettre de motivation (" + language + ") :");
                                 btnOriginal.setDisable(false);
                             }
-                            btnTranslate.setText("🌐 Translate");
+                            btnTranslate.setText("🌐 Traduire");
                             btnTranslate.setDisable(false);
                         });
 
                         task.setOnFailed(ev -> {
-                            btnTranslate.setText("🌐 Translate");
+                            btnTranslate.setText("🌐 Traduire");
                             btnTranslate.setDisable(false);
-                            Alert alert = new Alert(Alert.AlertType.ERROR, "Translation failed. Please try again.", ButtonType.OK);
+                            Alert alert = new Alert(Alert.AlertType.ERROR,
+                                    "La traduction a échoué. Veuillez réessayer.", ButtonType.OK);
                             alert.showAndWait();
                         });
 
@@ -711,13 +719,12 @@ public class ApplicationsController {
             cvBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15;");
 
             HBox cvLabelBox = new HBox(10);
-            Label cvLabel = new Label("CV Path: " + app.cvPath());
+            Label cvLabel = new Label("CV : " + app.cvPath());
             cvLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12;");
 
-            // Download button for recruiters and admins
             if (role == UserContext.Role.RECRUITER || role == UserContext.Role.ADMIN) {
-                Button btnDownload = new Button("Download CV");
-                btnDownload.setStyle("-fx-padding: 4 10; -fx-font-size: 11; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand;");
+                Button btnDownload = new Button("📥 Télécharger CV");
+                btnDownload.setStyle("-fx-padding: 4 10; -fx-font-size: 11; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 4;");
                 btnDownload.setOnAction(e -> downloadPDF(app));
                 cvLabelBox.getChildren().addAll(cvLabel, btnDownload);
             } else {
@@ -732,7 +739,7 @@ public class ApplicationsController {
         VBox historyBox = new VBox(8);
         historyBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15;");
 
-        Label historyLabel = new Label("Status History:");
+        Label historyLabel = new Label("Historique des statuts :");
         historyLabel.setStyle("-fx-font-weight: bold;");
         historyBox.getChildren().add(historyLabel);
 
@@ -740,7 +747,7 @@ public class ApplicationsController {
                 ApplicationStatusHistoryService.getByApplicationId(app.id());
 
         if (history.isEmpty()) {
-            Label noHistory = new Label("No history available");
+            Label noHistory = new Label("Aucun historique disponible.");
             noHistory.setStyle("-fx-text-fill: #999;");
             historyBox.getChildren().add(noHistory);
         } else {
@@ -748,24 +755,23 @@ public class ApplicationsController {
                 VBox historyItem = new VBox(3);
                 historyItem.setStyle("-fx-border-color: #dee2e6; -fx-border-radius: 3; -fx-padding: 8; -fx-background-color: white;");
 
-                Label statusLabel = new Label(record.status());
+                Label statusLabel = new Label(translateStatus(record.status()));
                 statusLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12;");
 
                 Label dateLabel = new Label(record.changedAt() != null
-                        ? record.changedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"))
+                        ? record.changedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
                         : "N/A");
                 dateLabel.setStyle("-fx-text-fill: #999; -fx-font-size: 11;");
 
                 historyItem.getChildren().addAll(statusLabel, dateLabel);
 
                 if (record.note() != null && !record.note().isEmpty()) {
-                    Label noteLabel = new Label("Note: " + record.note());
+                    Label noteLabel = new Label("Note : " + record.note());
                     noteLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 11; -fx-wrap-text: true;");
                     noteLabel.setWrapText(true);
                     historyItem.getChildren().add(noteLabel);
                 }
 
-                // Determine if current user can edit/delete this history record
                 boolean canEditHistory = false;
                 boolean canDeleteHistory = false;
 
@@ -777,11 +783,9 @@ public class ApplicationsController {
                         var offer = JobOfferService.getById(app.offerId());
                         if (offer != null && offer.recruiterId() != null && UserContext.getRecruiterId() != null
                                 && offer.recruiterId().equals(UserContext.getRecruiterId())) {
-                            canEditHistory = true; // recruiter owning the offer may edit history
+                            canEditHistory = true;
                         }
-                    } catch (Exception ignored) {
-                        // If any issue, default to not allowing edit
-                    }
+                    } catch (Exception ignored) {}
                 }
 
                 if (canEditHistory || canDeleteHistory) {
@@ -789,15 +793,15 @@ public class ApplicationsController {
                     adminButtonBox.setAlignment(Pos.CENTER_RIGHT);
 
                     if (canEditHistory) {
-                        Button btnEdit = new Button("Edit");
-                        btnEdit.setStyle("-fx-padding: 4 8; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
+                        Button btnEdit = new Button("✏ Modifier");
+                        btnEdit.setStyle("-fx-padding: 4 8; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 4;");
                         btnEdit.setOnAction(e -> editStatusHistory(record));
                         adminButtonBox.getChildren().add(btnEdit);
                     }
 
                     if (canDeleteHistory) {
-                        Button btnDelete = new Button("Delete");
-                        btnDelete.setStyle("-fx-padding: 4 8; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
+                        Button btnDelete = new Button("🗑 Supprimer");
+                        btnDelete.setStyle("-fx-padding: 4 8; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 4;");
                         btnDelete.setOnAction(e -> deleteStatusHistory(record, app));
                         adminButtonBox.getChildren().add(btnDelete);
                     }
@@ -816,26 +820,25 @@ public class ApplicationsController {
         VBox actionsBox = new VBox(10);
         actionsBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15; -fx-background-color: #f8f9fa;");
 
-        Label actionsLabel = new Label("Actions:");
+        Label actionsLabel = new Label("Actions :");
         actionsLabel.setStyle("-fx-font-weight: bold;");
         actionsBox.getChildren().add(actionsLabel);
 
         if (role == UserContext.Role.CANDIDATE) {
             HBox buttonBox = new HBox(10);
 
-            Button btnEdit = new Button("Edit");
-            btnEdit.setStyle("-fx-padding: 6 12; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
+            Button btnEdit = new Button("✏ Modifier");
+            btnEdit.setStyle("-fx-padding: 6 12; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 6;");
             btnEdit.setOnAction(e -> showEditApplicationDialog(app));
 
-            // Only enable edit if status is SUBMITTED
             boolean canEdit = "SUBMITTED".equals(app.currentStatus());
             btnEdit.setDisable(!canEdit);
             if (!canEdit) {
-                btnEdit.setStyle("-fx-padding: 6 12; -fx-background-color: #ccc; -fx-text-fill: #666; -fx-cursor: not-allowed;");
+                btnEdit.setStyle("-fx-padding: 6 12; -fx-background-color: #ccc; -fx-text-fill: #666; -fx-cursor: not-allowed; -fx-background-radius: 6;");
             }
 
-            Button btnDelete = new Button("Delete");
-            btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
+            Button btnDelete = new Button("🗑 Supprimer");
+            btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 6;");
             btnDelete.setOnAction(e -> deleteApplication(app));
 
             buttonBox.getChildren().addAll(btnEdit, btnDelete);
@@ -844,62 +847,86 @@ public class ApplicationsController {
         } else if (role == UserContext.Role.RECRUITER) {
             VBox statusUpdateBox = new VBox(8);
 
-            Label statusLabel = new Label("Change Status:");
+            Label statusLabel = new Label("Changer le statut :");
             statusLabel.setStyle("-fx-font-weight: bold;");
 
             ComboBox<String> statusCombo = new ComboBox<>();
             statusCombo.getItems().addAll("SUBMITTED", "IN_REVIEW", "SHORTLISTED", "REJECTED", "INTERVIEW", "HIRED");
             statusCombo.setValue(app.currentStatus());
             statusCombo.setPrefWidth(250);
+            // Show French labels in the ComboBox
+            statusCombo.setButtonCell(new javafx.scene.control.ListCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : translateStatus(item));
+                }
+            });
+            statusCombo.setCellFactory(lv -> new javafx.scene.control.ListCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : translateStatus(item));
+                }
+            });
 
             TextArea noteArea = new TextArea();
-            noteArea.setPromptText("Add note (optional)");
+            noteArea.setPromptText("Ajouter une note (optionnel)");
             noteArea.setPrefRowCount(3);
             noteArea.setWrapText(true);
 
-            Button btnUpdate = new Button("Update Status");
-            btnUpdate.setStyle("-fx-padding: 6 12; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand;");
+            Button btnUpdate = new Button("✔ Mettre à jour");
+            btnUpdate.setStyle("-fx-padding: 8 16; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 6; -fx-font-weight: 600;");
             btnUpdate.setOnAction(e -> updateApplicationStatus(app, statusCombo.getValue(), noteArea.getText()));
 
             // Quick Action Buttons
             HBox quickActionsBox = new HBox(10);
-            quickActionsBox.setStyle("-fx-padding: 10 0; -fx-border-top: 1px solid #ddd; -fx-padding: 10;");
+            quickActionsBox.setStyle("-fx-padding: 10 0;");
 
-            Button btnInReview = new Button("📋 In Review");
-            btnInReview.setStyle("-fx-padding: 8 15; -fx-background-color: #17a2b8; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+            Button btnInReview = new Button("📋 En révision");
+            btnInReview.setStyle("-fx-padding: 8 15; -fx-background-color: #17a2b8; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-background-radius: 6;");
             btnInReview.setOnAction(e -> startReviewApplication(app));
 
-            Button btnAccept = new Button("✓ Accept (Shortlist)");
-            btnAccept.setStyle("-fx-padding: 8 15; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+            Button btnAccept = new Button("✓ Présélectionner");
+            btnAccept.setStyle("-fx-padding: 8 15; -fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-background-radius: 6;");
             btnAccept.setOnAction(e -> acceptApplication(app));
 
-            Button btnReject = new Button("✕ Reject");
-            btnReject.setStyle("-fx-padding: 8 15; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+            Button btnReject = new Button("✕ Rejeter");
+            btnReject.setStyle("-fx-padding: 8 15; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-background-radius: 6;");
             btnReject.setOnAction(e -> rejectApplication(app));
 
-            Button btnSchedule = new Button("📅 Schedule Interview");
-            btnSchedule.setStyle("-fx-padding: 8 15; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
-            btnSchedule.setOnAction(e -> showInterviewScheduleDialog(app));
+            // Schedule button — show "Déjà planifié" if interview already scheduled
+            boolean alreadyScheduled = "INTERVIEW".equals(app.currentStatus()) || "HIRED".equals(app.currentStatus());
+            Button btnSchedule;
+            if (alreadyScheduled) {
+                btnSchedule = new Button("✅ Déjà planifié");
+                btnSchedule.setStyle("-fx-padding: 8 15; -fx-background-color: #e9ecef; -fx-text-fill: #6c757d; -fx-cursor: default; -fx-font-weight: bold; -fx-background-radius: 6;");
+                btnSchedule.setDisable(true);
+                Tooltip tip = new Tooltip("Un entretien a déjà été planifié pour ce candidat.");
+                Tooltip.install(btnSchedule, tip);
+            } else {
+                btnSchedule = new Button("📅 Planifier Entretien");
+                btnSchedule.setStyle("-fx-padding: 8 15; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-background-radius: 6;");
+                btnSchedule.setOnAction(e -> showInterviewScheduleDialog(app));
+            }
 
             quickActionsBox.getChildren().addAll(btnInReview, btnAccept, btnReject, btnSchedule);
 
-            statusUpdateBox.getChildren().addAll(statusLabel, statusCombo, new Label("Note:"), noteArea, btnUpdate, quickActionsBox);
+            statusUpdateBox.getChildren().addAll(statusLabel, statusCombo, new Label("Note :"), noteArea, btnUpdate, quickActionsBox);
             actionsBox.getChildren().add(statusUpdateBox);
+
         } else if (role == UserContext.Role.ADMIN) {
             HBox buttonBox = new HBox(10);
 
-            Button btnDelete = new Button("Delete");
-            btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand;");
+            Button btnDelete = new Button("🗑 Supprimer");
+            btnDelete.setStyle("-fx-padding: 6 12; -fx-background-color: #dc3545; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 6;");
             btnDelete.setOnAction(e -> deleteApplication(app));
 
-            // Archive / Unarchive button
-            Button btnArchive = new Button(app.isArchived() ? "Unarchive" : "Archive");
-            btnArchive.setStyle("-fx-padding: 6 12; -fx-background-color: #6c757d; -fx-text-fill: white; -fx-cursor: hand;");
+            Button btnArchive = new Button(app.isArchived() ? "📤 Désarchiver" : "📥 Archiver");
+            btnArchive.setStyle("-fx-padding: 6 12; -fx-background-color: #6c757d; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 6;");
             btnArchive.setOnAction(e -> {
                 boolean toArchive = !app.isArchived();
                 ApplicationService.setArchived(app.id(), toArchive, UserContext.getAdminId());
                 loadApplications();
-                showAlert("Success", toArchive ? "Application archived." : "Application unarchived.", Alert.AlertType.INFORMATION);
+                showAlert("Succès", toArchive ? "Candidature archivée." : "Candidature désarchivée.", Alert.AlertType.INFORMATION);
             });
 
             buttonBox.getChildren().addAll(btnArchive, btnDelete);
@@ -911,8 +938,8 @@ public class ApplicationsController {
 
     private void showEditApplicationDialog(ApplicationService.ApplicationRow app) {
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Edit Application");
-        dialog.setHeaderText("Edit Application #" + app.id());
+        dialog.setTitle("Modifier la Candidature");
+        dialog.setHeaderText("Candidature #" + app.id());
 
         ScrollPane scrollPane = new ScrollPane();
         VBox content = new VBox(15);
@@ -922,20 +949,20 @@ public class ApplicationsController {
         scrollPane.setFitToWidth(true);
 
         // Phone field with country selection
-        Label phoneLabel = new Label("Phone Number *");
+        Label phoneLabel = new Label("Numéro de téléphone *");
         phoneLabel.setStyle("-fx-font-weight: bold;");
 
         HBox phoneContainer = new HBox(10);
         phoneContainer.setAlignment(Pos.CENTER_LEFT);
 
         ComboBox<String> countryCombo = new ComboBox<>();
-        countryCombo.getItems().addAll("Tunisia (+216)", "France (+33)");
-        countryCombo.setValue("Tunisia (+216)");
+        countryCombo.getItems().addAll("Tunisie (+216)", "France (+33)");
+        countryCombo.setValue("Tunisie (+216)");
         countryCombo.setPrefWidth(150);
         countryCombo.setStyle("-fx-font-size: 13px;");
 
         TextField phoneField = new TextField(app.phone() != null ? app.phone() : "");
-        phoneField.setPromptText("Enter your phone number");
+        phoneField.setPromptText("Entrez votre numéro de téléphone");
         phoneField.setPrefWidth(250);
 
         Label phoneErrorLabel = new Label();
@@ -945,11 +972,11 @@ public class ApplicationsController {
         phoneContainer.getChildren().addAll(countryCombo, phoneField);
 
         // Cover Letter field
-        Label letterLabel = new Label("Cover Letter * (50-2000 characters)");
+        Label letterLabel = new Label("Lettre de motivation * (50-2000 caractères)");
         letterLabel.setStyle("-fx-font-weight: bold;");
 
         TextArea letterArea = new TextArea(app.coverLetter() != null ? app.coverLetter() : "");
-        letterArea.setPromptText("Tell us why you're interested in this position...");
+        letterArea.setPromptText("Expliquez pourquoi vous êtes intéressé(e) par ce poste...");
         letterArea.setPrefRowCount(8);
         letterArea.setWrapText(true);
         letterArea.setStyle("-fx-font-size: 13px;");
@@ -980,23 +1007,24 @@ public class ApplicationsController {
         letterBox.getChildren().addAll(letterLabel, letterArea, letterCharCount);
 
         // CV/PDF file selection
-        Label pdfLabel = new Label("Upload CV (PDF) - Optional");
+        Label pdfLabel = new Label("Télécharger CV (PDF) - Optionnel");
         pdfLabel.setStyle("-fx-font-weight: bold;");
 
         HBox cvBox = new HBox(10);
         cvBox.setAlignment(Pos.CENTER_LEFT);
         TextField cvPathField = new TextField();
-        cvPathField.setPromptText(app.cvPath() != null && !app.cvPath().isEmpty() ? "Current: " + app.cvPath() : "No file selected");
+        cvPathField.setPromptText(app.cvPath() != null && !app.cvPath().isEmpty()
+                ? "Actuel : " + app.cvPath() : "Aucun fichier sélectionné");
         cvPathField.setEditable(false);
         cvPathField.setPrefWidth(280);
 
-        Button btnBrowseCV = new Button("Browse");
-        btnBrowseCV.setStyle("-fx-padding: 6 12; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
+        Button btnBrowseCV = new Button("📂 Parcourir");
+        btnBrowseCV.setStyle("-fx-padding: 6 12; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 6;");
         btnBrowseCV.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Select PDF File");
+            fileChooser.setTitle("Sélectionner un fichier PDF");
             fileChooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+                    new FileChooser.ExtensionFilter("Fichiers PDF", "*.pdf")
             );
             java.io.File selectedFile = fileChooser.showOpenDialog(null);
             if (selectedFile != null) {
@@ -1006,8 +1034,8 @@ public class ApplicationsController {
 
         cvBox.getChildren().addAll(cvPathField, btnBrowseCV);
 
-        Button btnGenerateLetter = new Button("🤖 Generate with AI");
-        btnGenerateLetter.setStyle("-fx-padding: 6 12; -fx-background-color: #6f42c1; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+        Button btnGenerateLetter = new Button("🤖 Générer avec l'IA");
+        btnGenerateLetter.setStyle("-fx-padding: 6 12; -fx-background-color: #6f42c1; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-background-radius: 6;");
         btnGenerateLetter.setOnAction(e -> generateCoverLetterForEdit(app, letterArea, cvPathField));
 
         HBox generateRow = new HBox(btnGenerateLetter);
@@ -1016,18 +1044,14 @@ public class ApplicationsController {
         // Add validation on input change for real-time feedback
         phoneField.textProperty().addListener((obs, oldVal, newVal) -> {
             String country = countryCombo.getValue();
-            boolean isValid = false;
-            if ("Tunisia (+216)".equals(country)) {
-                isValid = ValidationUtils.isValidTunisianPhone(newVal);
-            } else if ("France (+33)".equals(country)) {
-                isValid = ValidationUtils.isValidFrenchPhone(newVal);
-            }
-
+            boolean isValid = "Tunisie (+216)".equals(country)
+                    ? ValidationUtils.isValidTunisianPhone(newVal)
+                    : ValidationUtils.isValidFrenchPhone(newVal);
             if (newVal.isEmpty()) {
                 phoneErrorLabel.setVisible(false);
             } else if (!isValid) {
                 phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
-                        "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                        "Tunisie (+216)".equals(country) ? "TN" : "FR", newVal));
                 phoneErrorLabel.setVisible(true);
             } else {
                 phoneErrorLabel.setVisible(false);
@@ -1035,21 +1059,16 @@ public class ApplicationsController {
         });
 
         countryCombo.setOnAction(e -> {
-            // Re-validate on country change
             String newVal = phoneField.getText();
             String country = countryCombo.getValue();
-            boolean isValid = false;
-            if ("Tunisia (+216)".equals(country)) {
-                isValid = ValidationUtils.isValidTunisianPhone(newVal);
-            } else if ("France (+33)".equals(country)) {
-                isValid = ValidationUtils.isValidFrenchPhone(newVal);
-            }
-
+            boolean isValid = "Tunisie (+216)".equals(country)
+                    ? ValidationUtils.isValidTunisianPhone(newVal)
+                    : ValidationUtils.isValidFrenchPhone(newVal);
             if (newVal.isEmpty()) {
                 phoneErrorLabel.setVisible(false);
             } else if (!isValid) {
                 phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
-                        "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                        "Tunisie (+216)".equals(country) ? "TN" : "FR", newVal));
                 phoneErrorLabel.setVisible(true);
             } else {
                 phoneErrorLabel.setVisible(false);
@@ -1072,24 +1091,20 @@ public class ApplicationsController {
                 String coverLetter = letterArea.getText();
                 String cvPath = cvPathField.getText();
 
-                // Validate phone based on selected country
-                boolean phoneValid = false;
-                if ("Tunisia (+216)".equals(country)) {
-                    phoneValid = ValidationUtils.isValidTunisianPhone(phone);
-                } else if ("France (+33)".equals(country)) {
-                    phoneValid = ValidationUtils.isValidFrenchPhone(phone);
-                }
+                boolean phoneValid = "Tunisie (+216)".equals(country)
+                        ? ValidationUtils.isValidTunisianPhone(phone)
+                        : ValidationUtils.isValidFrenchPhone(phone);
 
                 if (!phoneValid) {
-                    showAlert("Validation Error",
+                    showAlert("Erreur de validation",
                             ValidationUtils.getPhoneErrorMessage(
-                                    "Tunisia (+216)".equals(country) ? "TN" : "FR", phone),
+                                    "Tunisie (+216)".equals(country) ? "TN" : "FR", phone),
                             Alert.AlertType.ERROR);
                     return;
                 }
 
                 if (!ValidationUtils.isValidCoverLetter(coverLetter)) {
-                    showAlert("Validation Error",
+                    showAlert("Erreur de validation",
                             ValidationUtils.getCoverLetterErrorMessage(coverLetter),
                             Alert.AlertType.ERROR);
                     return;
@@ -1278,83 +1293,74 @@ public class ApplicationsController {
     private void updateApplicationStatus(ApplicationService.ApplicationRow app, String newStatus, String note) {
         try {
             Long recruiterId = UserContext.getRecruiterId();
-
-            // Generate automatic note if empty
-            String finalNote = note;
-            if (note == null || note.trim().isEmpty()) {
-                finalNote = generateStatusChangeNote(app.currentStatus(), newStatus);
-            }
-
+            String finalNote = (note == null || note.trim().isEmpty())
+                    ? generateStatusChangeNote(app.currentStatus(), newStatus) : note;
             ApplicationService.updateStatus(app.id(), newStatus, recruiterId, finalNote);
             loadApplications();
-            showAlert("Success", "Status updated to: " + newStatus + "\nNote: " + finalNote, Alert.AlertType.INFORMATION);
+            showAlert("Succès", "Statut mis à jour : " + translateStatus(newStatus), Alert.AlertType.INFORMATION);
         } catch (Exception e) {
-            showAlert("Error", "Failed to update status: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec de la mise à jour du statut : " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
     private String generateStatusChangeNote(String oldStatus, String newStatus) {
         return switch (newStatus) {
-            case "SUBMITTED" -> "Application re-submitted for review";
-            case "IN_REVIEW" -> "Recruiter is now reviewing this application";
-            case "SHORTLISTED" -> "Candidate has been shortlisted";
-            case "REJECTED" -> "Application has been rejected";
-            case "INTERVIEW" -> "Candidate is scheduled for interview";
-            case "HIRED" -> "Candidate has been hired";
-            default -> "Status updated to " + newStatus;
+            case "SUBMITTED"   -> "Candidature soumise à nouveau pour examen";
+            case "IN_REVIEW"   -> "Le recruteur examine cette candidature";
+            case "SHORTLISTED" -> "Le candidat a été présélectionné";
+            case "REJECTED"    -> "La candidature a été rejetée";
+            case "INTERVIEW"   -> "Le candidat est convoqué à un entretien";
+            case "HIRED"       -> "Le candidat a été embauché";
+            default            -> "Statut mis à jour : " + newStatus;
         };
     }
 
     private void acceptApplication(ApplicationService.ApplicationRow app) {
         try {
             Long recruiterId = UserContext.getRecruiterId();
-            String note = "Recruiter likes this profile and has shortlisted the candidate";
-
+            String note = "Le recruteur apprécie ce profil et a présélectionné le candidat";
             ApplicationService.updateStatus(app.id(), "SHORTLISTED", recruiterId, note);
             loadApplications();
-            showAlert("Success", "Application accepted!\n\nCandidate has been shortlisted", Alert.AlertType.INFORMATION);
+            showAlert("Succès", "Candidature acceptée !\nLe candidat a été présélectionné.", Alert.AlertType.INFORMATION);
         } catch (Exception e) {
-            showAlert("Error", "Failed to accept application: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec de l'acceptation : " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
     private void startReviewApplication(ApplicationService.ApplicationRow app) {
         try {
             Long recruiterId = UserContext.getRecruiterId();
-            String note = "Recruiter has started reviewing this application";
-
+            String note = "Le recruteur a commencé l'examen de cette candidature";
             ApplicationService.updateStatus(app.id(), "IN_REVIEW", recruiterId, note);
             loadApplications();
-            showAlert("Success", "Application status changed to In Review", Alert.AlertType.INFORMATION);
+            showAlert("Succès", "Statut passé en révision.", Alert.AlertType.INFORMATION);
         } catch (Exception e) {
-            showAlert("Error", "Failed to change status: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec du changement de statut : " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
     private void rejectApplication(ApplicationService.ApplicationRow app) {
         try {
             Long recruiterId = UserContext.getRecruiterId();
-            String note = "Recruiter has reviewed the profile and decided not to proceed";
-
+            String note = "Le recruteur a examiné le profil et décidé de ne pas poursuivre";
             ApplicationService.updateStatus(app.id(), "REJECTED", recruiterId, note);
             loadApplications();
-            showAlert("Success", "Application rejected", Alert.AlertType.INFORMATION);
+            showAlert("Succès", "Candidature rejetée.", Alert.AlertType.INFORMATION);
         } catch (Exception e) {
-            showAlert("Error", "Failed to reject application: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec du rejet de la candidature : " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
     private void deleteApplication(ApplicationService.ApplicationRow app) {
         Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmation.setTitle("Delete Application");
-        confirmation.setHeaderText("Are you sure?");
-        confirmation.setContentText("This action cannot be undone.");
-
+        confirmation.setTitle("Supprimer la candidature");
+        confirmation.setHeaderText("Êtes-vous sûr ?");
+        confirmation.setContentText("Cette action est irréversible.");
         confirmation.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
                 ApplicationService.delete(app.id());
                 loadApplications();
-                showAlert("Success", "Application deleted!", Alert.AlertType.INFORMATION);
+                showAlert("Succès", "Candidature supprimée.", Alert.AlertType.INFORMATION);
             }
         });
     }
@@ -1370,48 +1376,53 @@ public class ApplicationsController {
     private void downloadPDF(ApplicationService.ApplicationRow app) {
         try {
             java.io.File pdfFile = ApplicationService.downloadPDF(app.id());
-
-            // Open file with default PDF viewer
             if (javafx.application.HostServices.class != null) {
                 Desktop.getDesktop().open(pdfFile);
-                showAlert("Success", "Opening PDF file...", Alert.AlertType.INFORMATION);
+                showAlert("Succès", "Ouverture du fichier PDF...", Alert.AlertType.INFORMATION);
             }
         } catch (Exception e) {
-            showAlert("Error", "Could not download PDF: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Impossible d'ouvrir le PDF : " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
     }
 
     private void editStatusHistory(ApplicationStatusHistoryService.StatusHistoryRow record) {
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Edit Status History");
-        dialog.setHeaderText("Edit Status History Entry #" + record.id());
+        dialog.setTitle("Modifier l'historique");
+        dialog.setHeaderText("Entrée #" + record.id());
 
         VBox content = new VBox(15);
         content.setPadding(new Insets(20));
 
-        // Status field (editable for admin)
-        Label statusLabel = new Label("Status:");
+        Label statusLabel = new Label("Statut :");
         statusLabel.setStyle("-fx-font-weight: bold;");
 
         ComboBox<String> statusCombo = new ComboBox<>();
         statusCombo.getItems().addAll("SUBMITTED", "IN_REVIEW", "SHORTLISTED", "REJECTED", "INTERVIEW", "HIRED");
         statusCombo.setValue(record.status() != null ? record.status() : "SUBMITTED");
         statusCombo.setPrefWidth(240);
+        statusCombo.setButtonCell(new javafx.scene.control.ListCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty); setText(empty || item == null ? null : translateStatus(item));
+            }
+        });
+        statusCombo.setCellFactory(lv -> new javafx.scene.control.ListCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty); setText(empty || item == null ? null : translateStatus(item));
+            }
+        });
 
-        // Date field (read-only)
-        Label dateLabel = new Label("Changed At:");
+        Label dateLabel = new Label("Modifié le :");
         dateLabel.setStyle("-fx-font-weight: bold;");
         TextField dateField = new TextField(record.changedAt() != null ?
-                record.changedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")) : "N/A");
+                record.changedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "N/A");
         dateField.setEditable(false);
         dateField.setStyle("-fx-opacity: 0.7;");
 
-        // Note field (editable) with validation
-        Label noteLabel = new Label("Note * (Min 5 - Max 255 characters)");
+        Label noteLabel = new Label("Note * (5-255 caractères)");
         noteLabel.setStyle("-fx-font-weight: bold;");
         TextArea noteArea = new TextArea(record.note() != null ? record.note() : "");
-        noteArea.setPromptText("Edit note... (min 5, max 255 characters)");
+        noteArea.setPromptText("Modifier la note... (min 5, max 255 caractères)");
         noteArea.setPrefRowCount(6);
         noteArea.setWrapText(true);
         noteArea.setStyle("-fx-font-size: 13px;");
@@ -1470,19 +1481,17 @@ public class ApplicationsController {
 
                 // Validate note before saving
                 if (!ValidationUtils.isValidNote(noteText)) {
-                    showAlert("Validation Error",
+                    showAlert("Erreur de validation",
                             ValidationUtils.getNoteErrorMessage(noteText),
                             Alert.AlertType.ERROR);
                     return;
                 }
-
                 try {
-                    // Use the new service method to update both status and note (which also syncs application current_status)
                     ApplicationStatusHistoryService.updateStatusHistory(record.id(), selectedStatus, noteText);
                     loadApplications();
-                    showAlert("Success", "Status history updated!", Alert.AlertType.INFORMATION);
+                    showAlert("Succès", "Historique mis à jour.", Alert.AlertType.INFORMATION);
                 } catch (Exception e) {
-                    showAlert("Error", "Failed to update status history: " + e.getMessage(), Alert.AlertType.ERROR);
+                    showAlert("Erreur", "Échec de la mise à jour : " + e.getMessage(), Alert.AlertType.ERROR);
                     e.printStackTrace();
                 }
             }
@@ -1491,18 +1500,17 @@ public class ApplicationsController {
 
     private void deleteStatusHistory(ApplicationStatusHistoryService.StatusHistoryRow record, ApplicationService.ApplicationRow app) {
         Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmation.setTitle("Delete Status History");
-        confirmation.setHeaderText("Are you sure?");
-        confirmation.setContentText("Delete this status history entry?\nThis action cannot be undone.");
-
+        confirmation.setTitle("Supprimer l'entrée");
+        confirmation.setHeaderText("Êtes-vous sûr ?");
+        confirmation.setContentText("Supprimer cette entrée de l'historique ?\nCette action est irréversible.");
         confirmation.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
                 try {
                     ApplicationStatusHistoryService.deleteStatusHistory(record.id());
                     loadApplications();
-                    showAlert("Success", "Status history entry deleted!", Alert.AlertType.INFORMATION);
+                    showAlert("Succès", "Entrée supprimée.", Alert.AlertType.INFORMATION);
                 } catch (Exception e) {
-                    showAlert("Error", "Failed to delete status history: " + e.getMessage(), Alert.AlertType.ERROR);
+                    showAlert("Erreur", "Échec de la suppression : " + e.getMessage(), Alert.AlertType.ERROR);
                     e.printStackTrace();
                 }
             }
@@ -1512,19 +1520,15 @@ public class ApplicationsController {
     private void bulkUpdateStatus(List<Long> applicationIds, String newStatus, String note) {
         try {
             Long recruiterId = UserContext.getRecruiterId();
-
-            // Generate automatic note if empty
-            String finalNote = note;
-            if (note == null || note.trim().isEmpty()) {
-                finalNote = generateStatusChangeNote("MULTIPLE", newStatus);
-            }
-
+            String finalNote = (note == null || note.trim().isEmpty())
+                    ? generateStatusChangeNote("MULTIPLE", newStatus) : note;
             ApplicationService.bulkUpdateStatus(applicationIds, newStatus, recruiterId, finalNote);
             selectedApplicationIds.clear();
             loadApplications();
-            showAlert("Success", "Updated " + applicationIds.size() + " application(s) to: " + newStatus, Alert.AlertType.INFORMATION);
+            showAlert("Succès", applicationIds.size() + " candidature(s) mise(s) à jour : "
+                    + translateStatus(newStatus), Alert.AlertType.INFORMATION);
         } catch (Exception e) {
-            showAlert("Error", "Failed to update statuses: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec de la mise à jour groupée : " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
@@ -1632,8 +1636,37 @@ public class ApplicationsController {
         VBox content = new VBox(14);
         content.setPadding(new Insets(20));
 
-        DatePicker datePicker = new DatePicker(java.time.LocalDate.now().plusDays(7));
+        // DatePicker — default tomorrow, block past dates
+        DatePicker datePicker = new DatePicker(java.time.LocalDate.now().plusDays(1));
+        datePicker.setDayCellFactory(picker -> new DateCell() {
+            @Override
+            public void updateItem(java.time.LocalDate item, boolean empty) {
+                super.updateItem(item, empty);
+                // Disable days strictly before today
+                if (item.isBefore(java.time.LocalDate.now())) {
+                    setDisable(true);
+                    setStyle("-fx-background-color: #f8d7da;");
+                }
+            }
+        });
+        datePicker.setEditable(false);
+        datePicker.setPrefWidth(350);
+
+        // Time field with hint label
+        VBox timeBox = new VBox(4);
         TextField timeField = new TextField("14:00");
+        timeField.setPrefWidth(350);
+        Label timeHint = new Label("Format: HH:mm  (ex: 09:30, 14:00, 16:45)");
+        timeHint.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d;");
+        // Live format feedback — accept H:mm or HH:mm
+        timeField.textProperty().addListener((obs, old, val) -> {
+            boolean valid = parseTime(val) != null;
+            timeField.setStyle(valid
+                    ? "-fx-border-color: #28a745; -fx-border-radius: 4;"
+                    : "-fx-border-color: #dc3545; -fx-border-radius: 4;");
+        });
+        timeBox.getChildren().addAll(timeField, timeHint);
+
         TextField durationField = new TextField("60");
         ComboBox<String> modeCombo = new ComboBox<>();
         modeCombo.getItems().addAll("ONLINE", "ON_SITE");
@@ -1643,19 +1676,27 @@ public class ApplicationsController {
         TextField linkField = new TextField();
         linkField.setEditable(false);
         linkField.setStyle("-fx-background-color: #f8f9fa;");
-        linkField.setPromptText("Click Génerer to auto-generate...");
-        Button genBtn = new Button("Générer");
-        genBtn.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 4;");
+        linkField.setPromptText("Cliquez 'Générer' pour créer un lien automatique...");
+        Button genBtn = new Button("🔗 Générer");
+        genBtn.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 6; -fx-padding: 8 14;");
         genBtn.setOnAction(ev -> {
             try {
-                LocalDateTime dt = LocalDateTime.of(datePicker.getValue(),
-                        java.time.LocalTime.parse(timeField.getText()));
+                if (datePicker.getValue() == null) {
+                    showAlert("Erreur", "Veuillez d'abord sélectionner une date.", Alert.AlertType.WARNING);
+                    return;
+                }
+                java.time.LocalTime parsedTime = parseTime(timeField.getText());
+                if (parsedTime == null) {
+                    showAlert("Erreur", "Format d'heure invalide. Utilisez HH:mm (ex: 14:00).", Alert.AlertType.WARNING);
+                    return;
+                }
+                LocalDateTime dt = LocalDateTime.of(datePicker.getValue(), parsedTime);
                 int dur = 60;
-                try { dur = Integer.parseInt(durationField.getText()); } catch (Exception ignored) {}
+                try { dur = Integer.parseInt(durationField.getText().trim()); } catch (Exception ignored) {}
                 linkField.setText(MeetingService.generateMeetingLink(app.id(), dt, dur));
                 linkField.setStyle("-fx-background-color: #d4edda;");
             } catch (Exception ex) {
-                showAlert("Erreur", "Date/heure invalide.", Alert.AlertType.WARNING);
+                showAlert("Erreur", "Impossible de générer le lien: " + ex.getMessage(), Alert.AlertType.WARNING);
             }
         });
         HBox linkRow = new HBox(10, linkField, genBtn);
@@ -1669,56 +1710,65 @@ public class ApplicationsController {
         notesArea.setPromptText("Notes supplémentaires...");
         notesArea.setPrefRowCount(3);
 
-        VBox linkBox     = buildFieldBox("Lien de réunion (ONLINE)", linkRow);
-        VBox locationBox = buildFieldBox("Lieu (ON_SITE)", locationField);
+        VBox linkBox     = buildFieldBox("🔗 Lien de réunion (ONLINE)", linkRow);
+        VBox locationBox = buildFieldBox("📍 Lieu (ON_SITE)", locationField);
 
         Runnable toggleMode = () -> {
             boolean online = "ONLINE".equals(modeCombo.getValue());
-            linkBox.setVisible(online);     linkBox.setManaged(online);
+            linkBox.setVisible(online);      linkBox.setManaged(online);
             locationBox.setVisible(!online); locationBox.setManaged(!online);
         };
         modeCombo.valueProperty().addListener((o, ov, nv) -> toggleMode.run());
         toggleMode.run();
 
+        // Validation hint label
+        Label validationHint = new Label("");
+        validationHint.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: 600;");
+        validationHint.setWrapText(true);
+
         content.getChildren().addAll(
-                buildFieldBox("Date *", datePicker),
-                buildFieldBox("Heure (HH:mm) *", timeField),
-                buildFieldBox("Durée (minutes) *", durationField),
-                buildFieldBox("Mode *", modeCombo),
+                buildFieldBox("📅 Date *", datePicker),
+                buildFieldBox("🕐 Heure *", timeBox),
+                buildFieldBox("⏱ Durée (minutes) *", durationField),
+                buildFieldBox("🎯 Mode *", modeCombo),
                 linkBox, locationBox,
-                buildFieldBox("Notes", notesArea)
+                buildFieldBox("📝 Notes", notesArea),
+                validationHint
         );
 
         ScrollPane scroll = new ScrollPane(content);
         scroll.setFitToWidth(true);
-        scroll.setPrefHeight(440);
+        scroll.setPrefHeight(480);
+        scroll.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
         dialog.getDialogPane().setContent(scroll);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.getDialogPane().setPrefWidth(480);
 
         Button okBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-        okBtn.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: bold;");
+        okBtn.setText("✔ Planifier");
+        okBtn.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6;");
+
+        // Prevent dialog from closing on invalid input
+        okBtn.addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
+            String error = validateScheduleForm(
+                    datePicker, timeField, durationField, modeCombo, linkField, locationField);
+            if (error != null) {
+                validationHint.setText("⚠ " + error);
+                event.consume(); // don't close dialog
+            }
+        });
 
         dialog.showAndWait().ifPresent(result -> {
             if (result != ButtonType.OK) return;
             try {
-                if (datePicker.getValue() == null)
-                    throw new Exception("Veuillez sélectionner une date.");
-                LocalDateTime scheduledAt = LocalDateTime.of(
-                        datePicker.getValue(),
-                        java.time.LocalTime.parse(timeField.getText()));
-                if (scheduledAt.isBefore(LocalDateTime.now()))
-                    throw new Exception("La date doit être dans le futur.");
-                int duration = Integer.parseInt(durationField.getText());
-                if (duration <= 0) throw new Exception("La durée doit être positive.");
+                java.time.LocalTime parsedTime = parseTime(timeField.getText());
+                if (parsedTime == null) throw new Exception("Heure invalide.");
+                LocalDateTime scheduledAt = LocalDateTime.of(datePicker.getValue(), parsedTime);
+                int duration = Integer.parseInt(durationField.getText().trim());
                 String mode = modeCombo.getValue();
 
-                if ("ONLINE".equals(mode)) {
-                    if (linkField.getText() == null || linkField.getText().isBlank())
-                        linkField.setText(MeetingService.generateMeetingLink(app.id(), scheduledAt, duration));
-                } else {
-                    if (locationField.getText() == null || locationField.getText().isBlank())
-                        throw new Exception("Le lieu est requis pour les entretiens ON_SITE.");
-                }
+                if ("ONLINE".equals(mode) && (linkField.getText() == null || linkField.getText().isBlank()))
+                    linkField.setText(MeetingService.generateMeetingLink(app.id(), scheduledAt, duration));
 
                 Models.Interview interview = new Models.Interview(
                         app.id(), UserContext.getRecruiterId(), scheduledAt, duration, mode);
@@ -1728,18 +1778,67 @@ public class ApplicationsController {
                 else                       interview.setLocation(locationField.getText().trim());
 
                 InterviewService.addInterview(interview);
-                // Move application to INTERVIEW status
                 ApplicationService.updateStatus(app.id(), "INTERVIEW", UserContext.getRecruiterId(),
                         "Entretien planifié pour le " + scheduledAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
 
                 showAlert("Succès", "Entretien planifié avec succès !\nUn rappel email/SMS sera envoyé 24h avant.", Alert.AlertType.INFORMATION);
                 loadApplications();
-            } catch (NumberFormatException e) {
-                showAlert("Erreur", "La durée doit être un nombre entier valide.", Alert.AlertType.WARNING);
             } catch (Exception e) {
                 showAlert("Erreur", e.getMessage(), Alert.AlertType.ERROR);
             }
         });
+    }
+
+    /** Returns an error message string if invalid, null if valid */
+    private String validateScheduleForm(DatePicker datePicker, TextField timeField,
+                                        TextField durationField, ComboBox<String> modeCombo,
+                                        TextField linkField, TextField locationField) {
+        if (datePicker.getValue() == null)
+            return "Veuillez sélectionner une date.";
+
+        java.time.LocalTime time = parseTime(timeField.getText());
+        if (time == null)
+            return "Heure invalide. Utilisez le format HH:mm (ex: 14:00).";
+
+        LocalDateTime scheduledAt = LocalDateTime.of(datePicker.getValue(), time);
+        if (scheduledAt.isBefore(LocalDateTime.now()))
+            return "La date et l'heure doivent être dans le futur.";
+
+        try {
+            int dur = Integer.parseInt(durationField.getText().trim());
+            if (dur <= 0) return "La durée doit être supérieure à 0.";
+            if (dur > 480) return "La durée ne peut pas dépasser 480 minutes (8h).";
+        } catch (NumberFormatException e) {
+            return "La durée doit être un nombre entier valide.";
+        }
+
+        if (modeCombo.getValue() == null) return "Veuillez sélectionner un mode.";
+
+        if ("ON_SITE".equals(modeCombo.getValue()) &&
+                (locationField.getText() == null || locationField.getText().isBlank()))
+            return "Le lieu est requis pour les entretiens sur site.";
+
+        return null; // valid
+    }
+
+    /**
+     * Robustly parse a time string in H:mm or HH:mm format.
+     * Returns null if the string cannot be parsed.
+     */
+    private java.time.LocalTime parseTime(String text) {
+        if (text == null || text.isBlank()) return null;
+        text = text.trim();
+        for (java.time.format.DateTimeFormatter fmt : new java.time.format.DateTimeFormatter[]{
+                java.time.format.DateTimeFormatter.ofPattern("H:mm"),
+                java.time.format.DateTimeFormatter.ofPattern("HH:mm"),
+                java.time.format.DateTimeFormatter.ofPattern("H:m"),
+                java.time.format.DateTimeFormatter.ISO_LOCAL_TIME
+        }) {
+            try {
+                return java.time.LocalTime.parse(text, fmt);
+            } catch (Exception ignored) {}
+        }
+        return null;
     }
 
     private VBox buildFieldBox(String label, javafx.scene.Node field) {

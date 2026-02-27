@@ -1,13 +1,14 @@
 package Controllers;
 
 import Services.ApplicationStatisticsService;
-import Utils.UserContext;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.Priority;
 
 import java.util.Map;
 
@@ -19,155 +20,139 @@ public class AdminDashboardController {
 
     @FXML
     public void initialize() {
-        // Only admins should see this
-        if (UserContext.getRole() != UserContext.Role.ADMIN) {
-            Label accessDenied = new Label("Access Denied. Admin only.");
-            accessDenied.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 16; -fx-font-weight: bold;");
-            globalStatsContainer.getChildren().add(accessDenied);
-            return;
-        }
-
-        btnRefresh.setOnAction(e -> loadStatistics());
+        if (btnRefresh != null) btnRefresh.setOnAction(e -> loadStatistics());
         loadStatistics();
     }
 
     private void loadStatistics() {
-        // Clear existing content
-        globalStatsContainer.getChildren().clear();
-        offerStatsContainer.getChildren().clear();
+        if (globalStatsContainer != null) globalStatsContainer.getChildren().clear();
+        if (offerStatsContainer  != null) offerStatsContainer.getChildren().clear();
 
-        // Load global statistics
-        ApplicationStatisticsService.OfferStatistics globalStats = ApplicationStatisticsService.getGlobalStatistics();
-        if (globalStats != null) {
-            displayGlobalStatistics(globalStats);
-        }
+        // Global stats
+        ApplicationStatisticsService.OfferStatistics global =
+                ApplicationStatisticsService.getGlobalStatistics();
+        if (global != null) displayGlobalStatistics(global);
 
-        // Load per-offer statistics
+        // Per-offer stats
         Map<Long, ApplicationStatisticsService.OfferStatistics> offerStats =
-            ApplicationStatisticsService.getAllOfferStatistics();
+                ApplicationStatisticsService.getAllOfferStatistics();
 
-        if (offerStats.isEmpty()) {
-            Label noData = new Label("No offers with applications found");
-            noData.setStyle("-fx-text-fill: #999; -fx-font-size: 14;");
-            offerStatsContainer.getChildren().add(noData);
+        if (offerStats == null || offerStats.isEmpty()) {
+            Label noData = new Label("Aucune offre avec des candidatures trouvée");
+            noData.setStyle("-fx-text-fill: #adb5bd; -fx-font-size: 14px; -fx-padding: 20;");
+            if (offerStatsContainer != null) offerStatsContainer.getChildren().add(noData);
         } else {
-            offerStats.forEach((offerId, stats) -> {
-                VBox offerCard = createOfferStatisticsCard(stats);
-                offerStatsContainer.getChildren().add(offerCard);
-            });
+            offerStats.forEach((id, stats) ->
+                    offerStatsContainer.getChildren().add(createOfferStatCard(stats)));
         }
     }
 
     private void displayGlobalStatistics(ApplicationStatisticsService.OfferStatistics stats) {
-        // Total Applications Card
-        VBox totalCard = createStatCard("Total Applications", String.valueOf(stats.totalApplications()), "#0066cc");
-        globalStatsContainer.getChildren().add(totalCard);
-
-        // Submitted Card
-        VBox submittedCard = createStatCard("Submitted", String.valueOf(stats.submitted()), "#6c757d");
-        globalStatsContainer.getChildren().add(submittedCard);
-
-        // Shortlisted Card
-        VBox shortlistedCard = createStatCard("Shortlisted", String.valueOf(stats.shortlisted()), "#ffc107");
-        globalStatsContainer.getChildren().add(shortlistedCard);
-
-        // Rejected Card
-        VBox rejectedCard = createStatCard("Rejected", String.valueOf(stats.rejected()), "#dc3545");
-        globalStatsContainer.getChildren().add(rejectedCard);
-
-        // Interview Card
-        VBox interviewCard = createStatCard("Interview", String.valueOf(stats.interview()), "#17a2b8");
-        globalStatsContainer.getChildren().add(interviewCard);
-
-        // Hired Card
-        VBox hiredCard = createStatCard("Hired", String.valueOf(stats.hired()), "#28a745");
-        globalStatsContainer.getChildren().add(hiredCard);
-
-        // Acceptance Rate Card
-        VBox acceptanceCard = createStatCard("Acceptance Rate",
-            stats.getAcceptancePercentage() + "%", "#007bff");
-        globalStatsContainer.getChildren().add(acceptanceCard);
+        if (globalStatsContainer == null) return;
+        globalStatsContainer.getChildren().addAll(
+            createStatCard("Total",           String.valueOf(stats.totalApplications()), "#5BA3F5", "📋"),
+            createStatCard("Soumises",        String.valueOf(stats.submitted()),          "#6c757d", "📝"),
+            createStatCard("Présélectionnés", String.valueOf(stats.shortlisted()),        "#f0ad4e", "⭐"),
+            createStatCard("Rejetées",        String.valueOf(stats.rejected()),           "#dc3545", "✕"),
+            createStatCard("Entretiens",      String.valueOf(stats.interview()),          "#9b59b6", "🎤"),
+            createStatCard("Embauchés",       String.valueOf(stats.hired()),              "#28a745", "✓"),
+            createStatCard("Taux d'acceptation", stats.getAcceptancePercentage() + "%",  "#17a2b8", "📈")
+        );
     }
 
-    private VBox createStatCard(String title, String value, String color) {
-        VBox card = new VBox(10);
-        card.setStyle("-fx-border-color: " + color + "; -fx-border-radius: 4; -fx-padding: 15; " +
-                     "-fx-background-color: white; -fx-border-width: 2;");
+    private VBox createStatCard(String title, String value, String color, String icon) {
+        VBox card = new VBox(8);
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 12; "
+                + "-fx-border-color: " + color + "; -fx-border-width: 0 0 3 0; "
+                + "-fx-padding: 18 20; "
+                + "-fx-effect: dropshadow(gaussian,rgba(0,0,0,0.06),10,0,0,2);");
         card.setAlignment(Pos.CENTER);
-        card.setPrefWidth(140);
+        card.setPrefWidth(145);
 
-        Label titleLabel = new Label(title);
-        titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12; -fx-text-fill: #666;");
+        Label iconLabel = new Label(icon);
+        iconLabel.setStyle("-fx-font-size: 20px;");
 
         Label valueLabel = new Label(value);
-        valueLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 28; -fx-text-fill: " + color + ";");
+        valueLabel.setStyle("-fx-font-weight: 700; -fx-font-size: 28px; -fx-text-fill: " + color + ";");
 
-        card.getChildren().addAll(titleLabel, valueLabel);
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #7f8c8d; -fx-font-weight: 600;");
+        titleLabel.setWrapText(true);
+        titleLabel.setAlignment(Pos.CENTER);
+
+        card.getChildren().addAll(iconLabel, valueLabel, titleLabel);
         return card;
     }
 
-    private VBox createOfferStatisticsCard(ApplicationStatisticsService.OfferStatistics stats) {
-        VBox card = new VBox(12);
-        card.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 15; " +
-                     "-fx-background-color: #f8f9fa; -fx-border-width: 1;");
+    private VBox createOfferStatCard(ApplicationStatisticsService.OfferStatistics stats) {
+        VBox card = new VBox(14);
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 12; "
+                + "-fx-border-color: #e9ecef; -fx-border-width: 1; -fx-border-radius: 12; "
+                + "-fx-padding: 18; -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.05),8,0,0,2);");
 
-        // Offer Title
+        // Offer title + total badge
+        HBox titleRow = new HBox(12);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
+
         Label offerTitle = new Label(stats.offerTitle());
-        offerTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14;");
+        offerTitle.setStyle("-fx-font-weight: 700; -fx-font-size: 15px; -fx-text-fill: #2c3e50;");
+        HBox.setHgrow(offerTitle, Priority.ALWAYS);
 
-        // Total Applications
-        HBox totalBox = createStatRow("Total Applications", String.valueOf(stats.totalApplications()));
+        Label totalBadge = new Label(stats.totalApplications() + " candidature(s)");
+        totalBadge.setStyle("-fx-background-color: #EBF3FE; -fx-text-fill: #5BA3F5; "
+                + "-fx-font-weight: 600; -fx-font-size: 12px; "
+                + "-fx-padding: 4 12; -fx-background-radius: 20;");
 
-        // Status breakdown in a 3x2 grid
-        HBox statusGrid = new HBox(15);
-        statusGrid.setStyle("-fx-padding: 10; -fx-border-top: 1px solid #ddd; -fx-border-bottom: 1px solid #ddd;");
+        titleRow.getChildren().addAll(offerTitle, totalBadge);
 
-        VBox submittedBox = createCompactStatBox("Submitted", stats.submitted(), "#6c757d");
-        VBox shortlistedBox = createCompactStatBox("Shortlisted", stats.shortlisted(), "#ffc107");
-        VBox rejectedBox = createCompactStatBox("Rejected", stats.rejected(), "#dc3545");
-        VBox interviewBox = createCompactStatBox("Interview", stats.interview(), "#17a2b8");
-        VBox hiredBox = createCompactStatBox("Hired", stats.hired(), "#28a745");
+        // Status pill row
+        HBox pillRow = new HBox(10);
+        pillRow.setAlignment(Pos.CENTER_LEFT);
+        pillRow.getChildren().addAll(
+            makePill("Soumises",        stats.submitted(),  "#6c757d"),
+            makePill("Présélectionnés", stats.shortlisted(), "#f0ad4e"),
+            makePill("Rejetées",        stats.rejected(),   "#dc3545"),
+            makePill("Entretiens",      stats.interview(),  "#9b59b6"),
+            makePill("Embauchés",       stats.hired(),      "#28a745")
+        );
 
-        statusGrid.getChildren().addAll(submittedBox, shortlistedBox, rejectedBox,
-                                        interviewBox, hiredBox);
+        // Acceptance rate bar
+        double pct = stats.getAcceptancePercentage();
+        VBox rateBox = new VBox(4);
+        HBox rateHeader = new HBox(8);
+        Label rateLabel = new Label("Taux d'acceptation");
+        rateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #7f8c8d; -fx-font-weight: 600;");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        Label ratePct = new Label(pct + "%");
+        ratePct.setStyle("-fx-font-size: 13px; -fx-font-weight: 700; -fx-text-fill: #17a2b8;");
+        rateHeader.getChildren().addAll(rateLabel, spacer, ratePct);
 
-        // Acceptance Rate
-        HBox acceptanceBox = createStatRow("Acceptance Rate", stats.getAcceptancePercentage() + "%");
-        acceptanceBox.setStyle("-fx-padding: 10; -fx-border-top: 1px solid #ddd;");
+        // Progress bar background
+        VBox barBg = new VBox();
+        barBg.setStyle("-fx-background-color: #e9ecef; -fx-background-radius: 4; -fx-pref-height: 7;");
+        barBg.setMaxWidth(Double.MAX_VALUE);
+        VBox barFill = new VBox();
+        double width = Math.max(0, Math.min(pct, 100));
+        barFill.setStyle("-fx-background-color: #17a2b8; -fx-background-radius: 4; -fx-pref-height: 7;");
+        barFill.prefWidthProperty().bind(barBg.widthProperty().multiply(width / 100.0));
+        barBg.getChildren().add(barFill);
 
-        card.getChildren().addAll(offerTitle, totalBox, statusGrid, acceptanceBox);
+        rateBox.getChildren().addAll(rateHeader, barBg);
+
+        card.getChildren().addAll(titleRow, pillRow, rateBox);
         return card;
     }
 
-    private HBox createStatRow(String label, String value) {
-        HBox row = new HBox(15);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setStyle("-fx-padding: 8;");
-
-        Label labelText = new Label(label);
-        labelText.setStyle("-fx-font-weight: bold; -fx-font-size: 12; -fx-text-fill: #666;");
-        labelText.setPrefWidth(120);
-
-        Label valueText = new Label(value);
-        valueText.setStyle("-fx-font-size: 14; -fx-text-fill: #333; -fx-font-weight: bold;");
-
-        row.getChildren().addAll(labelText, valueText);
-        return row;
-    }
-
-    private VBox createCompactStatBox(String label, int value, String color) {
-        VBox box = new VBox(5);
-        box.setAlignment(Pos.CENTER);
-        box.setPrefWidth(100);
-
-        Label labelText = new Label(label);
-        labelText.setStyle("-fx-font-size: 11; -fx-text-fill: #666;");
-
-        Label valueText = new Label(String.valueOf(value));
-        valueText.setStyle("-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
-
-        box.getChildren().addAll(labelText, valueText);
-        return box;
+    private HBox makePill(String label, int value, String color) {
+        HBox pill = new HBox(5);
+        pill.setAlignment(Pos.CENTER);
+        pill.setStyle("-fx-background-color: " + color + "22; -fx-background-radius: 8; -fx-padding: 6 12;");
+        Label lbl = new Label(label);
+        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + color + "; -fx-font-weight: 600;");
+        Label val = new Label(String.valueOf(value));
+        val.setStyle("-fx-font-size: 13px; -fx-font-weight: 700; -fx-text-fill: " + color + ";");
+        pill.getChildren().addAll(val, lbl);
+        return pill;
     }
 }
-

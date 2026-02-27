@@ -113,6 +113,35 @@ public class EmailService {
     }
 
     /**
+     * Send a test reminder to a CUSTOM email (not from DB).
+     * Uses the first upcoming interview from DB for content, but sends to the given address.
+     */
+    public static void sendTestTo(String customEmail, String customName) {
+        System.out.println("[EmailService] sendTestTo: " + customEmail);
+        try {
+            List<Interview> interviews = InterviewService.getAll();
+            Interview target = interviews.stream()
+                .filter(i -> i.getId() != null && i.getScheduledAt() != null)
+                .findFirst().orElse(null);
+
+            if (target == null) {
+                // Build a dummy interview for the test
+                target = new Interview(1L, 1L,
+                        LocalDateTime.now().plusDays(1).withHour(14).withMinute(0),
+                        60, "ONLINE");
+                target.setMeetingLink("https://meet.example.com/test");
+                target.setNotes("Test de notification Talent Bridge");
+            }
+
+            String name = (customName != null && !customName.isBlank()) ? customName : "Test Utilisateur";
+            sendInterviewReminder(target, customEmail, name);
+            System.out.println("[EmailService] Test email sent to: " + customEmail);
+        } catch (Exception e) {
+            System.err.println("[EmailService] sendTestTo failed: " + e.getMessage());
+        }
+    }
+
+    /**
      * DB-based test: finds the first upcoming interview and sends a real reminder.
      */
     public static void sendTestFromDatabase() {

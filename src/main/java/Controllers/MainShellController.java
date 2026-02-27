@@ -5,7 +5,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 
@@ -22,6 +21,7 @@ public class MainShellController {
     @FXML private Button btnApplications;
     @FXML private Button btnJobOffers;
     @FXML private Button btnDashboard;
+    @FXML private Button btnAdminStats;
     @FXML private Button btnFullscreenToggle;
 
     // Top-bar buttons
@@ -41,7 +41,12 @@ public class MainShellController {
         if (lblUserName != null) lblUserName.setText("Utilisateur");
         if (lblUserRole != null) lblUserRole.setText(Utils.UserContext.getRoleLabel());
         applyRoleToShell();
-        handleApplicationsNav();
+        // Load appropriate default page based on role
+        if (Utils.UserContext.getRole() == Utils.UserContext.Role.ADMIN) {
+            handleAdminStatsNav();
+        } else {
+            handleApplicationsNav();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -77,6 +82,13 @@ public class MainShellController {
         highlightActiveButton(btnDashboard);
     }
 
+    @FXML
+    private void handleAdminStatsNav() {
+        activePage = "/AdminApplicationStatistics.fxml";
+        loadContentView(activePage);
+        highlightActiveButton(btnAdminStats);
+    }
+
     // -------------------------------------------------------------------------
     // Top-bar handlers
     // -------------------------------------------------------------------------
@@ -92,29 +104,102 @@ public class MainShellController {
         Utils.UserContext.toggleRole();
         if (lblUserRole != null) lblUserRole.setText(Utils.UserContext.getRoleLabel());
         applyRoleToShell();
-        handleApplicationsNav();
+        if (Utils.UserContext.getRole() == Utils.UserContext.Role.ADMIN) {
+            handleAdminStatsNav();
+        } else {
+            handleApplicationsNav();
+        }
     }
 
     @FXML
     private void handleNotifications() {
-        Services.InterviewReminderScheduler.printDiagnostics();
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Notifications & Rappels");
-        alert.setHeaderText("Statut du scheduler de rappels");
-        alert.setContentText(
-            "Scheduler actif : " + Services.InterviewReminderScheduler.isRunning() + "\n"
-            + "Rappels envoyés cette session : " + Services.InterviewReminderScheduler.getSentCount() + "\n\n"
-            + "Cliquez OK pour forcer l'envoi des rappels maintenant."
-        );
-        alert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
-        alert.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                Services.InterviewReminderScheduler.resetAllReminders();
-                Services.InterviewReminderScheduler.runTestNow();
-                showInfo("Rappels envoyés", "Test terminé",
-                    "Vérifiez la console pour le résultat détaillé.");
+        // Build a custom dialog for sending test notifications
+        javafx.scene.control.Dialog<Void> dialog = new javafx.scene.control.Dialog<>();
+        dialog.setTitle("Tester les Notifications");
+        dialog.setHeaderText("Envoyer un email / SMS de test à une adresse personnalisée");
+
+        javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(16);
+        content.setPadding(new javafx.geometry.Insets(20));
+        content.setPrefWidth(420);
+
+        // Email section
+        javafx.scene.control.Label emailLbl = new javafx.scene.control.Label("📧 Email de destination");
+        emailLbl.setStyle("-fx-font-weight: 700; -fx-font-size: 13px;");
+        javafx.scene.control.TextField emailField = new javafx.scene.control.TextField();
+        emailField.setPromptText("ex: destinataire@gmail.com");
+        javafx.scene.control.TextField emailNameField = new javafx.scene.control.TextField();
+        emailNameField.setPromptText("Nom du destinataire (optionnel)");
+        javafx.scene.control.Button btnSendEmail = new javafx.scene.control.Button("📤 Envoyer Email Test");
+        btnSendEmail.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
+        javafx.scene.control.Label emailStatus = new javafx.scene.control.Label("");
+        emailStatus.setStyle("-fx-font-size: 12px;");
+        btnSendEmail.setOnAction(e -> {
+            String email = emailField.getText().trim();
+            if (email.isBlank() || !email.contains("@")) {
+                emailStatus.setText("⚠ Adresse email invalide.");
+                emailStatus.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px;");
+                return;
             }
+            emailStatus.setText("⏳ Envoi en cours...");
+            emailStatus.setStyle("-fx-text-fill: #f0ad4e; -fx-font-size: 12px;");
+            String name = emailNameField.getText().trim();
+            new Thread(() -> {
+                Services.EmailService.sendTestTo(email, name.isEmpty() ? "Test Utilisateur" : name);
+                javafx.application.Platform.runLater(() -> {
+                    emailStatus.setText("✅ Email envoyé à: " + email + "\n(vérifiez la console pour confirmation)");
+                    emailStatus.setStyle("-fx-text-fill: #28a745; -fx-font-size: 12px;");
+                });
+            }, "TestEmailThread").start();
         });
+
+        // SMS section
+        javafx.scene.control.Separator sep = new javafx.scene.control.Separator();
+        javafx.scene.control.Label smsLbl = new javafx.scene.control.Label("📱 Numéro de téléphone SMS");
+        smsLbl.setStyle("-fx-font-weight: 700; -fx-font-size: 13px;");
+        javafx.scene.control.TextField phoneField = new javafx.scene.control.TextField();
+        phoneField.setPromptText("ex: +21653757969  ou  53757969");
+        javafx.scene.control.TextField smsNameField = new javafx.scene.control.TextField();
+        smsNameField.setPromptText("Nom du destinataire (optionnel)");
+        javafx.scene.control.Button btnSendSMS = new javafx.scene.control.Button("📤 Envoyer SMS Test");
+        btnSendSMS.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: 700; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
+        javafx.scene.control.Label smsStatus = new javafx.scene.control.Label("");
+        smsStatus.setStyle("-fx-font-size: 12px;");
+        btnSendSMS.setOnAction(e -> {
+            String phone = phoneField.getText().trim();
+            if (phone.isBlank()) {
+                smsStatus.setText("⚠ Numéro de téléphone requis.");
+                smsStatus.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px;");
+                return;
+            }
+            smsStatus.setText("⏳ Envoi en cours...");
+            smsStatus.setStyle("-fx-text-fill: #f0ad4e; -fx-font-size: 12px;");
+            String name = smsNameField.getText().trim();
+            new Thread(() -> {
+                Services.SMSService.sendTestTo(phone, name.isEmpty() ? "Test" : name);
+                javafx.application.Platform.runLater(() -> {
+                    smsStatus.setText("✅ SMS dispatché vers: " + phone + "\n(vérifiez la console pour confirmation)");
+                    smsStatus.setStyle("-fx-text-fill: #28a745; -fx-font-size: 12px;");
+                });
+            }, "TestSMSThread").start();
+        });
+
+        // Scheduler info
+        javafx.scene.control.Separator sep2 = new javafx.scene.control.Separator();
+        javafx.scene.control.Label schedulerInfo = new javafx.scene.control.Label(
+            "⏰ Scheduler actif : " + Services.InterviewReminderScheduler.isRunning()
+            + "   |   Rappels envoyés : " + Services.InterviewReminderScheduler.getSentCount());
+        schedulerInfo.setStyle("-fx-font-size: 12px; -fx-text-fill: #7f8c8d;");
+
+        content.getChildren().addAll(
+            emailLbl, emailField, emailNameField, btnSendEmail, emailStatus,
+            sep,
+            smsLbl, phoneField, smsNameField, btnSendSMS, smsStatus,
+            sep2, schedulerInfo
+        );
+
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().add(javafx.scene.control.ButtonType.CLOSE);
+        dialog.showAndWait();
     }
 
     @FXML
@@ -154,7 +239,8 @@ public class MainShellController {
     }
 
     private void resetButtonStyles() {
-        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers, btnDashboard, btnFullscreenToggle};
+        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers,
+                               btnDashboard, btnAdminStats, btnFullscreenToggle};
         for (Button btn : navButtons) {
             if (btn == null) continue;
             btn.getStyleClass().removeAll("sidebar-nav-btn-active");
@@ -165,21 +251,31 @@ public class MainShellController {
 
     private void applyRoleToShell() {
         boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
+        boolean isAdmin     = Utils.UserContext.getRole() == Utils.UserContext.Role.ADMIN;
+
+        if (lblUserRole != null) lblUserRole.setText(Utils.UserContext.getRoleLabel());
 
         if (btnInterviews != null) {
-            btnInterviews.setText(isRecruiter ? "📅  Entretiens" : "📅  Entretiens à venir");
-            btnInterviews.setVisible(true); btnInterviews.setManaged(true);
+            btnInterviews.setText(isRecruiter || isAdmin ? "📅   Entretiens" : "📅   Entretiens à venir");
+            btnInterviews.setVisible(!isAdmin);
+            btnInterviews.setManaged(!isAdmin);
         }
         if (btnApplications != null) {
-            btnApplications.setText(isRecruiter ? "📋  Candidatures" : "📋  Mes candidatures");
-            btnApplications.setVisible(true); btnApplications.setManaged(true);
+            btnApplications.setText(isRecruiter ? "📋   Candidatures" : "📋   Mes candidatures");
+            btnApplications.setVisible(!isAdmin);
+            btnApplications.setManaged(!isAdmin);
         }
         if (btnJobOffers != null) {
-            btnJobOffers.setText("💼  Offres d'emploi");
-            btnJobOffers.setVisible(true); btnJobOffers.setManaged(true);
+            btnJobOffers.setVisible(!isAdmin);
+            btnJobOffers.setManaged(!isAdmin);
         }
         if (btnDashboard != null) {
-            btnDashboard.setVisible(false); btnDashboard.setManaged(false);
+            btnDashboard.setVisible(false);
+            btnDashboard.setManaged(false);
+        }
+        if (btnAdminStats != null) {
+            btnAdminStats.setVisible(isAdmin);
+            btnAdminStats.setManaged(isAdmin);
         }
     }
 

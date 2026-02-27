@@ -56,6 +56,9 @@
 
                 <Button fx:id="btnDashboard"    onAction="#handleDashboardNav"   text="👨‍💼   Tableau de Bord"
                         styleClass="sidebar-nav-btn" maxWidth="Infinity" visible="false" managed="false"/>
+
+                <Button fx:id="btnAdminStats"   onAction="#handleAdminStatsNav"  text="📊   Statistiques"
+                        styleClass="sidebar-nav-btn" maxWidth="Infinity" visible="false" managed="false"/>
             </VBox>
 
             <Region VBox.vgrow="ALWAYS"/>

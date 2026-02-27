@@ -6,36 +6,44 @@
 
 <VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="Controllers.AdminDashboardController" spacing="20" styleClass="page"
-      stylesheets="@styles.css" style="-fx-background-color: #f8f9fa;">
+      stylesheets="@styles.css" style="-fx-background-color: #F5F6F8;">
 
     <padding>
         <Insets top="25" left="25" right="25" bottom="25"/>
     </padding>
 
-    <!-- Header Section -->
+    <!-- Header -->
     <HBox alignment="CENTER_LEFT" spacing="20">
         <VBox spacing="5" HBox.hgrow="ALWAYS">
-            <Label text="Application Statistics" styleClass="page-title"/>
-            <Label text="Overview of all job applications and offers" styleClass="page-subtitle"/>
+            <Label text="Statistiques des Candidatures"
+                   style="-fx-font-size: 26px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;"/>
+            <Label text="Vue d'ensemble de toutes les offres et candidatures"
+                   style="-fx-font-size: 13px; -fx-text-fill: #7f8c8d;"/>
         </VBox>
-        <Button text="Refresh" fx:id="btnRefresh" styleClass="btn-primary"/>
+        <Button fx:id="btnRefresh" text="🔄 Actualiser"
+                style="-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 600;
+                       -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;
+                       -fx-font-size: 13px;"/>
     </HBox>
 
-    <!-- Global Statistics Section -->
-    <VBox spacing="15" style="-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 20; -fx-background-color: white;">
-        <Label text="Overall Statistics" style="-fx-font-weight: bold; -fx-font-size: 16;"/>
-
-        <HBox spacing="20" fx:id="globalStatsContainer">
-            <!-- Stats cards will be added dynamically -->
-        </HBox>
+    <!-- Global Statistics -->
+    <VBox spacing="14"
+          style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20;
+                 -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.07),12,0,0,2);">
+        <Label text="Vue globale"
+               style="-fx-font-weight: 700; -fx-font-size: 15px; -fx-text-fill: #2c3e50;"/>
+        <HBox fx:id="globalStatsContainer" spacing="14" style="-fx-padding: 4 0 0 0;"/>
     </VBox>
 
-    <!-- Per-Offer Statistics Section -->
-    <VBox spacing="15" VBox.vgrow="ALWAYS" style="-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 20; -fx-background-color: white;">
-        <Label text="Per-Offer Statistics" style="-fx-font-weight: bold; -fx-font-size: 16;"/>
-
-        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
-            <VBox fx:id="offerStatsContainer" spacing="15" style="-fx-padding: 5;"/>
+    <!-- Per-Offer Statistics -->
+    <VBox spacing="14" VBox.vgrow="ALWAYS"
+          style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20;
+                 -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.07),12,0,0,2);">
+        <Label text="Par offre d'emploi"
+               style="-fx-font-weight: 700; -fx-font-size: 15px; -fx-text-fill: #2c3e50;"/>
+        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                    style="-fx-background: transparent; -fx-background-color: transparent;">
+            <VBox fx:id="offerStatsContainer" spacing="14" style="-fx-padding: 4 0;"/>
         </ScrollPane>
     </VBox>
 

@@ -75,6 +75,39 @@ public class SMSService {
     }
 
     /**
+     * Send a test SMS to a CUSTOM phone number.
+     * Uses the first interview from DB for content, but sends to the given number.
+     */
+    public static void sendTestTo(String customPhone, String customName) {
+        if (customPhone == null || customPhone.isBlank()) {
+            System.err.println("[SMSService] sendTestTo: phone is null or blank — aborting.");
+            return;
+        }
+        System.out.println("[SMSService] sendTestTo: " + customPhone);
+        try {
+            java.util.List<Interview> interviews = InterviewService.getAll();
+            Interview target = interviews.stream()
+                .filter(i -> i.getId() != null && i.getScheduledAt() != null)
+                .findFirst().orElse(null);
+
+            if (target == null) {
+                target = new Interview(1L, 1L,
+                        java.time.LocalDateTime.now().plusDays(1).withHour(14).withMinute(0),
+                        60, "ONLINE");
+                target.setMeetingLink("https://meet.example.com/test");
+            }
+
+            String name = (customName != null && !customName.isBlank()) ? customName : "Test";
+            sendInterviewReminder(target, customPhone, name);
+            System.out.println("[SMSService] Test SMS dispatched to: " + customPhone);
+        } catch (Exception e) {
+            System.err.println("[SMSService] sendTestTo failed: " + e.getClass().getSimpleName()
+                    + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * DB-based test: takes the first upcoming interview from the DB,
      * reads the candidate's real phone from users.phone, and sends.
      */
@@ -110,7 +143,7 @@ public class SMSService {
     }
 
     // -------------------------------------------------------------------------
-    // Core send
+    // Core send — restored to the exact working version
     // -------------------------------------------------------------------------
 
     /**
@@ -126,6 +159,12 @@ public class SMSService {
             return;
         }
 
+        // Guard null / blank phone
+        if (toPhoneNumber == null || toPhoneNumber.isBlank()) {
+            System.err.println("[SMSService] Cannot send SMS — phone number is null or blank.");
+            return;
+        }
+
         // Strip everything except digits
         String digits = toPhoneNumber.replaceAll("[^0-9]", "");
 
@@ -134,15 +173,15 @@ public class SMSService {
             digits = "216" + digits;
         }
 
-        // API uses recipients= with + prefix (e.g. +21693346608)
+        // recipients= uses + prefix  e.g. +21693346608
         String recipient = "+" + digits;
 
         System.out.println("[SMSService] FROM: 53757969 → TO: " + recipient);
 
         try {
-            String body = "apikey=" + URLEncoder.encode(API_KEY, StandardCharsets.UTF_8)
-                        + "&recipients=" + URLEncoder.encode(recipient, StandardCharsets.UTF_8)
-                        + "&message=" + URLEncoder.encode(messageBody, StandardCharsets.UTF_8);
+            String body = "apikey="     + URLEncoder.encode(API_KEY,     StandardCharsets.UTF_8)
+                        + "&recipients=" + URLEncoder.encode(recipient,   StandardCharsets.UTF_8)
+                        + "&message="   + URLEncoder.encode(messageBody, StandardCharsets.UTF_8);
 
             System.out.println("[SMSService] POST recipients=" + recipient
                     + " message=[" + messageBody.length() + " chars]");
@@ -161,27 +200,40 @@ public class SMSService {
             }
 
             int code = conn.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream(),
-                StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line);
-            br.close();
 
-            String resp = sb.toString();
+            // getErrorStream() can return null — safe fallback
+            InputStream stream = null;
+            try {
+                stream = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
+            } catch (Exception ignored) {}
+            if (stream == null) {
+                try { stream = conn.getInputStream(); } catch (Exception ignored) {}
+            }
+
+            String resp = "";
+            if (stream != null) {
+                StringBuilder sb = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = br.readLine()) != null) sb.append(line);
+                }
+                resp = sb.toString();
+            }
+
             System.out.println("[SMSService] HTTP " + code + " — " + resp);
 
             if (resp.contains("\"error\":0") || resp.contains("\"error\":\"0\"")
-                    || resp.contains("\"sent\":\"1\"")) {
-                System.out.println("[SMSService] SMS sent successfully to " + digits);
+                    || resp.contains("\"sent\":\"1\"") || resp.contains("\"sent\":1")) {
+                System.out.println("[SMSService] ✅ SMS sent successfully to " + digits);
             } else {
-                System.err.println("[SMSService] API error — digits sent: " + digits
-                    + " — response: " + resp);
+                System.err.println("[SMSService] ⚠ API response for " + digits + ": " + resp);
             }
 
         } catch (Exception e) {
-            System.err.println("[SMSService] Exception: " + e.getMessage());
+            System.err.println("[SMSService] ❌ Exception for " + recipient + ": "
+                    + e.getClass().getSimpleName() + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -268,4 +320,3 @@ public class SMSService {
         return phone.trim();
     }
 }
-
