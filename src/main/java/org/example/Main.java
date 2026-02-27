@@ -1,5 +1,13 @@
 package org.example;
 
+import javafx.application.Application;
+
+public class Main {
+    public static void main(String[] args) {
+        Application.launch(MainFX.class, args);
+    }
+}
+
 import Services.InterviewReminderScheduler;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;

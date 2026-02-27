@@ -10,6 +10,12 @@ public final class UserContext {
 
     public enum Role {
         RECRUITER,
+        CANDIDATE,
+        ADMIN
+    }
+
+    private static Role currentRole = Role.RECRUITER;
+    // Using static IDs for testing: candidate=1, recruiter=2, admin=3
         CANDIDATE
     }
 
@@ -30,12 +36,17 @@ public final class UserContext {
     public static void toggleRole() {
         currentRole = switch (currentRole) {
             case RECRUITER -> Role.CANDIDATE;
+            case CANDIDATE -> Role.ADMIN;
+            case ADMIN -> Role.RECRUITER;
             case CANDIDATE -> Role.RECRUITER;
         };
     }
 
     public static String getRoleLabel() {
         return switch (currentRole) {
+            case RECRUITER -> "Recruiter";
+            case CANDIDATE -> "Candidate";
+            case ADMIN -> "Admin";
             case RECRUITER -> "Recruteur";
             case CANDIDATE -> "Candidat";
         };
@@ -43,6 +54,19 @@ public final class UserContext {
 
     // Mock ids for now (replace with authenticated user ids)
     public static Long getRecruiterId() {
+        return 2L; // Static ID for testing
+    }
+
+    public static Long getCandidateId() {
+        return 1L; // Static ID for testing
+    }
+
+    public static Long getAdminId() {
+        return 3L; // Static ID for testing
+    }
+}
+
+
         if (cachedRecruiterId == null) {
             cachedRecruiterId = getFirstRecruiterId();
         }

@@ -1,5 +1,19 @@
 package Controllers;
 
+import Services.ApplicationService;
+import Services.EmailService;
+import Services.FileService;
+import Services.GrokAIService;
+import Services.JobOfferService;
+import Services.UserService;
+import Utils.UserContext;
+import Utils.ValidationUtils;
+import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 import Services.JobOfferService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
@@ -40,6 +54,8 @@ public class JobOffersController {
 
     private void setupComboBoxes() {
         if (cbSearchCriteria != null) {
+            cbSearchCriteria.getItems().addAll("Title", "Location", "Contract Type");
+            cbSearchCriteria.setValue("Title");
             cbSearchCriteria.getItems().addAll("Titre", "Lieu", "Type de Contrat");
             cbSearchCriteria.setValue("Titre");
         }
@@ -56,6 +72,7 @@ public class JobOffersController {
         searchBar.setStyle("-fx-padding: 0 0 20 0;");
 
         if (cbSearchCriteria != null) {
+            cbSearchCriteria.setPromptText("Search by...");
             cbSearchCriteria.setPromptText("Rechercher par...");
             cbSearchCriteria.setStyle("-fx-pref-width: 150px;");
             cbSearchCriteria.setVisible(true);
@@ -63,6 +80,7 @@ public class JobOffersController {
         }
 
         if (txtSearch != null) {
+            txtSearch.setPromptText("Search job offers...");
             txtSearch.setPromptText("Rechercher des offres d'emploi...");
             txtSearch.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 10 15; -fx-border-color: #e9ecef; -fx-border-radius: 8; -fx-border-width: 1;");
             HBox.setHgrow(txtSearch, Priority.ALWAYS);
@@ -288,6 +306,18 @@ public class JobOffersController {
         if (UserContext.getRole() != UserContext.Role.RECRUITER) {
             Button btnApply = new Button("Apply Now");
             btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);");
+
+            // Check if candidate has already applied
+            Long candidateId = UserContext.getCandidateId();
+            if (candidateId != null && ApplicationService.hasAlreadyApplied(job.id(), candidateId)) {
+                btnApply.setText("✓ Already Applied");
+                btnApply.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: not-allowed;");
+                btnApply.setDisable(true);
+            } else {
+                btnApply.setOnAction(e -> showApplicationForm(job));
+                btnApply.setOnMouseEntered(e -> btnApply.setStyle("-fx-background-color: #4A90E2; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.5), 15, 0, 0, 3);"));
+                btnApply.setOnMouseExited(e -> btnApply.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 10, 0, 0, 2);"));
+            }
             btnApply.setOnAction(e -> showAlert("Apply", "Application feature will be integrated later", Alert.AlertType.INFORMATION));
 
             btnApply.setOnMouseEntered(e -> btnApply.setStyle("-fx-background-color: #4A90E2; -fx-text-fill: white; -fx-font-weight: 700; -fx-font-size: 16px; -fx-padding: 14 40; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.5), 15, 0, 0, 3);"));
@@ -413,4 +443,393 @@ public class JobOffersController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    private void showApplicationForm(JobOfferService.JobOfferRow job) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Apply for Job");
+        dialog.setHeaderText("Apply for: " + job.title());
+
+        ScrollPane scrollPane = new ScrollPane();
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setStyle("-fx-padding: 20;");
+        scrollPane.setContent(content);
+        scrollPane.setFitToWidth(true);
+
+        // Phone field with country selection
+        Label phoneLabel = new Label("Phone Number *");
+        phoneLabel.setStyle("-fx-font-weight: bold;");
+
+        HBox phoneContainer = new HBox(10);
+        phoneContainer.setAlignment(Pos.CENTER_LEFT);
+
+        ComboBox<String> countryCombo = new ComboBox<>();
+        countryCombo.getItems().addAll("Tunisia (+216)", "France (+33)");
+        countryCombo.setValue("Tunisia (+216)");
+        countryCombo.setPrefWidth(150);
+        countryCombo.setStyle("-fx-font-size: 13px;");
+
+        TextField phoneField = new TextField();
+        phoneField.setPromptText("Enter your phone number");
+        phoneField.setPrefWidth(250);
+
+        Label phoneErrorLabel = new Label();
+        phoneErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px;");
+        phoneErrorLabel.setVisible(false);
+
+        phoneContainer.getChildren().addAll(countryCombo, phoneField);
+
+        // Cover Letter field
+        Label letterLabel = new Label("Cover Letter * (50-2000 characters)");
+        letterLabel.setStyle("-fx-font-weight: bold;");
+
+        TextArea letterArea = new TextArea();
+        letterArea.setPromptText("Tell us why you're interested in this position...");
+        letterArea.setPrefRowCount(8);
+        letterArea.setWrapText(true);
+        letterArea.setStyle("-fx-font-size: 13px;");
+
+        Label letterCharCount = new Label("0/2000");
+        letterCharCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+
+        // Update character count in real-time
+        letterArea.textProperty().addListener((obs, oldVal, newVal) -> {
+            int length = newVal != null ? newVal.length() : 0;
+            letterCharCount.setText(length + "/2000");
+
+            if (length > 2000) {
+                letterCharCount.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 11px; -fx-font-weight: bold;");
+            } else if (length < 50 && length > 0) {
+                letterCharCount.setStyle("-fx-text-fill: #fd7e14; -fx-font-size: 11px;");
+            } else {
+                letterCharCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 11px;");
+            }
+        });
+
+        Label letterErrorLabel = new Label();
+        letterErrorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px;");
+        letterErrorLabel.setVisible(false);
+
+        VBox letterBox = new VBox(8);
+        letterBox.getChildren().addAll(letterLabel, letterArea, letterCharCount);
+
+        // CV/PDF file selection
+        Label pdfLabel = new Label("Upload CV (PDF) - Optional");
+        pdfLabel.setStyle("-fx-font-weight: bold;");
+
+        HBox pdfBox = new HBox(10);
+        pdfBox.setAlignment(Pos.CENTER_LEFT);
+        TextField pdfPathField = new TextField();
+        pdfPathField.setPromptText("No file selected");
+        pdfPathField.setEditable(false);
+        pdfPathField.setPrefWidth(280);
+
+        Button btnBrowse = new Button("Browse");
+        btnBrowse.setStyle("-fx-padding: 6 12; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-cursor: hand;");
+        btnBrowse.setOnAction(e -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Select PDF File");
+            fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+            );
+            java.io.File selectedFile = fileChooser.showOpenDialog(null);
+            if (selectedFile != null) {
+                pdfPathField.setText(selectedFile.getAbsolutePath());
+            }
+        });
+
+        pdfBox.getChildren().addAll(pdfPathField, btnBrowse);
+
+        // Add validation on input change for real-time feedback
+        phoneField.textProperty().addListener((obs, oldVal, newVal) -> {
+            String country = countryCombo.getValue();
+            boolean isValid = false;
+            if ("Tunisia (+216)".equals(country)) {
+                isValid = ValidationUtils.isValidTunisianPhone(newVal);
+            } else if ("France (+33)".equals(country)) {
+                isValid = ValidationUtils.isValidFrenchPhone(newVal);
+            }
+
+            if (newVal.isEmpty()) {
+                phoneErrorLabel.setVisible(false);
+            } else if (!isValid) {
+                phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
+                    "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                phoneErrorLabel.setVisible(true);
+            } else {
+                phoneErrorLabel.setVisible(false);
+            }
+        });
+
+        countryCombo.setOnAction(e -> {
+            // Re-validate on country change
+            String newVal = phoneField.getText();
+            String country = countryCombo.getValue();
+            boolean isValid = false;
+            if ("Tunisia (+216)".equals(country)) {
+                isValid = ValidationUtils.isValidTunisianPhone(newVal);
+            } else if ("France (+33)".equals(country)) {
+                isValid = ValidationUtils.isValidFrenchPhone(newVal);
+            }
+
+            if (newVal.isEmpty()) {
+                phoneErrorLabel.setVisible(false);
+            } else if (!isValid) {
+                phoneErrorLabel.setText(ValidationUtils.getPhoneErrorMessage(
+                    "Tunisia (+216)".equals(country) ? "TN" : "FR", newVal));
+                phoneErrorLabel.setVisible(true);
+            } else {
+                phoneErrorLabel.setVisible(false);
+            }
+        });
+
+        // Generate Cover Letter button
+        Button btnGenerateLetter = new Button("🤖 Generate with AI");
+        btnGenerateLetter.setStyle("-fx-background-color: #9B59B6; -fx-text-fill: white; -fx-padding: 8 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 12px;");
+        btnGenerateLetter.setOnAction(e -> generateCoverLetterWithAI(job, letterArea, pdfPathField));
+
+        HBox generateBox = new HBox(10);
+        generateBox.setAlignment(Pos.CENTER_LEFT);
+        generateBox.getChildren().add(btnGenerateLetter);
+
+        content.getChildren().addAll(
+            phoneLabel, phoneContainer, phoneErrorLabel,
+            letterBox, letterErrorLabel,
+            generateBox,
+            pdfLabel, pdfBox
+        );
+
+        dialog.getDialogPane().setContent(scrollPane);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                String country = countryCombo.getValue();
+                String phone = phoneField.getText();
+                String coverLetter = letterArea.getText();
+                String cvPath = pdfPathField.getText();
+
+                // Validate phone based on selected country
+                boolean phoneValid = false;
+                if ("Tunisia (+216)".equals(country)) {
+                    phoneValid = ValidationUtils.isValidTunisianPhone(phone);
+                } else if ("France (+33)".equals(country)) {
+                    phoneValid = ValidationUtils.isValidFrenchPhone(phone);
+                }
+
+                if (!phoneValid) {
+                    showAlert("Validation Error",
+                        ValidationUtils.getPhoneErrorMessage(
+                            "Tunisia (+216)".equals(country) ? "TN" : "FR", phone),
+                        Alert.AlertType.ERROR);
+                    return;
+                }
+
+                if (!ValidationUtils.isValidCoverLetter(coverLetter)) {
+                    showAlert("Validation Error",
+                        ValidationUtils.getCoverLetterErrorMessage(coverLetter),
+                        Alert.AlertType.ERROR);
+                    return;
+                }
+
+                submitApplication(job, phone, coverLetter, cvPath);
+            }
+        });
+    }
+
+    private void submitApplication(JobOfferService.JobOfferRow job, String phone, String coverLetter, String cvPath) {
+        try {
+            Long candidateId = UserContext.getCandidateId();
+            if (candidateId == null) {
+                showAlert("Error", "Candidate ID not found. Please login again.", Alert.AlertType.ERROR);
+                return;
+            }
+
+            // Check if candidate has already applied to this offer
+            if (ApplicationService.hasAlreadyApplied(job.id(), candidateId)) {
+                showAlert("Already Applied",
+                    "You have already applied to this job offer.\n\nYou can view and edit your existing application in the Applications section.",
+                    Alert.AlertType.WARNING);
+                return;
+            }
+
+            // If cvPath is provided, it's a file path - upload the file
+            java.io.File pdfFile = null;
+            if (cvPath != null && !cvPath.isEmpty()) {
+                pdfFile = new java.io.File(cvPath);
+            }
+
+            Long applicationId = ApplicationService.createWithPDF(job.id(), candidateId, phone, coverLetter, pdfFile);
+
+            if (applicationId != null) {
+                showAlert("Success", "Application submitted successfully!", Alert.AlertType.INFORMATION);
+                sendApplicationConfirmationEmail(candidateId, job.title());
+            } else {
+                showAlert("Error", "Failed to submit application. Please try again.", Alert.AlertType.ERROR);
+            }
+
+        } catch (Exception e) {
+            showAlert("Error", "Failed to submit application: " + e.getMessage(), Alert.AlertType.ERROR);
+            e.printStackTrace();
+        }
+    }
+
+    private void sendApplicationConfirmationEmail(Long candidateId, String offerTitle) {
+        new Thread(() -> {
+            try {
+                UserService.UserInfo info = UserService.getUserInfo(candidateId);
+                if (info == null || info.email() == null || info.email().isBlank()) {
+                    return;
+                }
+
+                String candidateName = ((info.firstName() != null ? info.firstName() : "") + " " +
+                    (info.lastName() != null ? info.lastName() : "")).trim();
+
+                EmailService.sendApplicationConfirmation(
+                    info.email(),
+                    candidateName.isEmpty() ? "Candidate" : candidateName,
+                    offerTitle != null && !offerTitle.isBlank() ? offerTitle : "Job Offer",
+                    LocalDateTime.now()
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send confirmation email: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    /**
+     * Generate cover letter using Grok AI based on candidate profile and CV
+     */
+    private void generateCoverLetterWithAI(JobOfferService.JobOfferRow job, TextArea letterArea, TextField pdfPathField) {
+        // Show loading dialog with Cancel button
+        Alert loadingAlert = new Alert(Alert.AlertType.INFORMATION);
+        loadingAlert.setTitle("Generating Cover Letter");
+        loadingAlert.setHeaderText(null);
+        loadingAlert.setContentText("Generating your personalized cover letter...\nThis may take a moment.");
+
+        // Add Cancel button so user can close it if needed
+        loadingAlert.getButtonTypes().setAll(ButtonType.CANCEL);
+
+        // Make it non-modal so it doesn't block
+        loadingAlert.initModality(javafx.stage.Modality.NONE);
+        loadingAlert.show();
+
+        // Run on separate thread to prevent UI freezing
+        new Thread(() -> {
+            try {
+                Long candidateId = UserContext.getCandidateId();
+                if (candidateId == null) {
+                    javafx.application.Platform.runLater(() -> {
+                        loadingAlert.close();
+                        showAlert("Error", "Candidate ID not found. Please login again.", Alert.AlertType.ERROR);
+                    });
+                    return;
+                }
+
+                // Fetch candidate information
+                UserService.UserInfo candidateInfo = UserService.getUserInfo(candidateId);
+                if (candidateInfo == null) {
+                    javafx.application.Platform.runLater(() -> {
+                        loadingAlert.close();
+                        showAlert("Error", "Could not retrieve candidate information.", Alert.AlertType.ERROR);
+                    });
+                    return;
+                }
+
+                // Fetch candidate skills from database
+                java.util.List<String> candidateSkills = UserService.getCandidateSkills(candidateId);
+
+                // Extract CV content if PDF is uploaded
+                String cvContent = "";
+                String pdfPath = pdfPathField.getText();
+                if (pdfPath != null && !pdfPath.isEmpty()) {
+                    try {
+                        Services.FileService fileService = new Services.FileService();
+                        cvContent = fileService.extractTextFromPDF(pdfPath);
+                        if (cvContent == null) {
+                            cvContent = "";
+                        }
+                        System.out.println("CV content extracted successfully from: " + pdfPath);
+                    } catch (Exception e) {
+                        System.err.println("Could not extract CV text: " + e.getMessage());
+                        cvContent = "";
+                    }
+                }
+
+                // Build candidate experience and education strings
+                String experience = candidateInfo.experienceYears() != null && candidateInfo.experienceYears() > 0
+                    ? candidateInfo.experienceYears() + " years of experience"
+                    : "No specific experience years provided";
+
+                String education = candidateInfo.educationLevel() != null && !candidateInfo.educationLevel().isEmpty()
+                    ? candidateInfo.educationLevel()
+                    : "Not specified";
+
+                // Get company name from recruiter
+                String companyName = UserService.getRecruiterCompanyName(job.recruiterId());
+                if (companyName == null || companyName.isEmpty()) {
+                    companyName = "Our Company";
+                }
+
+                // Call Cover Letter generation service based on candidate skills and CV
+                String generatedCoverLetter = GrokAIService.generateCoverLetter(
+                    candidateInfo.firstName() + " " + candidateInfo.lastName(),
+                    candidateInfo.email(),
+                    candidateInfo.phone(),
+                    job.title(),
+                    companyName,
+                    experience,
+                    education,
+                    candidateSkills,
+                    cvContent
+                );
+
+                // IMPORTANT: Close loading dialog first, then show result
+                javafx.application.Platform.runLater(() -> {
+                    // Force close the loading dialog
+                    try {
+                        loadingAlert.close();
+                    } catch (Exception ex) {
+                        // Ignore if already closed
+                    }
+
+                    if (generatedCoverLetter != null && !generatedCoverLetter.isEmpty()) {
+                        // Show the generated cover letter for review
+                        Alert reviewAlert = new Alert(Alert.AlertType.INFORMATION);
+                        reviewAlert.setTitle("Generated Cover Letter");
+                        reviewAlert.setHeaderText("Here's your AI-generated cover letter. Review and edit as needed:");
+
+                        TextArea textArea = new TextArea(generatedCoverLetter);
+                        textArea.setWrapText(true);
+                        textArea.setPrefRowCount(15);
+                        textArea.setStyle("-fx-font-size: 12px;");
+
+                        reviewAlert.getDialogPane().setContent(textArea);
+                        reviewAlert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
+
+                        var result = reviewAlert.showAndWait();
+                        if (result.isPresent() && result.get() == ButtonType.OK) {
+                            // Use the generated cover letter
+                            letterArea.setText(generatedCoverLetter);
+                            showAlert("Success", "Cover letter inserted! You can still edit it before submitting.", Alert.AlertType.INFORMATION);
+                        }
+                    } else {
+                        showAlert("Error", "Failed to generate cover letter. Please write one manually or try again.", Alert.AlertType.ERROR);
+                    }
+                });
+
+            } catch (Exception e) {
+                javafx.application.Platform.runLater(() -> {
+                    try {
+                        loadingAlert.close();
+                    } catch (Exception ex) {
+                        // Ignore if already closed
+                    }
+                    showAlert("Error", "Error generating cover letter: " + e.getMessage(), Alert.AlertType.ERROR);
+                    e.printStackTrace();
+                });
+            }
+        }).start();
+    }
+}
 }

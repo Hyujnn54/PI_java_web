@@ -103,6 +103,35 @@ public class JobOfferService {
         }
     }
 
+    public static List<JobOfferRow> getByRecruiterId(Long recruiterId) {
+        List<JobOfferRow> list = new ArrayList<>();
+        String sql = "SELECT id, recruiter_id, title, description, location, contract_type, created_at, deadline, status " +
+                     "FROM job_offer WHERE recruiter_id = ? ORDER BY created_at DESC";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setLong(1, recruiterId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new JobOfferRow(
+                            rs.getLong("id"),
+                            rs.getLong("recruiter_id"),
+                            rs.getString("title"),
+                            rs.getString("description"),
+                            rs.getString("location"),
+                            rs.getString("contract_type"),
+                            rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toLocalDateTime() : null,
+                            rs.getTimestamp("deadline") != null ? rs.getTimestamp("deadline").toLocalDateTime() : null,
+                            rs.getString("status")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving recruiter offers: " + e.getMessage());
+        }
+
+        return list;
+    }
+
     public static List<JobOfferRow> searchByTitle(String keyword) {
         List<JobOfferRow> list = new ArrayList<>();
         String sql = "SELECT id, recruiter_id, title, description, location, contract_type, created_at, deadline, status " +
@@ -189,5 +218,24 @@ public class JobOfferService {
 
         return list;
     }
+
+    public static List<String> getOfferSkills(Long offerId) {
+        List<String> skills = new ArrayList<>();
+        String sql = "SELECT skill_name FROM offer_skill WHERE offer_id = ? ORDER BY level_required DESC, skill_name ASC";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setLong(1, offerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    skills.add(rs.getString("skill_name"));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving offer skills: " + e.getMessage());
+        }
+
+        return skills;
+    }
+}
 }
 

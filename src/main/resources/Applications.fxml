@@ -15,6 +15,8 @@
     <!-- Header Section -->
     <HBox alignment="CENTER_LEFT" spacing="20">
         <VBox spacing="5" HBox.hgrow="ALWAYS">
+            <Label text="Candidate Applications" styleClass="page-title"/>
+            <Label fx:id="lblSubtitle" text="Review and manage candidate applications" styleClass="page-subtitle"/>
             <Label text="Candidatures" styleClass="page-title"/>
             <Label fx:id="lblSubtitle" text="Examiner et gérer les candidatures" styleClass="page-subtitle"/>
         </VBox>
@@ -22,6 +24,13 @@
 
     <!-- Search Bar Section -->
     <HBox spacing="15" alignment="CENTER_LEFT" styleClass="search-bar-container">
+        <ComboBox fx:id="cbSearchCriteria" promptText="Search by..." prefWidth="180" styleClass="modern-combo"/>
+
+        <TextField fx:id="txtSearch" promptText="Search candidates..." HBox.hgrow="ALWAYS"
+                   styleClass="modern-search-field"/>
+
+        <Button fx:id="btnSearch" text="Search" styleClass="btn-primary"/>
+        <Button fx:id="btnClear" text="Clear" styleClass="btn-secondary"/>
         <ComboBox fx:id="cbSearchCriteria" promptText="Rechercher par..." prefWidth="180" styleClass="modern-combo"/>
 
         <TextField fx:id="txtSearch" promptText="Rechercher candidats..." HBox.hgrow="ALWAYS"
@@ -36,6 +45,17 @@
 
         <!-- LEFT SIDE: Candidate List (30%) -->
         <VBox spacing="12" prefWidth="400" styleClass="candidate-list-container">
+            <Label text="Applications" styleClass="section-title"/>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
+                <VBox fx:id="candidateListContainer" spacing="12" style="-fx-padding: 5;"/>
+            </ScrollPane>
+        </VBox>
+
+        <!-- RIGHT SIDE: Application Detail View (70%) -->
+        <VBox spacing="20" HBox.hgrow="ALWAYS" styleClass="detail-view-container">
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
+                <VBox fx:id="mainContainer" spacing="20" style="-fx-padding: 10;"/>
             <Label text="Candidats" styleClass="section-title"/>
 
             <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
