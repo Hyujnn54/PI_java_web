@@ -3,7 +3,10 @@ package Controllers;
 import Services.ApplicationService;
 import Services.ApplicationStatusHistoryService;
 import Services.FileService;
+import Services.GrokAIService;
 import Services.JobOfferService;
+import Services.OllamaRankingService;
+import Services.UserService;
 import Utils.UserContext;
 import Utils.ValidationUtils;
 import javafx.fxml.FXML;
@@ -33,6 +36,11 @@ public class ApplicationsController {
     private ApplicationService.ApplicationRow selectedApplication;
     private List<Long> selectedApplicationIds = new ArrayList<>();
     private VBox bulkActionPanel;
+    private List<ApplicationService.ApplicationRow> currentApplications = new ArrayList<>();
+    private final java.util.Map<Long, OllamaRankingService.RankResult> rankingCache = new java.util.HashMap<>();
+    private boolean rankingActive = false;
+    private Label rankingStatusLabel;
+    private Label selectionTextLabel;
 
     @FXML
     public void initialize() {
@@ -188,34 +196,9 @@ public class ApplicationsController {
     }
 
     private void displaySearchResults(List<ApplicationService.ApplicationRow> results) {
-        if (candidateListContainer == null) return;
-        candidateListContainer.getChildren().clear();
-        selectedApplicationIds.clear();
-
-        if (results.isEmpty()) {
-            Label empty = new Label("No applications found matching your search");
-            empty.setStyle("-fx-text-fill: #999; -fx-font-size: 14px; -fx-padding: 30;");
-            candidateListContainer.getChildren().add(empty);
-            return;
-        }
-
-        // Hide bulk action panel for search results
-        if (bulkActionPanel != null) {
-            bulkActionPanel.setVisible(false);
-            bulkActionPanel.setManaged(false);
-        }
-
-        // Add results to list
-        boolean first = true;
-        for (ApplicationService.ApplicationRow app : results) {
-            VBox card = createApplicationCard(app);
-            candidateListContainer.getChildren().add(card);
-
-            if (first) {
-                selectApplication(app, card);
-                first = false;
-            }
-        }
+        currentApplications = results;
+        boolean showBulkPanel = UserContext.getRole() == UserContext.Role.RECRUITER;
+        renderApplications(results, showBulkPanel);
     }
 
     private void loadApplications() {
@@ -252,21 +235,38 @@ public class ApplicationsController {
                 .toList();
         }
 
-        if (applications.isEmpty()) {
-            Label empty = new Label("No applications found");
+        currentApplications = applications;
+        renderApplications(applications, role == UserContext.Role.RECRUITER);
+    }
+
+    private void renderApplications(List<ApplicationService.ApplicationRow> applications, boolean showBulkPanel) {
+        if (candidateListContainer == null) return;
+        candidateListContainer.getChildren().clear();
+        selectedApplicationIds.clear();
+
+        if (applications == null || applications.isEmpty()) {
+            Label empty = new Label(showBulkPanel ? "No applications found" : "No applications found matching your search");
             empty.setStyle("-fx-text-fill: #999; -fx-font-size: 14px; -fx-padding: 30;");
             candidateListContainer.getChildren().add(empty);
             return;
         }
 
-        // Create bulk action panel for recruiters (shown at top)
-        if (role == UserContext.Role.RECRUITER) {
-            createAndShowBulkActionPanel(candidateListContainer);
+        if (showBulkPanel) {
+            ensureBulkActionPanel(candidateListContainer);
+            bulkActionPanel.setVisible(true);
+            bulkActionPanel.setManaged(true);
+        } else if (bulkActionPanel != null) {
+            bulkActionPanel.setVisible(false);
+            bulkActionPanel.setManaged(false);
         }
 
-        // Add applications to list
+        List<ApplicationService.ApplicationRow> displayList = new ArrayList<>(applications);
+        if (rankingActive) {
+            displayList.sort((a, b) -> Integer.compare(getRankScore(b.id()), getRankScore(a.id())));
+        }
+
         boolean first = true;
-        for (ApplicationService.ApplicationRow app : applications) {
+        for (ApplicationService.ApplicationRow app : displayList) {
             VBox card = createApplicationCard(app);
             candidateListContainer.getChildren().add(card);
 
@@ -275,6 +275,11 @@ public class ApplicationsController {
                 first = false;
             }
         }
+    }
+
+    private int getRankScore(Long appId) {
+        OllamaRankingService.RankResult result = rankingCache.get(appId);
+        return result != null ? result.score() : -1;
     }
 
     private void createAndShowBulkActionPanel(VBox container) {
@@ -287,13 +292,9 @@ public class ApplicationsController {
         titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #004085;");
 
         HBox selectionInfo = new HBox(10);
-        Label selectionText = new Label("No applications selected");
-        selectionText.setStyle("-fx-text-fill: #004085;");
-
-        // Update selection text dynamically
-        selectedApplicationIds.stream();
-
-        selectionInfo.getChildren().add(selectionText);
+        selectionTextLabel = new Label("No applications selected");
+        selectionTextLabel.setStyle("-fx-text-fill: #004085;");
+        selectionInfo.getChildren().add(selectionTextLabel);
 
         HBox actionRow = new HBox(10);
         actionRow.setAlignment(Pos.CENTER_LEFT);
@@ -329,8 +330,40 @@ public class ApplicationsController {
         actionRow.getChildren().addAll(statusLabel, statusCombo, btnBulkUpdate);
         VBox.setVgrow(actionRow, Priority.NEVER);
 
-        bulkActionPanel.getChildren().addAll(titleLabel, selectionInfo, actionRow);
+        HBox rankingRow = new HBox(10);
+        rankingRow.setAlignment(Pos.CENTER_LEFT);
+
+        Button btnRank = new Button("Rank with AI");
+        btnRank.setStyle("-fx-padding: 6 12; -fx-background-color: #6f42c1; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+        btnRank.setOnAction(e -> rankApplicationsWithAI());
+
+        rankingStatusLabel = new Label("Ranking: OFF");
+        rankingStatusLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-weight: bold;");
+
+        rankingRow.getChildren().addAll(btnRank, rankingStatusLabel);
+
+        bulkActionPanel.getChildren().addAll(titleLabel, selectionInfo, actionRow, rankingRow);
         container.getChildren().add(0, bulkActionPanel);
+    }
+
+    private void ensureBulkActionPanel(VBox container) {
+        if (bulkActionPanel == null) {
+            createAndShowBulkActionPanel(container);
+            return;
+        }
+        if (!container.getChildren().contains(bulkActionPanel)) {
+            container.getChildren().add(0, bulkActionPanel);
+        }
+    }
+
+    private void updateBulkActionPanelUI() {
+        if (bulkActionPanel == null || selectionTextLabel == null) return;
+
+        if (selectedApplicationIds.isEmpty()) {
+            selectionTextLabel.setText("No applications selected");
+        } else {
+            selectionTextLabel.setText(selectedApplicationIds.size() + " application(s) selected");
+        }
     }
 
     private VBox createApplicationCard(ApplicationService.ApplicationRow app) {
@@ -353,7 +386,7 @@ public class ApplicationsController {
                 } else {
                     selectedApplicationIds.remove(app.id());
                 }
-                updateBulkActionPanel();
+                updateBulkActionPanelUI();
             });
             cardContent.getChildren().add(selectCheckbox);
             card.setUserData(new Object[]{app, selectCheckbox});
@@ -373,6 +406,15 @@ public class ApplicationsController {
         HBox statusBox = new HBox(10);
         Label statusBadge = new Label(app.currentStatus());
         statusBadge.setStyle("-fx-padding: 4 8; -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-border-radius: 3; -fx-font-size: 11;");
+
+        if (UserContext.getRole() == UserContext.Role.RECRUITER && rankingActive) {
+            OllamaRankingService.RankResult rankResult = rankingCache.get(app.id());
+            if (rankResult != null) {
+                Label rankBadge = new Label("AI " + rankResult.score());
+                rankBadge.setStyle("-fx-padding: 4 8; -fx-background-color: #6f42c1; -fx-text-fill: white; -fx-border-radius: 3; -fx-font-size: 11; -fx-font-weight: bold;");
+                statusBox.getChildren().add(rankBadge);
+            }
+        }
 
         // Archived badge
         if (app.isArchived()) {
@@ -447,6 +489,32 @@ public class ApplicationsController {
 
         headerBox.getChildren().addAll(candidateName, jobPosition, email, phone, appliedDate, currentStatus);
         detailContainer.getChildren().add(headerBox);
+
+        if (role == UserContext.Role.RECRUITER && rankingActive) {
+            VBox aiBox = new VBox(6);
+            aiBox.setStyle("-fx-border-color: #e9ecef; -fx-border-radius: 4; -fx-padding: 12; -fx-background-color: #f8f0ff;");
+
+            Label aiLabel = new Label("AI Ranking");
+            aiLabel.setStyle("-fx-font-weight: bold;");
+
+            OllamaRankingService.RankResult rankResult = rankingCache.get(app.id());
+            if (rankResult != null) {
+                Label scoreLabel = new Label("Score: " + rankResult.score() + "/100");
+                scoreLabel.setStyle("-fx-text-fill: #6f42c1; -fx-font-weight: bold;");
+
+                Label rationaleLabel = new Label(rankResult.rationale());
+                rationaleLabel.setWrapText(true);
+                rationaleLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 12;");
+
+                aiBox.getChildren().addAll(aiLabel, scoreLabel, rationaleLabel);
+            } else {
+                Label noRankLabel = new Label("Not ranked yet.");
+                noRankLabel.setStyle("-fx-text-fill: #999;");
+                aiBox.getChildren().addAll(aiLabel, noRankLabel);
+            }
+
+            detailContainer.getChildren().add(aiBox);
+        }
 
         // Cover Letter section
         if (app.coverLetter() != null && !app.coverLetter().isEmpty()) {
@@ -763,6 +831,13 @@ public class ApplicationsController {
 
         cvBox.getChildren().addAll(cvPathField, btnBrowseCV);
 
+        Button btnGenerateLetter = new Button("🤖 Generate with AI");
+        btnGenerateLetter.setStyle("-fx-padding: 6 12; -fx-background-color: #6f42c1; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold;");
+        btnGenerateLetter.setOnAction(e -> generateCoverLetterForEdit(app, letterArea, cvPathField));
+
+        HBox generateRow = new HBox(btnGenerateLetter);
+        generateRow.setAlignment(Pos.CENTER_LEFT);
+
         // Add validation on input change for real-time feedback
         phoneField.textProperty().addListener((obs, oldVal, newVal) -> {
             String country = countryCombo.getValue();
@@ -808,7 +883,7 @@ public class ApplicationsController {
 
         content.getChildren().addAll(
             phoneLabel, phoneContainer, phoneErrorLabel,
-            letterBox, letterErrorLabel,
+            letterBox, generateRow, letterErrorLabel,
             pdfLabel, cvBox
         );
 
@@ -848,6 +923,110 @@ public class ApplicationsController {
                 updateApplicationWithTracking(app, phone, coverLetter, cvPath);
             }
         });
+    }
+
+    private void generateCoverLetterForEdit(ApplicationService.ApplicationRow app, TextArea letterArea, TextField cvPathField) {
+        Alert loadingAlert = new Alert(Alert.AlertType.INFORMATION);
+        loadingAlert.setTitle("Generating Cover Letter");
+        loadingAlert.setHeaderText(null);
+        loadingAlert.setContentText("Generating your personalized cover letter...\nThis may take a moment.");
+        loadingAlert.getButtonTypes().setAll(ButtonType.CANCEL);
+        loadingAlert.initModality(javafx.stage.Modality.NONE);
+        loadingAlert.show();
+
+        new Thread(() -> {
+            try {
+                UserService.UserInfo candidateInfo = UserService.getUserInfo(app.candidateId());
+                if (candidateInfo == null) {
+                    javafx.application.Platform.runLater(() -> {
+                        loadingAlert.close();
+                        showAlert("Error", "Could not retrieve candidate information.", Alert.AlertType.ERROR);
+                    });
+                    return;
+                }
+
+                JobOfferService.JobOfferRow offer = JobOfferService.getById(app.offerId());
+                String jobTitle = offer != null ? offer.title() : (app.jobTitle() != null ? app.jobTitle() : "Job Offer");
+                String companyName = offer != null ? UserService.getRecruiterCompanyName(offer.recruiterId()) : null;
+                if (companyName == null || companyName.isEmpty()) {
+                    companyName = "Our Company";
+                }
+
+                String experience = candidateInfo.experienceYears() != null && candidateInfo.experienceYears() > 0
+                    ? candidateInfo.experienceYears() + " years of experience"
+                    : "No specific experience years provided";
+
+                String education = candidateInfo.educationLevel() != null && !candidateInfo.educationLevel().isEmpty()
+                    ? candidateInfo.educationLevel()
+                    : "Not specified";
+
+                java.util.List<String> candidateSkills = UserService.getCandidateSkills(app.candidateId());
+
+                String cvContent = "";
+                String cvPath = cvPathField.getText();
+                if (cvPath == null || cvPath.isBlank()) {
+                    cvPath = app.cvPath();
+                }
+                if (cvPath != null && cvPath.startsWith("Current: ")) {
+                    cvPath = cvPath.substring("Current: ".length()).trim();
+                }
+                if (cvPath != null && !cvPath.isBlank()) {
+                    try {
+                        FileService fileService = new FileService();
+                        cvContent = fileService.extractTextFromPDF(cvPath);
+                        if (cvContent == null) {
+                            cvContent = "";
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Could not extract CV text: " + e.getMessage());
+                        cvContent = "";
+                    }
+                }
+
+                String generatedCoverLetter = GrokAIService.generateCoverLetter(
+                    candidateInfo.firstName() + " " + candidateInfo.lastName(),
+                    candidateInfo.email(),
+                    candidateInfo.phone(),
+                    jobTitle,
+                    companyName,
+                    experience,
+                    education,
+                    candidateSkills,
+                    cvContent
+                );
+
+                javafx.application.Platform.runLater(() -> {
+                    loadingAlert.close();
+
+                    if (generatedCoverLetter != null && !generatedCoverLetter.isEmpty()) {
+                        Alert reviewAlert = new Alert(Alert.AlertType.INFORMATION);
+                        reviewAlert.setTitle("Generated Cover Letter");
+                        reviewAlert.setHeaderText("Review and edit as needed:");
+
+                        TextArea textArea = new TextArea(generatedCoverLetter);
+                        textArea.setWrapText(true);
+                        textArea.setPrefRowCount(15);
+                        textArea.setStyle("-fx-font-size: 12px;");
+
+                        reviewAlert.getDialogPane().setContent(textArea);
+                        reviewAlert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
+
+                        var result = reviewAlert.showAndWait();
+                        if (result.isPresent() && result.get() == ButtonType.OK) {
+                            letterArea.setText(generatedCoverLetter);
+                            showAlert("Success", "Cover letter inserted! You can still edit it.", Alert.AlertType.INFORMATION);
+                        }
+                    } else {
+                        showAlert("Error", "Failed to generate cover letter. Please write one manually.", Alert.AlertType.ERROR);
+                    }
+                });
+            } catch (Exception e) {
+                javafx.application.Platform.runLater(() -> {
+                    loadingAlert.close();
+                    showAlert("Error", "Error generating cover letter: " + e.getMessage(), Alert.AlertType.ERROR);
+                });
+            }
+        }).start();
     }
 
     private void updateApplicationWithTracking(ApplicationService.ApplicationRow app, String newPhone, String newCoverLetter, String newCvPath) {
@@ -1155,18 +1334,6 @@ public class ApplicationsController {
         });
     }
 
-    private void updateBulkActionPanel() {
-        if (bulkActionPanel == null) return;
-
-        if (selectedApplicationIds.isEmpty()) {
-            bulkActionPanel.setVisible(false);
-            bulkActionPanel.setManaged(false);
-        } else {
-            bulkActionPanel.setVisible(true);
-            bulkActionPanel.setManaged(true);
-        }
-    }
-
     private void bulkUpdateStatus(List<Long> applicationIds, String newStatus, String note) {
         try {
             Long recruiterId = UserContext.getRecruiterId();
@@ -1183,6 +1350,101 @@ public class ApplicationsController {
             showAlert("Success", "Updated " + applicationIds.size() + " application(s) to: " + newStatus, Alert.AlertType.INFORMATION);
         } catch (Exception e) {
             showAlert("Error", "Failed to update statuses: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    private void updateRankingStatus(String text, boolean success) {
+        if (rankingStatusLabel == null) return;
+        rankingStatusLabel.setText(text);
+        rankingStatusLabel.setStyle(success
+            ? "-fx-text-fill: #28a745; -fx-font-weight: bold;"
+            : "-fx-text-fill: #dc3545; -fx-font-weight: bold;");
+    }
+
+    private void rankApplicationsWithAI() {
+        if (UserContext.getRole() != UserContext.Role.RECRUITER) {
+            showAlert("Warning", "Only recruiters can rank applications", Alert.AlertType.WARNING);
+            return;
+        }
+        if (currentApplications == null || currentApplications.isEmpty()) {
+            showAlert("Info", "No applications to rank", Alert.AlertType.INFORMATION);
+            return;
+        }
+
+        rankingCache.clear();
+        rankingActive = true;
+        updateRankingStatus("Ranking: 0/" + currentApplications.size(), false);
+
+        new Thread(() -> {
+            int total = currentApplications.size();
+            int done = 0;
+
+            for (ApplicationService.ApplicationRow app : currentApplications) {
+                OllamaRankingService.RankResult result = buildRankForApplication(app);
+                if (result != null) {
+                    rankingCache.put(app.id(), result);
+                }
+                done++;
+                int progress = done;
+
+                javafx.application.Platform.runLater(() -> {
+                    updateRankingStatus("Ranking: " + progress + "/" + total, false);
+                    if (progress == total) {
+                        updateRankingStatus("Ranking: COMPLETE", true);
+                        renderApplications(currentApplications, true);
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private OllamaRankingService.RankResult buildRankForApplication(ApplicationService.ApplicationRow app) {
+        try {
+            JobOfferService.JobOfferRow offer = JobOfferService.getById(app.offerId());
+            List<String> offerSkills = JobOfferService.getOfferSkills(app.offerId());
+
+            UserService.UserInfo userInfo = UserService.getUserInfo(app.candidateId());
+            String experience = userInfo != null && userInfo.experienceYears() != null && userInfo.experienceYears() > 0
+                ? userInfo.experienceYears() + " years of experience"
+                : "No specific experience years provided";
+            String education = userInfo != null && userInfo.educationLevel() != null && !userInfo.educationLevel().isEmpty()
+                ? userInfo.educationLevel()
+                : "Not specified";
+
+            List<String> candidateSkills = UserService.getCandidateSkills(app.candidateId());
+            String cvContent = extractCvText(app.cvPath());
+
+            String jobTitle = offer != null ? offer.title() : (app.jobTitle() != null ? app.jobTitle() : "Job Offer");
+            String jobDescription = offer != null ? offer.description() : "";
+
+            return OllamaRankingService.rankApplication(
+                jobTitle,
+                jobDescription,
+                offerSkills,
+                app.candidateName() != null ? app.candidateName() : "Candidate",
+                experience,
+                education,
+                candidateSkills,
+                app.coverLetter(),
+                cvContent
+            );
+        } catch (Exception e) {
+            System.err.println("Ranking failed for application " + app.id() + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    private String extractCvText(String cvPath) {
+        if (cvPath == null || cvPath.isEmpty()) {
+            return "";
+        }
+        try {
+            FileService fileService = new FileService();
+            String text = fileService.extractTextFromPDF(cvPath);
+            return text == null ? "" : text;
+        } catch (Exception e) {
+            System.err.println("Failed to extract CV text: " + e.getMessage());
+            return "";
         }
     }
 }

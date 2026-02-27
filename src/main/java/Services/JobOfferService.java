@@ -218,4 +218,22 @@ public class JobOfferService {
 
         return list;
     }
+
+    public static List<String> getOfferSkills(Long offerId) {
+        List<String> skills = new ArrayList<>();
+        String sql = "SELECT skill_name FROM offer_skill WHERE offer_id = ? ORDER BY level_required DESC, skill_name ASC";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setLong(1, offerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    skills.add(rs.getString("skill_name"));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving offer skills: " + e.getMessage());
+        }
+
+        return skills;
+    }
 }
