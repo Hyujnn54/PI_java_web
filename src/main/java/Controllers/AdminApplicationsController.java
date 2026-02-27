@@ -103,7 +103,7 @@ public class AdminApplicationsController {
         selectedApplication = null;
 
         if (lblTotalCount != null) {
-            lblTotalCount.setText(apps.size() + " candidature(s)");
+            lblTotalCount.setText(apps.size() + " candidature(s) trouvée(s)");
         }
 
         if (apps.isEmpty()) {
