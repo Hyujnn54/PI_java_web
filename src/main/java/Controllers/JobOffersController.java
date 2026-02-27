@@ -2,6 +2,7 @@ package Controllers;
 
 import Services.ApplicationService;
 import Services.EmailService;
+import Services.EmailServiceApplication;
 import Services.GrokAIService;
 import Services.JobOfferService;
 import Services.UserService;
@@ -670,7 +671,7 @@ public class JobOffersController {
                 String candidateName = ((info.firstName() != null ? info.firstName() : "") + " " +
                         (info.lastName() != null ? info.lastName() : "")).trim();
 
-                EmailService.sendApplicationConfirmation(
+                EmailServiceApplication.sendApplicationConfirmation(
                         info.email(),
                         candidateName.isEmpty() ? "Candidate" : candidateName,
                         offerTitle != null && !offerTitle.isBlank() ? offerTitle : "Job Offer",

@@ -59,6 +59,9 @@
 
                 <Button fx:id="btnAdminStats"   onAction="#handleAdminStatsNav"  text="📊   Statistiques"
                         styleClass="sidebar-nav-btn" maxWidth="Infinity" visible="false" managed="false"/>
+
+                <Button fx:id="btnAdminApplications" onAction="#handleAdminApplicationsNav" text="📋   Toutes les Candidatures"
+                        styleClass="sidebar-nav-btn" maxWidth="Infinity" visible="false" managed="false"/>
             </VBox>
 
             <Region VBox.vgrow="ALWAYS"/>

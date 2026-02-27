@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<HBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.AdminApplicationsController"
+      spacing="20" style="-fx-background-color: #F5F6F8;">
+
+    <!-- LEFT: Application list -->
+    <VBox prefWidth="360" spacing="12" style="-fx-padding: 0 0 0 0;">
+
+        <!-- Header -->
+        <VBox spacing="6" style="-fx-background-color: white; -fx-background-radius: 12;
+              -fx-border-color: #e9ecef; -fx-border-width: 1; -fx-border-radius: 12;
+              -fx-padding: 16 18; -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.05),8,0,0,2);">
+
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="📋 Toutes les Candidatures" style="-fx-font-weight: 700; -fx-font-size: 16px; -fx-text-fill: #2c3e50;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="lblTotalCount" text="" style="-fx-font-size: 12px; -fx-text-fill: #7f8c8d;"/>
+            </HBox>
+
+            <!-- Search bar -->
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <ComboBox fx:id="cbSearchCriteria" promptText="Chercher par..." prefWidth="150"
+                          style="-fx-font-size: 12px;"/>
+                <TextField fx:id="txtSearch" promptText="Mot-clé..." HBox.hgrow="ALWAYS"
+                           style="-fx-font-size: 12px;"/>
+                <Button fx:id="btnSearch" text="🔍" style="-fx-cursor: hand; -fx-background-color: #5BA3F5;
+                        -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 6 10;" onAction="#handleSearch"/>
+                <Button fx:id="btnClear" text="✕" style="-fx-cursor: hand; -fx-background-color: #e9ecef;
+                        -fx-text-fill: #555; -fx-background-radius: 6; -fx-padding: 6 10;" onAction="#handleClear"/>
+            </HBox>
+
+            <!-- Filter row -->
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="Statut:" style="-fx-font-size: 12px; -fx-text-fill: #555;"/>
+                <ComboBox fx:id="cbStatusFilter" promptText="Tous" prefWidth="130" style="-fx-font-size: 12px;"/>
+                <CheckBox fx:id="chkShowArchived" text="Afficher archivés" style="-fx-font-size: 12px;"/>
+            </HBox>
+        </VBox>
+
+        <!-- Application list scroll -->
+        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-border-color: transparent;">
+            <VBox fx:id="applicationListContainer" spacing="8" style="-fx-padding: 4 2;"/>
+        </ScrollPane>
+    </VBox>
+
+    <!-- RIGHT: Detail panel -->
+    <ScrollPane fitToWidth="true" HBox.hgrow="ALWAYS"
+                style="-fx-background-color: transparent; -fx-border-color: transparent;">
+        <VBox fx:id="detailContainer" spacing="14" style="-fx-padding: 4 4 4 0;">
+            <Label text="← Sélectionnez une candidature"
+                   style="-fx-text-fill: #adb5bd; -fx-font-size: 15px; -fx-padding: 40 0 0 20;"/>
+        </VBox>
+    </ScrollPane>
+
+</HBox>
+
+

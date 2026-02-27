@@ -22,6 +22,7 @@ public class MainShellController {
     @FXML private Button btnJobOffers;
     @FXML private Button btnDashboard;
     @FXML private Button btnAdminStats;
+    @FXML private Button btnAdminApplications;
     @FXML private Button btnFullscreenToggle;
 
     // Top-bar buttons
@@ -87,6 +88,13 @@ public class MainShellController {
         activePage = "/AdminApplicationStatistics.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnAdminStats);
+    }
+
+    @FXML
+    private void handleAdminApplicationsNav() {
+        activePage = "/AdminApplications.fxml";
+        loadContentView(activePage);
+        highlightActiveButton(btnAdminApplications);
     }
 
     // -------------------------------------------------------------------------
@@ -240,7 +248,7 @@ public class MainShellController {
 
     private void resetButtonStyles() {
         Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers,
-                               btnDashboard, btnAdminStats, btnFullscreenToggle};
+                               btnDashboard, btnAdminStats, btnAdminApplications, btnFullscreenToggle};
         for (Button btn : navButtons) {
             if (btn == null) continue;
             btn.getStyleClass().removeAll("sidebar-nav-btn-active");
@@ -276,6 +284,10 @@ public class MainShellController {
         if (btnAdminStats != null) {
             btnAdminStats.setVisible(isAdmin);
             btnAdminStats.setManaged(isAdmin);
+        }
+        if (btnAdminApplications != null) {
+            btnAdminApplications.setVisible(isAdmin);
+            btnAdminApplications.setManaged(isAdmin);
         }
     }
 
