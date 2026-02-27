@@ -22,11 +22,11 @@ public class MyDatabase {
         try {
             // Check if connection is valid, if not, reconnect
             if (connection == null || connection.isClosed() || !connection.isValid(2)) {
-                System.out.println("Connection is closed or invalid, reconnecting...");
+                System.out.println("La connexion est fermée ou invalide, reconnexion en cours...");
                 connect();
             }
         } catch (SQLException e) {
-            System.err.println("Error checking connection validity: " + e.getMessage());
+            System.err.println("Erreur lors de la vérification de la connexion : " + e.getMessage());
             connect();
         }
         return connection;
@@ -39,9 +39,9 @@ public class MyDatabase {
     private void connect() {
         try {
             connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
-            System.out.println("Connected to database successfully");
+            System.out.println("Connexion à la base de données réussie");
         } catch (SQLException e) {
-            System.err.println("Database connection failed: " + e.getMessage());
+            System.err.println("Échec de la connexion à la base de données : " + e.getMessage());
             e.printStackTrace();
         }
     }

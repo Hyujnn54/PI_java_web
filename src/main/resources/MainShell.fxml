@@ -27,12 +27,12 @@
                 <Button fx:id="btnNotifications" text="🔔" style="-fx-background-color: transparent; -fx-font-size: 18px; -fx-cursor: hand;" onAction="#handleNotifications"/>
 
                 <VBox alignment="CENTER_RIGHT" spacing="2">
-                    <Label fx:id="lblUserName" text="Sarah Johnson" styleClass="user-name"/>
-                    <Label fx:id="lblUserRole" text="Recruiter" styleClass="user-role"/>
+                    <Label fx:id="lblUserName" text="Utilisateur" styleClass="user-name"/>
+                    <Label fx:id="lblUserRole" text="Rôle" styleClass="user-role"/>
                 </VBox>
 
                 <Button fx:id="btnUserProfile" text="👤" styleClass="profile-button" onAction="#handleUserProfile"/>
-                <Button fx:id="btnDisconnect" text="⎋ Disconnect" styleClass="disconnect-button" onAction="#handleDisconnect"/>
+                <Button fx:id="btnDisconnect" text="⎋ Déconnexion" styleClass="disconnect-button" onAction="#handleDisconnect"/>
             </HBox>
         </HBox>
     </top>
@@ -66,7 +66,7 @@
             <VBox spacing="8" style="-fx-padding: 20;">
                 <Separator styleClass="sidebar-separator"/>
 
-                <Button fx:id="btnFullscreenToggle" onAction="#handleFullscreenToggle" text="🖥  Toggle View"
+                <Button fx:id="btnFullscreenToggle" onAction="#handleFullscreenToggle" text="🖥  Plein écran"
                         styleClass="sidebar-bottom-button" maxWidth="Infinity">
                     <VBox.margin><Insets top="8"/></VBox.margin>
                 </Button>

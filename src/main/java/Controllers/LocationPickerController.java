@@ -1,5 +1,6 @@
 package Controllers;
 
+import Services.NominatimMapService;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
 import javafx.geometry.Pos;
@@ -12,21 +13,16 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import netscape.javascript.JSObject;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-
 /**
  * Contrôleur pour la sélection de localisation sur une carte interactive
- * Permet au recruteur de cliquer sur la carte pour choisir la localisation
+ * Utilise Nominatim (OpenStreetMap) - 100% GRATUIT
  */
 public class LocationPickerController {
 
     private WebView webView;
     private WebEngine webEngine;
     private Stage stage;
+    private NominatimMapService mapService;
 
     // Résultat de la sélection
     private Double selectedLatitude = null;
@@ -40,6 +36,10 @@ public class LocationPickerController {
     private Label lblCoordinates;
     private Label lblAddress;
     private TextField txtSearch;
+
+    public LocationPickerController() {
+        this.mapService = new NominatimMapService();
+    }
 
     /**
      * Interface de callback pour la sélection de localisation
@@ -105,7 +105,7 @@ public class LocationPickerController {
                           "-fx-padding: 10 20; -fx-background-radius: 20; -fx-cursor: hand;");
         btnSearch.setOnAction(e -> searchLocation(txtSearch.getText()));
 
-        Button btnMyLocation = new Button("📌 Ma position");
+        Button btnMyLocation = new Button("📌 Tunisie");
         btnMyLocation.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: 600; " +
                               "-fx-padding: 10 20; -fx-background-radius: 20; -fx-cursor: hand;");
         btnMyLocation.setOnAction(e -> centerOnDefaultLocation());
@@ -215,59 +215,21 @@ public class LocationPickerController {
     private void reverseGeocode(double lat, double lng) {
         new Thread(() -> {
             try {
-                String apiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImQ2ODk2YmExMTI4NTQ1NGZhMmNjNjYwODc0MDU4MjlmIiwiaCI6Im11cm11cjY0In0=";
-                String urlStr = String.format(
-                    "https://api.openrouteservice.org/geocode/reverse?api_key=%s&point.lon=%f&point.lat=%f&size=1",
-                    apiKey, lng, lat
-                );
+                NominatimMapService.GeoLocation location = mapService.reverseGeocode(lat, lng);
 
-                URL url = new URL(urlStr);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("Accept", "application/json");
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(10000);
-
-                if (conn.getResponseCode() == 200) {
-                    StringBuilder response = new StringBuilder();
-                    try (BufferedReader br = new BufferedReader(
-                            new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            response.append(line);
-                        }
+                Platform.runLater(() -> {
+                    if (location != null) {
+                        selectedAddress = location.getFullLocation();
+                        lblAddress.setText(selectedAddress);
+                    } else {
+                        selectedAddress = String.format("%.4f, %.4f", lat, lng);
+                        lblAddress.setText("Localisation: " + selectedAddress);
                     }
-
-                    String address = parseAddressFromResponse(response.toString());
-
-                    Platform.runLater(() -> {
-                        selectedAddress = address;
-                        lblAddress.setText(address != null ? address : "Adresse non trouvée");
-                    });
-                } else {
-                    Platform.runLater(() -> lblAddress.setText("Erreur de géocodage"));
-                }
+                });
             } catch (Exception e) {
                 Platform.runLater(() -> lblAddress.setText("Erreur: " + e.getMessage()));
             }
         }).start();
-    }
-
-    private String parseAddressFromResponse(String json) {
-        try {
-            // Chercher le label dans la réponse
-            int labelStart = json.indexOf("\"label\":\"");
-            if (labelStart != -1) {
-                labelStart += 9;
-                int labelEnd = json.indexOf("\"", labelStart);
-                if (labelEnd != -1) {
-                    return json.substring(labelStart, labelEnd);
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Erreur parsing adresse: " + e.getMessage());
-        }
-        return null;
     }
 
     private void searchLocation(String query) {
@@ -275,83 +237,43 @@ public class LocationPickerController {
 
         new Thread(() -> {
             try {
-                String apiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImQ2ODk2YmExMTI4NTQ1NGZhMmNjNjYwODc0MDU4MjlmIiwiaCI6Im11cm11cjY0In0=";
-                String encodedQuery = java.net.URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
-                String urlStr = String.format(
-                    "https://api.openrouteservice.org/geocode/search?api_key=%s&text=%s&size=1",
-                    apiKey, encodedQuery
-                );
+                var results = mapService.searchLocations(query);
 
-                URL url = new URL(urlStr);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("Accept", "application/json");
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(10000);
+                if (!results.isEmpty()) {
+                    NominatimMapService.GeoLocation loc = results.get(0);
 
-                if (conn.getResponseCode() == 200) {
-                    StringBuilder response = new StringBuilder();
-                    try (BufferedReader br = new BufferedReader(
-                            new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            response.append(line);
-                        }
-                    }
+                    Platform.runLater(() -> {
+                        selectedLatitude = loc.getLatitude();
+                        selectedLongitude = loc.getLongitude();
+                        selectedAddress = loc.getFullLocation();
 
-                    // Parser les coordonnées
-                    double[] coords = parseCoordinatesFromResponse(response.toString());
-                    String address = parseAddressFromResponse(response.toString());
+                        lblCoordinates.setText(String.format("%.6f, %.6f", loc.getLatitude(), loc.getLongitude()));
+                        lblAddress.setText(selectedAddress);
 
-                    if (coords != null) {
-                        Platform.runLater(() -> {
-                            selectedLatitude = coords[1]; // lat
-                            selectedLongitude = coords[0]; // lon
-                            selectedAddress = address;
-
-                            lblCoordinates.setText(String.format("%.6f, %.6f", coords[1], coords[0]));
-                            lblAddress.setText(address != null ? address : query);
-
-                            // Centrer la carte et placer un marqueur
-                            webEngine.executeScript(String.format(
-                                "setMarkerAndCenter(%f, %f);", coords[1], coords[0]
-                            ));
-                        });
-                    }
+                        // Centrer la carte et placer un marqueur
+                        webEngine.executeScript(String.format(
+                            "setMarkerAndCenter(%f, %f);", loc.getLatitude(), loc.getLongitude()
+                        ));
+                    });
+                } else {
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(Alert.AlertType.WARNING);
+                        alert.setTitle("Non trouvé");
+                        alert.setContentText("Aucun résultat pour: " + query);
+                        alert.show();
+                    });
                 }
             } catch (Exception e) {
                 Platform.runLater(() -> {
                     Alert alert = new Alert(Alert.AlertType.WARNING);
                     alert.setTitle("Erreur");
-                    alert.setContentText("Impossible de trouver: " + query);
+                    alert.setContentText("Erreur de recherche: " + e.getMessage());
                     alert.show();
                 });
             }
         }).start();
     }
 
-    private double[] parseCoordinatesFromResponse(String json) {
-        try {
-            int coordsStart = json.indexOf("\"coordinates\":[");
-            if (coordsStart != -1) {
-                coordsStart += 15;
-                int coordsEnd = json.indexOf("]", coordsStart);
-                if (coordsEnd != -1) {
-                    String coordsStr = json.substring(coordsStart, coordsEnd);
-                    String[] parts = coordsStr.split(",");
-                    if (parts.length >= 2) {
-                        return new double[] {
-                            Double.parseDouble(parts[0].trim()),
-                            Double.parseDouble(parts[1].trim())
-                        };
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Erreur parsing coordonnées: " + e.getMessage());
-        }
-        return null;
-    }
 
     private void centerOnDefaultLocation() {
         // Centrer sur Tunis par défaut

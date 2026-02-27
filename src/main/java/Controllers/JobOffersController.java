@@ -11,8 +11,8 @@ import Services.JobOfferService;
 import Services.JobOfferWarningService;
 import Services.WarningCorrectionService;
 import Services.OfferSkillService;
-import Services.GeoLocationService;
-import Services.GeoLocationService.GeoLocation;
+import Services.NominatimMapService;
+import Services.NominatimMapService.GeoLocation;
 import Utils.UserContext;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -51,7 +51,7 @@ public class JobOffersController {
     private OfferSkillService offerSkillService;
     private JobOfferWarningService warningService;
     private WarningCorrectionService correctionService;
-    private GeoLocationService geoLocationService;
+    private NominatimMapService mapService;
 
     // Form elements
     private TextField formTitleField;
@@ -86,7 +86,7 @@ public class JobOffersController {
         offerSkillService = new OfferSkillService();
         warningService = new JobOfferWarningService();
         correctionService = new WarningCorrectionService();
-        geoLocationService = new GeoLocationService();
+        mapService = new NominatimMapService();
         skillRows = new ArrayList<>();
         buildUI();
         loadJobOffers();
@@ -420,7 +420,7 @@ public class JobOffersController {
                 }
             }
         } catch (SQLException e) {
-            showAlert("Error", "Failed to load job offers: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Impossible de charger les offres : " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
     }
@@ -860,10 +860,10 @@ public class JobOffersController {
                 detailContainer.getChildren().add(skillsSection);
             }
         } catch (SQLException e) {
-            System.err.println("Failed to load skills: " + e.getMessage());
+            System.err.println("Erreur lors du chargement des compétences : " + e.getMessage());
         }
 
-        // Posted date
+        // Date de publication
         if (job.getCreatedAt() != null) {
             Label posted = new Label("Publié le: " + job.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             posted.setStyle("-fx-text-fill: #8e9ba8; -fx-font-size: 12px; -fx-padding: 15 0;");
@@ -944,7 +944,7 @@ public class JobOffersController {
             showAlert("Information", "Géocodage de la localisation en cours...", Alert.AlertType.INFORMATION);
 
             new Thread(() -> {
-                GeoLocationService.GeoLocation geoResult = geoLocationService.geocode(job.getLocation());
+                NominatimMapService.GeoLocation geoResult = mapService.geocode(job.getLocation());
 
                 javafx.application.Platform.runLater(() -> {
                     if (geoResult != null) {
@@ -1103,7 +1103,7 @@ public class JobOffersController {
                     @Override
                     public void run() {
                         javafx.application.Platform.runLater(() -> {
-                            List<GeoLocation> suggestions = geoLocationService.autocomplete(newVal);
+                            List<GeoLocation> suggestions = mapService.searchLocations(newVal);
                             if (!suggestions.isEmpty()) {
                                 locationSuggestions.getItems().clear();
                                 locationSuggestions.getItems().addAll(suggestions);
@@ -1251,7 +1251,7 @@ public class JobOffersController {
                     addSkillRow(skill);
                 }
             } catch (SQLException e) {
-                showAlert("Error", "Failed to load skills: " + e.getMessage(), Alert.AlertType.ERROR);
+                showAlert("Erreur", "Impossible de charger les compétences : " + e.getMessage(), Alert.AlertType.ERROR);
             }
         } else {
             // Add one empty skill row for new offers
@@ -1326,7 +1326,7 @@ public class JobOffersController {
         HBox.setHgrow(skillNameContainer, Priority.ALWAYS);
 
         TextField skillName = new TextField();
-        skillName.setPromptText("Skill name (e.g., Java, JavaScript)");
+        skillName.setPromptText("Nom de la compétence (ex: Java, JavaScript)");
         skillName.setStyle("-fx-padding: 8; -fx-font-size: 13px;");
 
         Label skillErrorLabel = new Label();
@@ -1334,7 +1334,7 @@ public class JobOffersController {
         skillErrorLabel.setVisible(false);
         skillErrorLabel.setManaged(false);
 
-        // Validation for skill name
+        // Validation des compétences
         skillName.textProperty().addListener((obs, oldVal, newVal) -> {
             skillErrorLabel.setVisible(false);
             skillErrorLabel.setManaged(false);
@@ -1344,12 +1344,12 @@ public class JobOffersController {
             }
             if (!newVal.isEmpty() && newVal.length() < 2) {
                 skillName.setStyle("-fx-padding: 8; -fx-font-size: 13px; -fx-border-color: #ffc107; -fx-border-width: 2;");
-                skillErrorLabel.setText("⚠️ Min 2 characters");
+                skillErrorLabel.setText("⚠️ Minimum 2 caractères");
                 skillErrorLabel.setVisible(true);
                 skillErrorLabel.setManaged(true);
-            } else if (!newVal.isEmpty() && !newVal.matches("^[a-zA-Z0-9\\s\\-+#.]+$")) {
+            } else if (!newVal.isEmpty() && !newVal.matches("^[\\p{L}\\p{N}\\s\\-+#.]+$")) {
                 skillName.setStyle("-fx-padding: 8; -fx-font-size: 13px; -fx-border-color: #dc3545; -fx-border-width: 2;");
-                skillErrorLabel.setText("❌ Only letters, numbers, -, +, #, . allowed");
+                skillErrorLabel.setText("❌ Seuls lettres, chiffres, -, +, #, . sont autorisés");
                 skillErrorLabel.setVisible(true);
                 skillErrorLabel.setManaged(true);
             } else if (!newVal.isEmpty()) {
@@ -1476,32 +1476,32 @@ public class JobOffersController {
     private void handleDeleteJobOffer(JobOffer job) {
         // Check if the current user owns this job offer
         if (!job.getRecruiterId().equals(UserContext.getRecruiterId())) {
-            showAlert("Permission Denied", "You can only delete job offers that you created.", Alert.AlertType.WARNING);
+            showAlert("Permission refusée", "Vous ne pouvez supprimer que les offres que vous avez créées.", Alert.AlertType.WARNING);
             return;
         }
 
         Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
         confirmation.setTitle("Confirm Delete");
-        confirmation.setHeaderText("Delete Job Offer");
-        confirmation.setContentText("Are you sure you want to delete this job offer? This action cannot be undone.");
+        confirmation.setHeaderText("Supprimer l'offre d'emploi");
+        confirmation.setContentText("Êtes-vous sûr de vouloir supprimer cette offre d'emploi ? Cette action est irréversible.");
 
         Optional<ButtonType> result = confirmation.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
                 boolean deleted = jobOfferService.deleteJobOffer(job.getId());
                 if (deleted) {
-                    showAlert("Success", "Job offer deleted successfully!", Alert.AlertType.INFORMATION);
+                    showAlert("Succès", "Offre d'emploi supprimée avec succès !", Alert.AlertType.INFORMATION);
                     selectedJob = null;
                     detailContainer.getChildren().clear();
-                    Label noSelection = new Label("Select a job offer to view details");
+                    Label noSelection = new Label("Sélectionnez une offre pour voir les détails");
                     noSelection.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 16px;");
                     detailContainer.getChildren().add(noSelection);
                     loadJobOffers();
                 } else {
-                    showAlert("Error", "Failed to delete job offer", Alert.AlertType.ERROR);
+                    showAlert("Erreur", "Impossible de supprimer l'offre", Alert.AlertType.ERROR);
                 }
             } catch (SQLException e) {
-                showAlert("Error", "Failed to delete job offer: " + e.getMessage(), Alert.AlertType.ERROR);
+                showAlert("Erreur", "Impossible de supprimer l'offre : " + e.getMessage(), Alert.AlertType.ERROR);
                 e.printStackTrace();
             }
         }
@@ -1510,7 +1510,7 @@ public class JobOffersController {
     private void handleToggleStatus(JobOffer job) {
         // Check if the current user owns this job offer
         if (!job.getRecruiterId().equals(UserContext.getRecruiterId())) {
-            showAlert("Permission Denied", "You can only change the status of job offers that you created.", Alert.AlertType.WARNING);
+            showAlert("Permission refusée", "Vous ne pouvez changer le statut que des offres que vous avez créées.", Alert.AlertType.WARNING);
             return;
         }
 
@@ -1522,14 +1522,15 @@ public class JobOffersController {
             boolean updated = jobOfferService.updateJobOfferStatus(job.getId(), newStatus);
             if (updated) {
                 job.setStatus(newStatus);
-                showAlert("Success", "Job offer status updated to " + newStatus, Alert.AlertType.INFORMATION);
+                String statusLabel = newStatus == Status.OPEN ? "Ouverte" : "Fermée";
+                showAlert("Succès", "Le statut de l'offre a été mis à jour : " + statusLabel, Alert.AlertType.INFORMATION);
                 loadJobOffers();
                 displayJobDetails(job);
             } else {
-                showAlert("Error", "Failed to update status", Alert.AlertType.ERROR);
+                showAlert("Erreur", "Impossible de mettre à jour le statut", Alert.AlertType.ERROR);
             }
         } catch (SQLException e) {
-            showAlert("Error", "Failed to update status: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Impossible de mettre à jour le statut : " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
     }
@@ -1541,110 +1542,110 @@ public class JobOffersController {
 
         // Validate Title
         if (title.isEmpty()) {
-            showAlert("Validation Error", "Job title is required", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "Le titre du poste est requis", Alert.AlertType.WARNING);
             formTitleField.requestFocus();
             return false;
         }
         if (title.length() < 3) {
-            showAlert("Validation Error", "Job title must be at least 3 characters long", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "Le titre doit contenir au moins 3 caractères", Alert.AlertType.WARNING);
             formTitleField.requestFocus();
             return false;
         }
         if (title.length() > 100) {
-            showAlert("Validation Error", "Job title must not exceed 100 characters", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "Le titre ne doit pas dépasser 100 caractères", Alert.AlertType.WARNING);
             formTitleField.requestFocus();
             return false;
         }
-        if (!title.matches("^[a-zA-Z0-9\\s\\-\\/&,.]+$")) {
-            showAlert("Validation Error", "Job title contains invalid characters.\nOnly letters, numbers, spaces, and basic punctuation are allowed.", Alert.AlertType.WARNING);
+        if (!title.matches("^[\\p{L}\\p{N}\\s\\-\\/&,.]+$")) {
+            showAlert("Erreur de validation", "Le titre contient des caractères non autorisés.\nSeuls les lettres, chiffres, espaces et ponctuations de base sont acceptés.", Alert.AlertType.WARNING);
             formTitleField.requestFocus();
             return false;
         }
 
-        // Validate Description
+        // Validation de la description
         if (description.isEmpty()) {
-            showAlert("Validation Error", "Job description is required", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "La description du poste est requise", Alert.AlertType.WARNING);
             formDescription.requestFocus();
             return false;
         }
         if (description.length() < 20) {
-            showAlert("Validation Error", "Job description must be at least 20 characters long", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "La description doit contenir au moins 20 caractères", Alert.AlertType.WARNING);
             formDescription.requestFocus();
             return false;
         }
         if (description.length() > 2000) {
-            showAlert("Validation Error", "Job description must not exceed 2000 characters", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "La description ne doit pas dépasser 2000 caractères", Alert.AlertType.WARNING);
             formDescription.requestFocus();
             return false;
         }
 
-        // Validate Location
+        // Validation de la localisation
         if (location.isEmpty()) {
-            showAlert("Validation Error", "Location is required", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "La localisation est requise", Alert.AlertType.WARNING);
             formLocation.requestFocus();
             return false;
         }
         if (location.length() < 2) {
-            showAlert("Validation Error", "Location must be at least 2 characters long", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "La localisation doit contenir au moins 2 caractères", Alert.AlertType.WARNING);
             formLocation.requestFocus();
             return false;
         }
         if (location.length() > 100) {
-            showAlert("Validation Error", "Location must not exceed 100 characters", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "La localisation ne doit pas dépasser 100 caractères", Alert.AlertType.WARNING);
             formLocation.requestFocus();
             return false;
         }
-        if (!location.matches("^[a-zA-Z0-9\\s\\-,./]+$")) {
-            showAlert("Validation Error", "Location contains invalid characters.\nOnly letters, numbers, spaces, and basic punctuation are allowed.", Alert.AlertType.WARNING);
+        if (!location.matches("^[\\p{L}\\p{N}\\s\\-,./]+$")) {
+            showAlert("Erreur de validation", "La localisation contient des caractères non autorisés.\nSeuls les lettres, chiffres, espaces et ponctuations de base sont acceptés.", Alert.AlertType.WARNING);
             formLocation.requestFocus();
             return false;
         }
 
-        // Validate Contract Type
+        // Validation du type de contrat
         if (formContractType.getValue() == null) {
-            showAlert("Validation Error", "Please select a contract type", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "Veuillez sélectionner un type de contrat", Alert.AlertType.WARNING);
             formContractType.requestFocus();
             return false;
         }
 
-        // Validate Status
+        // Validation du statut
         if (formStatus.getValue() == null) {
-            showAlert("Validation Error", "Please select a status", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "Veuillez sélectionner un statut", Alert.AlertType.WARNING);
             formStatus.requestFocus();
             return false;
         }
 
-        // Validate Deadline (if provided)
+        // Validation de la date limite (si fournie)
         if (formDeadline.getValue() != null) {
             if (formDeadline.getValue().isBefore(java.time.LocalDate.now())) {
-                showAlert("Validation Error", "Deadline cannot be in the past", Alert.AlertType.WARNING);
+                showAlert("Erreur de validation", "La date limite ne peut pas être dans le passé", Alert.AlertType.WARNING);
                 formDeadline.requestFocus();
                 return false;
             }
         }
 
-        // Validate Skills
+        // Validation des compétences
         boolean hasValidSkill = false;
         for (SkillRow row : skillRows) {
             String skillName = row.nameField.getText().trim();
             if (!skillName.isEmpty()) {
                 if (skillName.length() < 2) {
-                    showAlert("Validation Error", "Skill name must be at least 2 characters long", Alert.AlertType.WARNING);
+                    showAlert("Erreur de validation", "Le nom de la compétence doit contenir au moins 2 caractères", Alert.AlertType.WARNING);
                     row.nameField.requestFocus();
                     return false;
                 }
                 if (skillName.length() > 50) {
-                    showAlert("Validation Error", "Skill name must not exceed 50 characters", Alert.AlertType.WARNING);
+                    showAlert("Erreur de validation", "Le nom de la compétence ne doit pas dépasser 50 caractères", Alert.AlertType.WARNING);
                     row.nameField.requestFocus();
                     return false;
                 }
-                if (!skillName.matches("^[a-zA-Z0-9\\s\\-+#.]+$")) {
-                    showAlert("Validation Error", "Skill name '" + skillName + "' contains invalid characters.\nOnly letters, numbers, spaces, and -, +, #, . are allowed.", Alert.AlertType.WARNING);
+                if (!skillName.matches("^[\\p{L}\\p{N}\\s\\-+#.]+$")) {
+                    showAlert("Erreur de validation", "La compétence '" + skillName + "' contient des caractères non autorisés.\nSeuls les lettres, chiffres, espaces et -, +, #, . sont acceptés.", Alert.AlertType.WARNING);
                     row.nameField.requestFocus();
                     return false;
                 }
                 if (row.levelCombo.getValue() == null) {
-                    showAlert("Validation Error", "Please select a level for skill: " + skillName, Alert.AlertType.WARNING);
+                    showAlert("Erreur de validation", "Veuillez sélectionner un niveau pour la compétence : " + skillName, Alert.AlertType.WARNING);
                     row.levelCombo.requestFocus();
                     return false;
                 }
@@ -1653,7 +1654,7 @@ public class JobOffersController {
         }
 
         if (!hasValidSkill) {
-            showAlert("Validation Error", "Please add at least one skill for this job offer", Alert.AlertType.WARNING);
+            showAlert("Erreur de validation", "Veuillez ajouter au moins une compétence pour cette offre", Alert.AlertType.WARNING);
             return false;
         }
 
@@ -1661,7 +1662,7 @@ public class JobOffersController {
     }
 
     private void addValidationListeners() {
-        // Title validation - max 100 chars
+        // Validation du titre - max 100 caractères
         formTitleField.textProperty().addListener((obs, oldVal, newVal) -> {
             titleErrorLabel.setVisible(false);
             titleErrorLabel.setManaged(false);
@@ -1671,12 +1672,12 @@ public class JobOffersController {
             }
             if (!newVal.isEmpty() && newVal.length() < 3) {
                 formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #ffc107; -fx-border-width: 2;");
-                titleErrorLabel.setText("⚠️ Title must be at least 3 characters");
+                titleErrorLabel.setText("⚠️ Le titre doit contenir au moins 3 caractères");
                 titleErrorLabel.setVisible(true);
                 titleErrorLabel.setManaged(true);
-            } else if (!newVal.isEmpty() && !newVal.matches("^[a-zA-Z0-9\\s\\-/&,.]+$")) {
+            } else if (!newVal.isEmpty() && !newVal.matches("^[\\p{L}\\p{N}\\s\\-/&,.]+$")) {
                 formTitleField.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #dc3545; -fx-border-width: 2;");
-                titleErrorLabel.setText("❌ Invalid characters. Use only letters, numbers, spaces, and -, /, &, , .");
+                titleErrorLabel.setText("❌ Caractères non autorisés. Utilisez uniquement lettres, chiffres, espaces et -, /, &, , .");
                 titleErrorLabel.setVisible(true);
                 titleErrorLabel.setManaged(true);
             } else if (!newVal.isEmpty()) {
@@ -1686,7 +1687,7 @@ public class JobOffersController {
             }
         });
 
-        // Description validation - max 2000 chars
+        // Validation de la description - max 2000 caractères
         formDescription.textProperty().addListener((obs, oldVal, newVal) -> {
             descriptionErrorLabel.setVisible(false);
             descriptionErrorLabel.setManaged(false);
@@ -1696,7 +1697,7 @@ public class JobOffersController {
             }
             if (!newVal.isEmpty() && newVal.length() < 20) {
                 formDescription.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #ffc107; -fx-border-width: 2;");
-                descriptionErrorLabel.setText("⚠️ Description must be at least 20 characters (currently " + newVal.length() + ")");
+                descriptionErrorLabel.setText("⚠️ La description doit contenir au moins 20 caractères (actuellement " + newVal.length() + ")");
                 descriptionErrorLabel.setVisible(true);
                 descriptionErrorLabel.setManaged(true);
             } else if (!newVal.isEmpty()) {
@@ -1706,7 +1707,7 @@ public class JobOffersController {
             }
         });
 
-        // Location validation - max 100 chars
+        // Validation de la localisation - max 100 caractères
         formLocation.textProperty().addListener((obs, oldVal, newVal) -> {
             locationErrorLabel.setVisible(false);
             locationErrorLabel.setManaged(false);
@@ -1716,12 +1717,12 @@ public class JobOffersController {
             }
             if (!newVal.isEmpty() && newVal.length() < 2) {
                 formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #ffc107; -fx-border-width: 2;");
-                locationErrorLabel.setText("⚠️ Location must be at least 2 characters");
+                locationErrorLabel.setText("⚠️ La localisation doit contenir au moins 2 caractères");
                 locationErrorLabel.setVisible(true);
                 locationErrorLabel.setManaged(true);
-            } else if (!newVal.isEmpty() && !newVal.matches("^[a-zA-Z0-9\\s\\-,./]+$")) {
+            } else if (!newVal.isEmpty() && !newVal.matches("^[\\p{L}\\p{N}\\s\\-,./]+$")) {
                 formLocation.setStyle("-fx-padding: 10; -fx-font-size: 14px; -fx-border-color: #dc3545; -fx-border-width: 2;");
-                locationErrorLabel.setText("❌ Invalid characters. Use only letters, numbers, spaces, and -, , . /");
+                locationErrorLabel.setText("❌ Caractères non autorisés. Utilisez uniquement lettres, chiffres, espaces et -, , . /");
                 locationErrorLabel.setVisible(true);
                 locationErrorLabel.setManaged(true);
             } else if (!newVal.isEmpty()) {
@@ -1731,14 +1732,14 @@ public class JobOffersController {
             }
         });
 
-        // Deadline validation - not in the past
+        // Validation de la date limite - pas dans le passé
         formDeadline.valueProperty().addListener((obs, oldVal, newVal) -> {
             deadlineErrorLabel.setVisible(false);
             deadlineErrorLabel.setManaged(false);
 
             if (newVal != null && newVal.isBefore(java.time.LocalDate.now())) {
                 formDeadline.setStyle("-fx-font-size: 14px; -fx-border-color: #dc3545; -fx-border-width: 2;");
-                deadlineErrorLabel.setText("❌ Deadline cannot be in the past");
+                deadlineErrorLabel.setText("❌ La date limite ne peut pas être dans le passé");
                 deadlineErrorLabel.setVisible(true);
                 deadlineErrorLabel.setManaged(true);
             } else if (newVal != null) {

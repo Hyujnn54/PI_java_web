@@ -1,7 +1,6 @@
 package Controllers;
 
-import Services.ORSMapService;
-import Services.ORSMapService.DirectionsResult;
+import Services.NominatimMapService;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
 import javafx.geometry.Pos;
@@ -15,11 +14,11 @@ import javafx.stage.Stage;
 
 /**
  * Contrôleur pour afficher une carte avec la localisation d'une offre d'emploi
- * Utilise Leaflet dans un WebView JavaFX avec intégration OpenRouteService
+ * Utilise Leaflet (OpenStreetMap) - 100% GRATUIT, sans clé API
  */
 public class MapViewController {
 
-    private ORSMapService orsService;
+    private NominatimMapService mapService;
     private WebView webView;
     private WebEngine webEngine;
 
@@ -28,7 +27,7 @@ public class MapViewController {
     private Double candidateLongitude;
 
     public MapViewController() {
-        this.orsService = new ORSMapService();
+        this.mapService = new NominatimMapService();
     }
 
     /**
@@ -109,58 +108,51 @@ public class MapViewController {
         }
 
         HBox bar = new HBox(20);
-        bar.setStyle("-fx-background-color: #e8f5e9; -fx-padding: 15 20;");
+        bar.setStyle("-fx-background-color: linear-gradient(to right, #e3f2fd, #e8f5e9); -fx-padding: 15 20;");
         bar.setAlignment(Pos.CENTER_LEFT);
 
-        // Calcul de la distance et durée via API ORS Directions
-        Label loadingLabel = new Label("⏳ Calcul de l'itinéraire en cours...");
-        loadingLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #2e7d32;");
-        bar.getChildren().add(loadingLabel);
+        // Calcul de la distance avec formule Haversine
+        double distance = NominatimMapService.calculateDistance(
+            candidateLatitude, candidateLongitude, companyLat, companyLon
+        );
+        int travelTime = NominatimMapService.estimateTravelTime(distance);
 
-        // Lancer le calcul en arrière-plan
-        new Thread(() -> {
-            DirectionsResult directions = orsService.getDirections(
-                candidateLongitude, candidateLatitude,  // Départ: candidat [lon, lat]
-                companyLon, companyLat                   // Arrivée: entreprise [lon, lat]
-            );
+        // Icône voiture
+        Label carIcon = new Label("🚗");
+        carIcon.setStyle("-fx-font-size: 24px;");
 
-            Platform.runLater(() -> {
-                bar.getChildren().clear();
+        // Distance
+        VBox distanceBox = new VBox(2);
+        Label distanceLabel = new Label(NominatimMapService.formatDistance(distance));
+        distanceLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: #1976d2;");
+        Label distanceSubLabel = new Label("Distance");
+        distanceSubLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+        distanceBox.getChildren().addAll(distanceLabel, distanceSubLabel);
 
-                if (directions != null) {
-                    Label distanceLabel = new Label("🚗 Distance: " + directions.getFormattedDistance());
-                    distanceLabel.setStyle("-fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: #2e7d32;");
+        // Séparateur
+        Separator sep = new Separator();
+        sep.setStyle("-fx-orientation: vertical;");
 
-                    Label durationLabel = new Label("⏱️ Durée: " + directions.getFormattedDuration());
-                    durationLabel.setStyle("-fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: #1565c0;");
+        // Durée
+        VBox durationBox = new VBox(2);
+        Label durationLabel = new Label(NominatimMapService.formatTravelTime(travelTime));
+        durationLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: #388e3c;");
+        Label durationSubLabel = new Label("Durée estimée");
+        durationSubLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+        durationBox.getChildren().addAll(durationLabel, durationSubLabel);
 
-                    Region spacer = new Region();
-                    HBox.setHgrow(spacer, Priority.ALWAYS);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-                    Label infoLabel = new Label("(en voiture)");
-                    infoLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+        // Info
+        VBox infoBox = new VBox(2);
+        Label infoLabel = new Label("📍 Depuis votre position");
+        infoLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+        Label modeLabel = new Label("🚗 En voiture (~50 km/h)");
+        modeLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #999;");
+        infoBox.getChildren().addAll(infoLabel, modeLabel);
 
-                    bar.getChildren().addAll(distanceLabel, durationLabel, spacer, infoLabel);
-
-                    // Mettre à jour la carte avec la route
-                    updateMapWithRoute(companyLat, companyLon, directions);
-                } else {
-                    // Fallback: distance à vol d'oiseau
-                    double distance = ORSMapService.calculateHaversineDistance(
-                        candidateLatitude, candidateLongitude, companyLat, companyLon
-                    );
-                    int estimatedTime = (int) Math.round(distance / 50.0 * 60); // ~50 km/h moyenne
-
-                    Label distanceLabel = new Label("📍 Distance: " + String.format("%.1f km", distance) + " (à vol d'oiseau)");
-                    distanceLabel.setStyle("-fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: #ff9800;");
-
-                    Label durationLabel = new Label("⏱️ Durée estimée: ~" + estimatedTime + " min");
-                    durationLabel.setStyle("-fx-font-size: 15px; -fx-text-fill: #666;");
-
-                    bar.getChildren().addAll(distanceLabel, durationLabel);
-                }
-            });
-        }).start();
+        bar.getChildren().addAll(carIcon, distanceBox, sep, durationBox, spacer, infoBox);
 
         return bar;
     }
@@ -192,32 +184,13 @@ public class MapViewController {
     }
 
     private void loadMap(double lat, double lon, String locationName) {
-        String html;
-
-        if (candidateLatitude != null && candidateLongitude != null) {
-            // Carte avec position candidat (route sera ajoutée après)
-            html = ORSMapService.generateMapHTML(lat, lon, locationName, candidateLatitude, candidateLongitude, null);
-        } else {
-            // Carte simple
-            html = ORSMapService.generateSimpleMapHTML(lat, lon, locationName);
-        }
-
+        String html = NominatimMapService.generateMapViewHtml(
+            lat, lon, locationName,
+            candidateLatitude, candidateLongitude
+        );
         webEngine.loadContent(html);
     }
 
-    private void updateMapWithRoute(double companyLat, double companyLon, DirectionsResult directions) {
-        if (directions == null || webEngine == null) return;
-
-        // Recharger la carte avec la route
-        String html = ORSMapService.generateMapHTML(
-            companyLat, companyLon,
-            "Entreprise",
-            candidateLatitude, candidateLongitude,
-            directions
-        );
-
-        Platform.runLater(() -> webEngine.loadContent(html));
-    }
 
     private HBox createFooter(Stage stage, double lat, double lon, String locationName) {
         HBox footer = new HBox(15);

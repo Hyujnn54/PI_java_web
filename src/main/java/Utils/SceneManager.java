@@ -26,7 +26,7 @@ public final class SceneManager {
             Parent root = loader.load();
             scene.setRoot(root);
         } catch (Exception e) {
-            System.err.println("Failed to load scene: " + fxmlPath + " -> " + e.getMessage());
+            System.err.println("Échec du chargement de la scène : " + fxmlPath + " -> " + e.getMessage());
             e.printStackTrace();
         }
     }

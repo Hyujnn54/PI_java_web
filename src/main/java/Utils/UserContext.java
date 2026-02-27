@@ -16,9 +16,9 @@ public class UserContext {
 
     // Role enum
     public enum Role {
-        CANDIDATE("Candidate"),
-        RECRUITER("Recruiter"),
-        ADMIN("Admin");
+        CANDIDATE("Candidat"),
+        RECRUITER("Recruteur"),
+        ADMIN("Administrateur");
 
         private final String label;
 

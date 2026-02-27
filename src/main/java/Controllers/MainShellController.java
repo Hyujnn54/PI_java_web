@@ -123,8 +123,8 @@ public class MainShellController {
             org.example.MainFX.toggleFullscreen();
         } catch (Exception e) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Fullscreen");
-            alert.setHeaderText("Could not toggle fullscreen");
+            alert.setTitle("Plein écran");
+            alert.setHeaderText("Impossible de basculer en plein écran");
             alert.setContentText(String.valueOf(e.getMessage()));
             alert.showAndWait();
         }
@@ -143,7 +143,7 @@ public class MainShellController {
 
             contentArea.getChildren().setAll(content);
         } catch (IOException e) {
-            System.err.println("Error loading view: " + fxmlFile);
+            System.err.println("Erreur de chargement de la vue : " + fxmlFile);
             e.printStackTrace();
         }
     }

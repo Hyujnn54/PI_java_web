@@ -5,10 +5,10 @@ import Models.OfferSkill;
 import Models.ContractType;
 import Models.Status;
 import Models.MatchingResult;
+import Models.SkillLevel;
 import Services.JobOfferService;
 import Services.OfferSkillService;
-import Services.GeoLocationService;
-import Services.MatchingService;
+import Services.NominatimMapService;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -20,33 +20,25 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Contrôleur pour la vue Candidat - Lecture seule avec recherche avancée intégrée
- * PAS DE STATISTIQUES pour les candidats
+ * Contrôleur pour la vue Candidat - Consultation des offres d'emploi
  */
 public class JobOffersBrowseController {
 
     @FXML private VBox mainContainer;
     @FXML private TextField txtSearch;
-    @FXML private ComboBox<String> cbSearchCriteria;
-    @FXML private Button btnSearch;
-    @FXML private Button btnClearSearch;
 
     private VBox jobListContainer;
     private VBox detailContainer;
     private JobOffer selectedJob;
     private ComboBox<String> cbFilterType;
     private ComboBox<String> cbFilterLocation;
-    private ComboBox<String> cbSortBy;
 
     private JobOfferService jobOfferService;
     private OfferSkillService offerSkillService;
     private MatchingWidgetController matchingWidget;
 
-    // Position du candidat (pour le calcul de distance)
     private Double candidateLatitude = null;
     private Double candidateLongitude = null;
-
-    // Filtres actifs
     private ContractType selectedContractType = null;
     private String selectedLocation = null;
 
@@ -56,7 +48,6 @@ public class JobOffersBrowseController {
         offerSkillService = new OfferSkillService();
         matchingWidget = new MatchingWidgetController();
         matchingWidget.setOnProfileUpdated(() -> {
-            // Rafraîchir l'affichage quand le profil change
             if (selectedJob != null) {
                 displayJobDetails(selectedJob);
             }
@@ -71,29 +62,22 @@ public class JobOffersBrowseController {
         mainContainer.getChildren().clear();
         mainContainer.setStyle("-fx-background-color: #F5F6F8; -fx-padding: 20;");
 
-        // === EN-TÊTE AVEC TITRE ===
         Label pageTitle = new Label("🔍 Rechercher une offre d'emploi");
         pageTitle.setStyle("-fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: #2c3e50; -fx-padding: 0 0 15 0;");
         mainContainer.getChildren().add(pageTitle);
 
-        // === BARRE DE RECHERCHE ET FILTRES INTÉGRÉS ===
         VBox searchFilterBox = createSearchFilterBox();
         mainContainer.getChildren().add(searchFilterBox);
-
-        // Espaceur
         mainContainer.getChildren().add(new Region() {{ setPrefHeight(20); }});
 
-        // === CONTENU PRINCIPAL ===
         HBox contentArea = new HBox(20);
         VBox.setVgrow(contentArea, Priority.ALWAYS);
 
-        // LEFT: Liste des offres
         VBox leftSide = createJobListPanel();
         leftSide.setPrefWidth(420);
         leftSide.setMinWidth(380);
         leftSide.setMaxWidth(480);
 
-        // RIGHT: Détails
         VBox rightSide = createDetailPanel();
         HBox.setHgrow(rightSide, Priority.ALWAYS);
 
@@ -106,16 +90,10 @@ public class JobOffersBrowseController {
         container.setStyle("-fx-background-color: white; -fx-background-radius: 12; " +
                           "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 3);");
 
-        // === LIGNE 1: Recherche par mot-clé ===
         HBox searchRow = new HBox(12);
         searchRow.setAlignment(Pos.CENTER_LEFT);
         searchRow.setStyle("-fx-padding: 20 20 15 20;");
 
-        // Icône de recherche
-        Label searchIcon = new Label("🔍");
-        searchIcon.setStyle("-fx-font-size: 20px;");
-
-        // Champ de recherche
         txtSearch = new TextField();
         txtSearch.setPromptText("Rechercher par titre, description...");
         txtSearch.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-padding: 12 15; " +
@@ -123,37 +101,31 @@ public class JobOffersBrowseController {
         HBox.setHgrow(txtSearch, Priority.ALWAYS);
         txtSearch.setOnAction(e -> handleSearch());
 
-        // Bouton rechercher
-        Button btnSearchAction = new Button("Rechercher");
+        Button btnSearchAction = new Button("🔍 Rechercher");
         btnSearchAction.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-size: 14px; " +
                                 "-fx-font-weight: 600; -fx-padding: 12 24; -fx-background-radius: 8; -fx-cursor: hand;");
         btnSearchAction.setOnAction(e -> handleSearch());
 
-        searchRow.getChildren().addAll(searchIcon, txtSearch, btnSearchAction);
+        searchRow.getChildren().addAll(txtSearch, btnSearchAction);
 
-        // === SÉPARATEUR ===
         Separator separator = new Separator();
-        separator.setStyle("-fx-padding: 0 20;");
 
-        // === LIGNE 2: Filtres rapides ===
         HBox filterRow = new HBox(15);
         filterRow.setAlignment(Pos.CENTER_LEFT);
         filterRow.setStyle("-fx-padding: 15 20 20 20;");
 
-        Label filterLabel = new Label("Filtrer par:");
+        Label filterLabel = new Label("Filtrer par :");
         filterLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #495057;");
 
-        // Filtre par type de contrat
         cbFilterType = new ComboBox<>();
         cbFilterType.setPromptText("Type de contrat");
         cbFilterType.getItems().add("Tous les types");
         for (ContractType type : ContractType.values()) {
             cbFilterType.getItems().add(formatContractType(type));
         }
-        cbFilterType.setStyle("-fx-pref-width: 160; -fx-pref-height: 38; -fx-background-radius: 8;");
+        cbFilterType.setStyle("-fx-pref-width: 160; -fx-pref-height: 38;");
         cbFilterType.setOnAction(e -> applyFilters());
 
-        // Filtre par localisation
         cbFilterLocation = new ComboBox<>();
         cbFilterLocation.setPromptText("Localisation");
         cbFilterLocation.getItems().add("Toutes les villes");
@@ -163,27 +135,23 @@ public class JobOffersBrowseController {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        cbFilterLocation.setStyle("-fx-pref-width: 160; -fx-pref-height: 38; -fx-background-radius: 8;");
+        cbFilterLocation.setStyle("-fx-pref-width: 160; -fx-pref-height: 38;");
         cbFilterLocation.setOnAction(e -> applyFilters());
 
-        // Bouton réinitialiser
         Button btnReset = new Button("✕ Réinitialiser");
         btnReset.setStyle("-fx-background-color: #f8f9fa; -fx-text-fill: #6c757d; -fx-font-size: 13px; " +
                          "-fx-padding: 10 16; -fx-background-radius: 8; -fx-cursor: hand; " +
                          "-fx-border-color: #dee2e6; -fx-border-radius: 8;");
         btnReset.setOnAction(e -> resetFilters());
 
-        // Espaceur
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // Compteur de résultats
         Label resultCount = new Label("");
         resultCount.setId("resultCount");
         resultCount.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 13px;");
 
         filterRow.getChildren().addAll(filterLabel, cbFilterType, cbFilterLocation, btnReset, spacer, resultCount);
-
         container.getChildren().addAll(searchRow, separator, filterRow);
         return container;
     }
@@ -192,19 +160,8 @@ public class JobOffersBrowseController {
         String typeValue = cbFilterType.getValue();
         String locationValue = cbFilterLocation.getValue();
 
-        // Type de contrat
-        if (typeValue == null || typeValue.equals("Tous les types")) {
-            selectedContractType = null;
-        } else {
-            selectedContractType = getContractTypeFromLabel(typeValue);
-        }
-
-        // Localisation
-        if (locationValue == null || locationValue.equals("Toutes les villes")) {
-            selectedLocation = null;
-        } else {
-            selectedLocation = locationValue;
-        }
+        selectedContractType = (typeValue == null || typeValue.equals("Tous les types")) ? null : getContractTypeFromLabel(typeValue);
+        selectedLocation = (locationValue == null || locationValue.equals("Toutes les villes")) ? null : locationValue;
 
         loadFilteredJobOffers();
     }
@@ -225,7 +182,6 @@ public class JobOffersBrowseController {
         try {
             List<JobOffer> jobs = jobOfferService.filterJobOffers(selectedLocation, selectedContractType, Status.OPEN);
 
-            // Filtrer aussi par mot-clé si présent
             String keyword = txtSearch != null ? txtSearch.getText().trim().toLowerCase() : "";
             if (!keyword.isEmpty()) {
                 jobs = jobs.stream()
@@ -238,8 +194,7 @@ public class JobOffersBrowseController {
             updateResultCount(jobs.size());
 
             if (jobs.isEmpty()) {
-                VBox emptyState = createEmptyState();
-                jobListContainer.getChildren().add(emptyState);
+                jobListContainer.getChildren().add(createEmptyState());
                 return;
             }
 
@@ -253,8 +208,7 @@ public class JobOffersBrowseController {
                 }
             }
         } catch (SQLException e) {
-            showAlert("Erreur", "Impossible de charger les offres: " + e.getMessage(), Alert.AlertType.ERROR);
-            e.printStackTrace();
+            showAlert("Erreur", "Impossible de charger les offres : " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
@@ -276,7 +230,7 @@ public class JobOffersBrowseController {
         emptyBox.setAlignment(Pos.CENTER);
         emptyBox.setStyle("-fx-padding: 40;");
 
-        Label emptyIcon = new Label("📭");
+        Label emptyIcon = new Label("🔭");
         emptyIcon.setStyle("-fx-font-size: 48px;");
 
         Label emptyText = new Label("Aucune offre trouvée");
@@ -295,8 +249,8 @@ public class JobOffersBrowseController {
             case CDD -> "CDD";
             case INTERNSHIP -> "Stage";
             case FREELANCE -> "Freelance";
-            case PART_TIME -> "Temps Partiel";
-            case FULL_TIME -> "Temps Plein";
+            case PART_TIME -> "Temps partiel";
+            case FULL_TIME -> "Temps plein";
         };
     }
 
@@ -306,8 +260,8 @@ public class JobOffersBrowseController {
             case "CDD" -> ContractType.CDD;
             case "Stage" -> ContractType.INTERNSHIP;
             case "Freelance" -> ContractType.FREELANCE;
-            case "Temps Partiel" -> ContractType.PART_TIME;
-            case "Temps Plein" -> ContractType.FULL_TIME;
+            case "Temps partiel" -> ContractType.PART_TIME;
+            case "Temps plein" -> ContractType.FULL_TIME;
             default -> null;
         };
     }
@@ -353,7 +307,6 @@ public class JobOffersBrowseController {
         detailContainer.setStyle("-fx-padding: 10 5 10 0;");
         scrollPane.setContent(detailContainer);
 
-        // Message initial
         VBox selectMessage = new VBox(10);
         selectMessage.setAlignment(Pos.CENTER);
         selectMessage.setStyle("-fx-padding: 60;");
@@ -377,12 +330,10 @@ public class JobOffersBrowseController {
 
         try {
             List<JobOffer> jobs = jobOfferService.getJobOffersByStatus(Status.OPEN);
-
             updateResultCount(jobs.size());
 
             if (jobs.isEmpty()) {
-                VBox emptyState = createEmptyState();
-                jobListContainer.getChildren().add(emptyState);
+                jobListContainer.getChildren().add(createEmptyState());
                 return;
             }
 
@@ -396,8 +347,7 @@ public class JobOffersBrowseController {
                 }
             }
         } catch (SQLException e) {
-            showAlert("Erreur", "Impossible de charger les offres: " + e.getMessage(), Alert.AlertType.ERROR);
-            e.printStackTrace();
+            showAlert("Erreur", "Impossible de charger les offres : " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
 
@@ -406,12 +356,10 @@ public class JobOffersBrowseController {
         card.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 10; -fx-padding: 15; " +
                      "-fx-border-color: transparent; -fx-border-radius: 10; -fx-cursor: hand;");
 
-        // Titre
         Label title = new Label(job.getTitle());
         title.setStyle("-fx-font-size: 15px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
         title.setWrapText(true);
 
-        // Badges
         HBox badges = new HBox(8);
         badges.setAlignment(Pos.CENTER_LEFT);
 
@@ -424,39 +372,26 @@ public class JobOffersBrowseController {
 
         badges.getChildren().addAll(typeBadge, locationBadge);
 
-        // Distance si coordonnées disponibles
         if (job.hasCoordinates() && candidateLatitude != null && candidateLongitude != null) {
-            double distance = GeoLocationService.calculateDistance(
-                candidateLatitude, candidateLongitude,
-                job.getLatitude(), job.getLongitude()
-            );
-            int travelTime = GeoLocationService.estimateTravelTime(distance);
+            double distance = NominatimMapService.calculateDistance(
+                candidateLatitude, candidateLongitude, job.getLatitude(), job.getLongitude());
+            int travelTime = NominatimMapService.estimateTravelTime(distance);
 
-            Label distanceBadge = new Label("🚗 " + GeoLocationService.formatDistance(distance) +
-                                           " (" + GeoLocationService.formatTravelTime(travelTime) + ")");
+            Label distanceBadge = new Label("🚗 " + NominatimMapService.formatDistance(distance) +
+                                           " (" + NominatimMapService.formatTravelTime(travelTime) + ")");
             distanceBadge.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-padding: 3 8; " +
                                   "-fx-background-radius: 10; -fx-font-size: 10px;");
             badges.getChildren().add(distanceBadge);
         }
 
-        // Score de matching si profil configuré
-        if (matchingWidget != null && matchingWidget.getCandidateProfile() != null
-            && !matchingWidget.getCandidateProfile().getSkills().isEmpty()) {
-            MatchingResult matchResult = matchingWidget.calculateMatch(job);
-            HBox scoreBadge = matchingWidget.createCompactScoreBadge(matchResult.getOverallScore());
-            badges.getChildren().add(scoreBadge);
-        }
-
-        // Date
         if (job.getCreatedAt() != null) {
-            Label date = new Label("Publié " + job.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            Label date = new Label("Publié le " + job.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             date.setStyle("-fx-text-fill: #adb5bd; -fx-font-size: 11px;");
             card.getChildren().addAll(title, badges, date);
         } else {
             card.getChildren().addAll(title, badges);
         }
 
-        // Effets hover
         card.setOnMouseEntered(e -> {
             if (selectedJob == null || !selectedJob.getId().equals(job.getId())) {
                 card.setStyle("-fx-background-color: #e9ecef; -fx-background-radius: 10; -fx-padding: 15; " +
@@ -471,12 +406,10 @@ public class JobOffersBrowseController {
         });
 
         card.setOnMouseClicked(e -> selectJob(job, card));
-
         return card;
     }
 
     private void selectJob(JobOffer job, VBox card) {
-        // Reset all cards
         jobListContainer.getChildren().forEach(node -> {
             if (node instanceof VBox) {
                 node.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 10; -fx-padding: 15; " +
@@ -484,7 +417,6 @@ public class JobOffersBrowseController {
             }
         });
 
-        // Highlight selected
         card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15; " +
                      "-fx-border-color: #5BA3F5; -fx-border-width: 2; -fx-border-radius: 10; " +
                      "-fx-effect: dropshadow(gaussian, rgba(91,163,245,0.3), 8, 0, 0, 2); -fx-cursor: hand;");
@@ -496,7 +428,6 @@ public class JobOffersBrowseController {
     private void displayJobDetails(JobOffer job) {
         detailContainer.getChildren().clear();
 
-        // En-tête
         VBox headerCard = new VBox(12);
         headerCard.setStyle("-fx-background-color: linear-gradient(to right, #f8f9fa, #fff); " +
                            "-fx-background-radius: 10; -fx-padding: 25;");
@@ -505,7 +436,6 @@ public class JobOffersBrowseController {
         title.setStyle("-fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
         title.setWrapText(true);
 
-        // Métadonnées
         FlowPane metaFlow = new FlowPane(12, 8);
         metaFlow.setAlignment(Pos.CENTER_LEFT);
 
@@ -520,7 +450,7 @@ public class JobOffersBrowseController {
         metaFlow.getChildren().addAll(contractType, location);
 
         if (job.getDeadline() != null) {
-            Label deadline = new Label("⏰ Date limite: " + job.getDeadline().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            Label deadline = new Label("⏰ Date limite : " + job.getDeadline().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             deadline.setStyle("-fx-background-color: #ffebee; -fx-text-fill: #c62828; -fx-padding: 6 12; " +
                              "-fx-background-radius: 15; -fx-font-size: 13px; -fx-font-weight: 600;");
             metaFlow.getChildren().add(deadline);
@@ -529,14 +459,12 @@ public class JobOffersBrowseController {
         headerCard.getChildren().addAll(title, metaFlow);
         detailContainer.getChildren().add(headerCard);
 
-        // === WIDGET DE MATCHING ===
         if (matchingWidget != null) {
             MatchingResult matchResult = matchingWidget.calculateMatch(job);
             VBox matchingSection = matchingWidget.createMatchingScoreWidget(matchResult);
             detailContainer.getChildren().add(matchingSection);
         }
 
-        // Description
         if (job.getDescription() != null && !job.getDescription().isBlank()) {
             VBox descSection = new VBox(10);
             descSection.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 10; -fx-padding: 20;");
@@ -552,7 +480,6 @@ public class JobOffersBrowseController {
             detailContainer.getChildren().add(descSection);
         }
 
-        // Compétences
         try {
             List<OfferSkill> skills = offerSkillService.getSkillsByOfferId(job.getId());
             if (!skills.isEmpty()) {
@@ -564,10 +491,9 @@ public class JobOffersBrowseController {
 
                 FlowPane skillsFlow = new FlowPane(8, 8);
                 for (OfferSkill skill : skills) {
-                    Label skillTag = new Label(skill.getSkillName() + " • " + skill.getLevelRequired().name());
+                    Label skillTag = new Label(skill.getSkillName() + " - " + formatSkillLevel(skill.getLevelRequired()));
                     skillTag.setStyle("-fx-background-color: white; -fx-padding: 8 14; -fx-background-radius: 8; " +
-                                     "-fx-border-color: #dee2e6; -fx-border-radius: 8; -fx-font-size: 12px; " +
-                                     "-fx-text-fill: #495057;");
+                                     "-fx-border-color: #dee2e6; -fx-border-radius: 8; -fx-font-size: 12px;");
                     skillsFlow.getChildren().add(skillTag);
                 }
 
@@ -575,10 +501,9 @@ public class JobOffersBrowseController {
                 detailContainer.getChildren().add(skillsSection);
             }
         } catch (SQLException e) {
-            System.err.println("Erreur chargement compétences: " + e.getMessage());
+            System.err.println("Erreur chargement compétences : " + e.getMessage());
         }
 
-        // Section Localisation avec bouton carte (toujours visible si location existe)
         if (job.getLocation() != null && !job.getLocation().trim().isEmpty()) {
             VBox distanceSection = new VBox(10);
             distanceSection.setStyle("-fx-background-color: #e8f5e9; -fx-background-radius: 10; -fx-padding: 15;");
@@ -586,31 +511,26 @@ public class JobOffersBrowseController {
             HBox distanceInfo = new HBox(15);
             distanceInfo.setAlignment(Pos.CENTER_LEFT);
 
-            Label locationIcon = new Label("📍");
-            locationIcon.setStyle("-fx-font-size: 20px;");
-
             if (job.hasCoordinates() && candidateLatitude != null && candidateLongitude != null) {
-                double distance = GeoLocationService.calculateDistance(
-                    candidateLatitude, candidateLongitude,
-                    job.getLatitude(), job.getLongitude()
-                );
-                int travelTime = GeoLocationService.estimateTravelTime(distance);
+                double distance = NominatimMapService.calculateDistance(
+                    candidateLatitude, candidateLongitude, job.getLatitude(), job.getLongitude());
+                int travelTime = NominatimMapService.estimateTravelTime(distance);
 
-                Label distanceLabel = new Label(job.getLocation() + " - Distance: " +
-                    GeoLocationService.formatDistance(distance) + " (" +
-                    GeoLocationService.formatTravelTime(travelTime) + ")");
+                Label distanceLabel = new Label("📍 " + job.getLocation() + " - Distance : " +
+                    NominatimMapService.formatDistance(distance) + " (" +
+                    NominatimMapService.formatTravelTime(travelTime) + ")");
                 distanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #2e7d32;");
-                distanceInfo.getChildren().addAll(locationIcon, distanceLabel);
+                distanceInfo.getChildren().add(distanceLabel);
             } else {
-                Label locationLabel = new Label(job.getLocation());
+                Label locationLabel = new Label("📍 " + job.getLocation());
                 locationLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #2e7d32;");
 
                 Button btnSetLocation = new Button("📌 Définir ma position");
                 btnSetLocation.setStyle("-fx-background-color: #4caf50; -fx-text-fill: white; " +
-                                       "-fx-padding: 6 12; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 11px;");
+                                       "-fx-padding: 6 12; -fx-background-radius: 6; -fx-cursor: hand;");
                 btnSetLocation.setOnAction(e -> showSetLocationDialog());
 
-                distanceInfo.getChildren().addAll(locationIcon, locationLabel, btnSetLocation);
+                distanceInfo.getChildren().addAll(locationLabel, btnSetLocation);
             }
 
             Region spacer = new Region();
@@ -626,14 +546,12 @@ public class JobOffersBrowseController {
             detailContainer.getChildren().add(distanceSection);
         }
 
-        // Date de publication
         if (job.getCreatedAt() != null) {
-            Label posted = new Label("📅 Publié le " + job.getCreatedAt().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")));
+            Label posted = new Label("📅 Publié le " + job.getCreatedAt().format(DateTimeFormatter.ofPattern("dd MMMM yyyy", java.util.Locale.FRENCH)));
             posted.setStyle("-fx-text-fill: #adb5bd; -fx-font-size: 12px; -fx-padding: 10 0;");
             detailContainer.getChildren().add(posted);
         }
 
-        // Bouton Postuler
         HBox actionBox = new HBox();
         actionBox.setAlignment(Pos.CENTER);
         actionBox.setStyle("-fx-padding: 20 0;");
@@ -648,78 +566,69 @@ public class JobOffersBrowseController {
         detailContainer.getChildren().add(actionBox);
     }
 
-    /**
-     * Affiche un dialogue pour définir la position du candidat
-     */
+    private String formatSkillLevel(SkillLevel level) {
+        return switch (level) {
+            case BEGINNER -> "Débutant";
+            case INTERMEDIATE -> "Intermédiaire";
+            case ADVANCED -> "Avancé";
+        };
+    }
+
     private void showSetLocationDialog() {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Définir ma position");
         dialog.setHeaderText("Entrez votre ville");
-        dialog.setContentText("Ville:");
+        dialog.setContentText("Ville :");
 
         Optional<String> result = dialog.showAndWait();
         result.ifPresent(city -> {
-            GeoLocationService geoService = new GeoLocationService();
-            GeoLocationService.GeoLocation location = geoService.geocode(city);
+            NominatimMapService geoService = new NominatimMapService();
+            NominatimMapService.GeoLocation location = geoService.geocode(city);
             if (location != null) {
                 candidateLatitude = location.getLatitude();
                 candidateLongitude = location.getLongitude();
-                showAlert("Succès", "Position définie: " + location.getFullLocation(), Alert.AlertType.INFORMATION);
-                loadJobOffers(); // Recharger pour afficher les distances
+                showAlert("Succès", "Position définie : " + location.getFullLocation(), Alert.AlertType.INFORMATION);
+                loadJobOffers();
             } else {
-                showAlert("Erreur", "Ville non trouvée. Essayez une autre ville.", Alert.AlertType.WARNING);
+                showAlert("Erreur", "Ville non trouvée. Veuillez réessayer.", Alert.AlertType.WARNING);
             }
         });
     }
 
-    /**
-     * Affiche une fenêtre modale avec la carte Leaflet (WebView) de l'entreprise
-     * Géocode automatiquement si les coordonnées ne sont pas disponibles
-     */
     private void showMapDialog(JobOffer job) {
         if (job.hasCoordinates()) {
-            // Coordonnées disponibles - afficher directement
             if (candidateLatitude != null && candidateLongitude != null) {
                 MapViewController.showMapWithDistance(
                     job.getLatitude(), job.getLongitude(),
                     job.getLocation(), job.getTitle(),
-                    candidateLatitude, candidateLongitude
-                );
+                    candidateLatitude, candidateLongitude);
             } else {
                 MapViewController.showMap(
                     job.getLatitude(), job.getLongitude(),
-                    job.getLocation(), job.getTitle()
-                );
+                    job.getLocation(), job.getTitle());
             }
         } else if (job.getLocation() != null && !job.getLocation().trim().isEmpty()) {
-            // Géocoder la localisation
             new Thread(() -> {
-                GeoLocationService geoService = new GeoLocationService();
-                GeoLocationService.GeoLocation geoResult = geoService.geocode(job.getLocation());
+                NominatimMapService geoService = new NominatimMapService();
+                NominatimMapService.GeoLocation geoResult = geoService.geocode(job.getLocation());
 
                 javafx.application.Platform.runLater(() -> {
                     if (geoResult != null) {
-                        // Mettre à jour les coordonnées de l'offre en mémoire
                         job.setLatitude(geoResult.getLatitude());
                         job.setLongitude(geoResult.getLongitude());
 
-                        // Afficher la carte
                         if (candidateLatitude != null && candidateLongitude != null) {
                             MapViewController.showMapWithDistance(
                                 geoResult.getLatitude(), geoResult.getLongitude(),
                                 job.getLocation(), job.getTitle(),
-                                candidateLatitude, candidateLongitude
-                            );
+                                candidateLatitude, candidateLongitude);
                         } else {
                             MapViewController.showMap(
                                 geoResult.getLatitude(), geoResult.getLongitude(),
-                                job.getLocation(), job.getTitle()
-                            );
+                                job.getLocation(), job.getTitle());
                         }
                     } else {
-                        showAlert("Erreur",
-                            "Impossible de trouver les coordonnées pour: " + job.getLocation(),
-                            Alert.AlertType.WARNING);
+                        showAlert("Erreur", "Impossible de localiser cette adresse.", Alert.AlertType.WARNING);
                     }
                 });
             }).start();
@@ -731,21 +640,16 @@ public class JobOffersBrowseController {
     private void handleApply(JobOffer job) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Candidature");
-        alert.setHeaderText("Postuler pour: " + job.getTitle());
+        alert.setHeaderText("Postuler pour : " + job.getTitle());
         alert.setContentText("La fonctionnalité de candidature sera bientôt disponible.\n\n" +
-                            "Poste: " + job.getTitle() + "\n" +
-                            "Lieu: " + (job.getLocation() != null ? job.getLocation() : "Non spécifié"));
+                            "Poste : " + job.getTitle() + "\n" +
+                            "Lieu : " + (job.getLocation() != null ? job.getLocation() : "Non spécifié"));
         alert.showAndWait();
     }
 
     @FXML
     private void handleSearch() {
         loadFilteredJobOffers();
-    }
-
-    @FXML
-    private void handleClearSearch() {
-        resetFilters();
     }
 
     private void showAlert(String title, String message, Alert.AlertType type) {
@@ -756,4 +660,7 @@ public class JobOffersBrowseController {
         alert.showAndWait();
     }
 }
+
+
+
 

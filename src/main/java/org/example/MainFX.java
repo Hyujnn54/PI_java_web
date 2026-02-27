@@ -25,13 +25,13 @@ public class MainFX extends Application {
 
         try {
             // Initialize default user context (Recruiter with ID 1)
-            UserContext.login(1L, "Demo Recruiter", "recruiter@talentbridge.com", UserContext.Role.RECRUITER);
-            System.out.println("User context initialized: " + UserContext.getRoleLabel() + " (ID: " + UserContext.getUserId() + ")");
+            UserContext.login(1L, "Recruteur Démo", "recruteur@talentbridge.com", UserContext.Role.RECRUITER);
+            System.out.println("Contexte utilisateur initialisé : " + UserContext.getRoleLabel() + " (ID: " + UserContext.getUserId() + ")");
 
-            System.out.println("Loading MainShell.fxml...");
+            System.out.println("Chargement de MainShell.fxml...");
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));
             Parent root = fxmlLoader.load();
-            System.out.println("MainShell loaded successfully");
+            System.out.println("MainShell chargé avec succès");
 
             Scene scene = new Scene(root, WINDOWED_WIDTH, WINDOWED_HEIGHT);
 
@@ -39,24 +39,24 @@ public class MainFX extends Application {
             try {
                 String cssPath = getClass().getResource("/styles.css").toExternalForm();
                 scene.getStylesheets().add(cssPath);
-                System.out.println("CSS loaded successfully: " + cssPath);
+                System.out.println("CSS chargé avec succès : " + cssPath);
             } catch (Exception e) {
-                System.err.println("Warning: Could not load styles.css: " + e.getMessage());
+                System.err.println("Avertissement : Impossible de charger styles.css : " + e.getMessage());
             }
 
             // Initialize centralized navigation
             Utils.SceneManager.init(stage, scene);
 
-            stage.setTitle("Talent Bridge - Dashboard");
+            stage.setTitle("Talent Bridge - Tableau de bord");
             stage.setScene(scene);
             stage.setResizable(true);
             stage.centerOnScreen();
             stage.show();
 
-            System.out.println("Application started successfully");
+            System.out.println("Application démarrée avec succès");
 
         } catch (Exception e) {
-            System.err.println("Error loading application: " + e.getMessage());
+            System.err.println("Erreur lors du chargement de l'application : " + e.getMessage());
             e.printStackTrace();
             throw e;
         }

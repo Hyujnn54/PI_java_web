@@ -3,7 +3,7 @@ package Controllers;
 import Models.*;
 import Models.CandidateProfile.CandidateSkill;
 import Services.MatchingService;
-import Services.GeoLocationService;
+import Services.NominatimMapService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -282,8 +282,8 @@ public class MatchingWidgetController {
 
             // Géocoder la localisation
             if (!txtLocation.getText().trim().isEmpty()) {
-                GeoLocationService geoService = new GeoLocationService();
-                GeoLocationService.GeoLocation geo = geoService.geocode(txtLocation.getText().trim());
+                NominatimMapService mapService = new NominatimMapService();
+                NominatimMapService.GeoLocation geo = mapService.geocode(txtLocation.getText().trim());
                 if (geo != null) {
                     candidateProfile.setLatitude(geo.getLatitude());
                     candidateProfile.setLongitude(geo.getLongitude());
