@@ -1,6 +1,7 @@
 package Controllers;
 
 import Services.ApplicationService;
+import Services.EmailService;
 import Services.FileService;
 import Services.GrokAIService;
 import Services.JobOfferService;
@@ -648,6 +649,7 @@ public class JobOffersController {
 
             if (applicationId != null) {
                 showAlert("Success", "Application submitted successfully!", Alert.AlertType.INFORMATION);
+                sendApplicationConfirmationEmail(candidateId, job.title());
             } else {
                 showAlert("Error", "Failed to submit application. Please try again.", Alert.AlertType.ERROR);
             }
@@ -656,6 +658,29 @@ public class JobOffersController {
             showAlert("Error", "Failed to submit application: " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
+    }
+
+    private void sendApplicationConfirmationEmail(Long candidateId, String offerTitle) {
+        new Thread(() -> {
+            try {
+                UserService.UserInfo info = UserService.getUserInfo(candidateId);
+                if (info == null || info.email() == null || info.email().isBlank()) {
+                    return;
+                }
+
+                String candidateName = ((info.firstName() != null ? info.firstName() : "") + " " +
+                    (info.lastName() != null ? info.lastName() : "")).trim();
+
+                EmailService.sendApplicationConfirmation(
+                    info.email(),
+                    candidateName.isEmpty() ? "Candidate" : candidateName,
+                    offerTitle != null && !offerTitle.isBlank() ? offerTitle : "Job Offer",
+                    LocalDateTime.now()
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send confirmation email: " + e.getMessage());
+            }
+        }).start();
     }
 
     /**
