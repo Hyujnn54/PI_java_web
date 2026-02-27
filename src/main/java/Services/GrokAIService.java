@@ -6,52 +6,52 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
 /**
- * Service for generating cover letters using Google Gemini API
+ * Service for generating / translating cover letters using Groq API.
  */
 public class GrokAIService {
 
-    // ⚠️ Replace with a valid API key from https://aistudio.google.com/apikey
-    private static final String API_KEY = "AIzaSyDHr-PkQZ2ZPGd-_JM_mCxEQ-_ijOtdeTc";
+    private static final String GROQ_API_KEY = "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";
+    private static final String GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions";
 
-    // Models confirmed available in v1beta (from ListModels API)
+    // Groq-hosted models, tried in order
     private static final String[] MODELS = {
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-pro"
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "mixtral-8x7b-32768"
     };
 
     public static String generateCoverLetter(String candidateName, String email, String phone,
                                              String jobTitle, String companyName, String experience,
-                                             String education, java.util.List<String> skills, String cvContent) {
+                                             String education, List<String> skills, String cvContent) {
         String prompt = buildPrompt(candidateName, email, phone, jobTitle,
                 companyName, experience, education, skills, cvContent);
 
         for (String model : MODELS) {
             try {
-                System.out.println("Trying Gemini model: " + model);
-                String result = callGeminiREST(model, prompt);
-                if (result != null && !result.isEmpty()) {
-                    System.out.println("Cover letter generated successfully using model: " + model);
+                System.out.println("Trying Groq model: " + model);
+                String result = callGroq(model, prompt);
+                if (result != null && !result.isBlank()) {
+                    System.out.println("Cover letter generated with Groq model: " + model);
                     return cleanContent(result);
                 }
             } catch (Exception e) {
-                System.err.println("Model " + model + " failed: " + e.getMessage());
+                System.err.println("Groq model " + model + " failed: " + e.getMessage());
             }
         }
 
-        System.out.println("All Gemini models failed. Falling back to local generation...");
+        System.out.println("All Groq models failed – falling back to local generation.");
         return LocalCoverLetterService.generateCoverLetter(candidateName, email, phone, jobTitle,
                 companyName, experience, education, skills, cvContent);
     }
 
     private static String buildPrompt(String candidateName, String email, String phone,
                                       String jobTitle, String companyName, String experience,
-                                      String education, java.util.List<String> skills, String cvContent) {
+                                      String education, List<String> skills, String cvContent) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("You are a professional cover letter writer. Write a compelling, professional cover letter (200-400 words) for the following candidate applying to a job. Output ONLY the cover letter text, nothing else.\n\n");
 
@@ -78,40 +78,35 @@ public class GrokAIService {
         return prompt.toString();
     }
 
-    private static String callGeminiREST(String model, String prompt) throws Exception {
-        String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/"
-                + model + ":generateContent?key=" + API_KEY;
-
-        URL url = new URL(endpoint);
+    private static String callGroq(String model, String prompt) throws Exception {
+        URL url = new URL(GROQ_URL);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Authorization", "Bearer " + GROQ_API_KEY);
         conn.setDoOutput(true);
         conn.setConnectTimeout(15000);
-        conn.setReadTimeout(30000);
+        conn.setReadTimeout(60000);
 
-        // Build Gemini request body
-        JSONObject part = new JSONObject();
-        part.put("text", prompt);
+        JSONObject systemMsg = new JSONObject();
+        systemMsg.put("role", "system");
+        systemMsg.put("content", "You are a professional assistant.");
 
-        JSONArray parts = new JSONArray();
-        parts.put(part);
+        JSONObject userMsg = new JSONObject();
+        userMsg.put("role", "user");
+        userMsg.put("content", prompt);
 
-        JSONObject content = new JSONObject();
-        content.put("parts", parts);
-
-        JSONArray contents = new JSONArray();
-        contents.put(content);
-
-        JSONObject generationConfig = new JSONObject();
-        generationConfig.put("temperature", 0.7);
-        generationConfig.put("maxOutputTokens", 1024);
+        JSONArray messages = new JSONArray();
+        messages.put(systemMsg);
+        messages.put(userMsg);
 
         JSONObject body = new JSONObject();
-        body.put("contents", contents);
-        body.put("generationConfig", generationConfig);
+        body.put("model", model);
+        body.put("messages", messages);
+        body.put("temperature", 0.7);
+        body.put("max_tokens", 1024);
+        body.put("stream", false);
 
-        // Send request
         try (OutputStream os = conn.getOutputStream()) {
             os.write(body.toString().getBytes(StandardCharsets.UTF_8));
         }
@@ -124,11 +119,10 @@ public class GrokAIService {
                 String line;
                 while ((line = br.readLine()) != null) err.append(line);
             }
-            System.err.println("Gemini HTTP " + code + " for model " + model + ": " + err);
+            System.err.println("Groq HTTP " + code + " for model " + model + ": " + err);
             return null;
         }
 
-        // Read response
         StringBuilder response = new StringBuilder();
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
@@ -136,17 +130,13 @@ public class GrokAIService {
             while ((line = br.readLine()) != null) response.append(line);
         }
 
-        // Parse response: candidates[0].content.parts[0].text
+        // Parse OpenAI-compatible response: choices[0].message.content
         JSONObject json = new JSONObject(response.toString());
-        JSONArray candidates = json.optJSONArray("candidates");
-        if (candidates != null && candidates.length() > 0) {
-            JSONObject firstCandidate = candidates.getJSONObject(0);
-            JSONObject contentObj = firstCandidate.optJSONObject("content");
-            if (contentObj != null) {
-                JSONArray partsArr = contentObj.optJSONArray("parts");
-                if (partsArr != null && partsArr.length() > 0) {
-                    return partsArr.getJSONObject(0).optString("text", "");
-                }
+        JSONArray choices = json.optJSONArray("choices");
+        if (choices != null && choices.length() > 0) {
+            JSONObject message = choices.getJSONObject(0).optJSONObject("message");
+            if (message != null) {
+                return message.optString("content", "");
             }
         }
         return null;
@@ -161,7 +151,24 @@ public class GrokAIService {
     public static String translateCoverLetter(String coverLetter, String targetLanguage) {
         if (coverLetter == null || coverLetter.trim().isEmpty()) return coverLetter;
 
-        // Map display language names to MyMemory language codes
+        String prompt = "Translate the following cover letter to " + targetLanguage + ".\n"
+                + "Output ONLY the translated cover letter text, with no preamble or explanation.\n\n"
+                + coverLetter;
+
+        for (String model : MODELS) {
+            try {
+                String result = callGroq(model, prompt);
+                if (result != null && !result.isBlank()) {
+                    System.out.println("Translation via Groq successful (" + model + ")");
+                    return cleanContent(result);
+                }
+            } catch (Exception e) {
+                System.err.println("Groq translation model " + model + " failed: " + e.getMessage());
+            }
+        }
+
+        // Fallback: MyMemory free translation API
+        System.out.println("Groq unavailable — falling back to MyMemory translation API");
         String langCode = switch (targetLanguage.toLowerCase()) {
             case "french"  -> "fr";
             case "arabic"  -> "ar";
@@ -170,23 +177,6 @@ public class GrokAIService {
             case "german"  -> "de";
             default        -> targetLanguage.toLowerCase().substring(0, Math.min(2, targetLanguage.length()));
         };
-
-        // First try Gemini (if key works)
-        String prompt = "Translate the following cover letter to " + targetLanguage + ".\n"
-                + "Output ONLY the translated cover letter text, nothing else. Do not add any explanation.\n\n"
-                + coverLetter;
-        for (String model : MODELS) {
-            try {
-                String result = callGeminiREST(model, prompt);
-                if (result != null && !result.isEmpty()) {
-                    System.out.println("Translation via Gemini successful (" + model + ")");
-                    return cleanContent(result);
-                }
-            } catch (Exception ignored) {}
-        }
-
-        // Fallback: MyMemory free translation API (no key required)
-        System.out.println("Gemini unavailable — falling back to MyMemory translation API");
         return translateWithMyMemory(coverLetter, langCode);
     }
 
