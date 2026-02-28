@@ -19,6 +19,12 @@ public class MatchingResult {
     private double distanceKm;
     private String matchLevel;            // EXCELLENT, BON, MOYEN, FAIBLE
 
+    private java.util.List<String> matchingSkills = new java.util.ArrayList<>();
+    private java.util.List<String> missingSkills = new java.util.ArrayList<>();
+    private java.util.List<String> partialSkills = new java.util.ArrayList<>();
+    private String scoreFormula;
+    private String textualExplanation;
+
     public MatchingResult() {}
 
     public MatchingResult(JobOffer jobOffer, CandidateProfile candidate) {
@@ -99,6 +105,21 @@ public class MatchingResult {
 
     public String getMatchLevel() { return matchLevel; }
     public void setMatchLevel(String level) { this.matchLevel = level; }
+
+    public java.util.List<String> getMatchingSkills() { return matchingSkills; }
+    public void setMatchingSkills(java.util.List<String> matchingSkills) { this.matchingSkills = matchingSkills; }
+
+    public java.util.List<String> getMissingSkills() { return missingSkills; }
+    public void setMissingSkills(java.util.List<String> missingSkills) { this.missingSkills = missingSkills; }
+
+    public java.util.List<String> getPartialSkills() { return partialSkills; }
+    public void setPartialSkills(java.util.List<String> partialSkills) { this.partialSkills = partialSkills; }
+
+    public String getScoreFormula() { return scoreFormula; }
+    public void setScoreFormula(String scoreFormula) { this.scoreFormula = scoreFormula; }
+
+    public String getTextualExplanation() { return textualExplanation; }
+    public void setTextualExplanation(String textualExplanation) { this.textualExplanation = textualExplanation; }
 
     /**
      * Formatte le score pour l'affichage

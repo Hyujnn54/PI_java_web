@@ -45,7 +45,7 @@ public class MatchingService {
         try {
             // 1. Calculer le score des compétences
             List<OfferSkill> requiredSkills = offerSkillService().getSkillsByOfferId(offer.getId());
-            double skillsScore = calculateSkillsScore(candidate.getSkills(), requiredSkills);
+            double skillsScore = calculateSkillsScore(candidate.getSkills(), requiredSkills, result);
             result.setSkillsScore(skillsScore);
             result.setTotalRequiredSkills(requiredSkills.size());
 
@@ -68,6 +68,12 @@ public class MatchingService {
                                  (experienceScore * EXPERIENCE_WEIGHT);
 
             result.setOverallScore(overallScore);
+
+            // Generate detailed explanations
+            result.setScoreFormula(String.format("Score = (Comp. %.0f × 40%%) + (Loc. %.0f × 25%%) + (Contrat %.0f × 20%%) + (Exp. %.0f × 15%%) = %.0f%%",
+                skillsScore, locationScore, contractScore, experienceScore, overallScore));
+            
+            result.setTextualExplanation(generateExplanation(result));
 
         } catch (Exception e) {
             System.err.println("Erreur calcul matching: " + e.getMessage());
@@ -97,7 +103,7 @@ public class MatchingService {
     /**
      * Calcule le score des compétences
      */
-    private double calculateSkillsScore(List<CandidateSkill> candidateSkills, List<OfferSkill> requiredSkills) {
+    private double calculateSkillsScore(List<CandidateSkill> candidateSkills, List<OfferSkill> requiredSkills, MatchingResult result) {
         if (requiredSkills.isEmpty()) {
             return 100; // Pas de compétences requises = 100%
         }
@@ -113,6 +119,14 @@ public class MatchingService {
                 // Bonus si le niveau est égal ou supérieur
                 double skillScore = calculateSkillLevelScore(matched.getLevel(), required.getLevelRequired());
                 totalScore += skillScore;
+                
+                if (skillScore == 100.0) {
+                    result.getMatchingSkills().add(required.getSkillName() + " (Niveau OK)");
+                } else {
+                    result.getPartialSkills().add(required.getSkillName() + " (Candidat: " + matched.getLevel().name() + " | Requis: " + required.getLevelRequired().name() + ")");
+                }
+            } else {
+                result.getMissingSkills().add(required.getSkillName());
             }
         }
 
@@ -342,6 +356,37 @@ public class MatchingService {
         return allResults.stream()
                         .filter(r -> r.getOverallScore() >= minScore)
                         .toList();
+    }
+
+    /**
+     * Génère une explication textuelle du score de matching
+     */
+    private String generateExplanation(MatchingResult result) {
+        StringBuilder explanation = new StringBuilder();
+        
+        if (result.getOverallScore() >= 85) {
+            explanation.append("Excellent profil pour cette offre ! ");
+        } else if (result.getOverallScore() >= 70) {
+            explanation.append("Bon profil, mais quelques ajustements ou compétences supplémentaires seraient bénéfiques. ");
+        } else if (result.getOverallScore() >= 50) {
+            explanation.append("Profil moyen, certains critères importants ne sont pas remplis. ");
+        } else {
+            explanation.append("Le profil ne correspond pas aux attentes principales de l'offre. ");
+        }
+        
+        if (!result.getMissingSkills().isEmpty()) {
+            explanation.append("Il manque ").append(result.getMissingSkills().size()).append(" compétence(s) technique(s) requise(s). ");
+        }
+        
+        if (result.getLocationScore() < 50) {
+            explanation.append("La localisation géographique semble éloignée. ");
+        }
+        
+        if (result.getExperienceScore() < 60) {
+            explanation.append("Le niveau d'expérience est légèrement inférieur à ce qui est attendu.");
+        }
+        
+        return explanation.toString().trim();
     }
 }
 

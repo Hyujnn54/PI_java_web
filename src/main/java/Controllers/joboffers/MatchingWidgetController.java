@@ -110,7 +110,116 @@ public class MatchingWidgetController {
 
         widget.getChildren().add(detailsBox);
 
+        // Bouton "Voir détails"
+        Button btnDetails = new Button("👁 Voir détails");
+        btnDetails.setStyle("-fx-background-color: transparent; -fx-text-fill: #5BA3F5; -fx-padding: 8 15; " +
+                            "-fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #5BA3F5; -fx-border-radius: 6; -fx-font-weight: 600;");
+        btnDetails.setMaxWidth(Double.MAX_VALUE);
+        btnDetails.setOnAction(e -> showMatchingDetailsDialog(result));
+
+        widget.getChildren().add(btnDetails);
+
         return widget;
+    }
+
+    /**
+     * Affiche les détails du matching dans une fenêtre popup
+     */
+    private void showMatchingDetailsDialog(MatchingResult result) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Détails du Matching");
+        dialog.setMinWidth(550);
+        dialog.setMinHeight(650);
+
+        VBox root = new VBox(20);
+        root.setStyle("-fx-background-color: #f5f6f8; -fx-padding: 25;");
+
+        // En-tête
+        Label title = new Label("📊 Analyse détaillée du Score");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
+
+        // Explication textuelle
+        VBox explBox = new VBox(10);
+        explBox.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15; -fx-border-color: #e9ecef; -fx-border-width: 1; -fx-border-radius: 10;");
+        Label explTitle = new Label("💡 Interprétation globale :");
+        explTitle.setStyle("-fx-font-weight: bold; -fx-text-fill: #495057;");
+        Label explText = new Label(result.getTextualExplanation() != null ? result.getTextualExplanation() : "Aucune explication disponible.");
+        explText.setWrapText(true);
+        explText.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 14px;");
+        explBox.getChildren().addAll(explTitle, explText);
+
+        // Formule détaillée
+        VBox formulaBox = new VBox(10);
+        formulaBox.setStyle("-fx-background-color: #e8f4fd; -fx-background-radius: 10; -fx-padding: 15;");
+        Label formulaLabel = new Label("📐 Formule du calcul :");
+        formulaLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #0c5460;");
+        Label formulaText = new Label(result.getScoreFormula() != null ? result.getScoreFormula() : "Score global calculé.");
+        formulaText.setStyle("-fx-text-fill: #0c5460; -fx-font-family: monospace; -fx-font-size: 14px;");
+        formulaBox.getChildren().addAll(formulaLabel, formulaText);
+
+        // Compétences
+        VBox skillsBox = new VBox(15);
+        skillsBox.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15; -fx-border-color: #e9ecef; -fx-border-width: 1; -fx-border-radius: 10;");
+        
+        Label skillsTitle = new Label("🎯 Détails des Compétences");
+        skillsTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;");
+        skillsBox.getChildren().add(skillsTitle);
+
+        if (result.getMatchingSkills() != null && !result.getMatchingSkills().isEmpty()) {
+            VBox okBox = new VBox(5);
+            Label okLabel = new Label("✅ Compétences acquises (" + result.getMatchingSkills().size() + ") :");
+            okLabel.setStyle("-fx-text-fill: #28a745; -fx-font-weight: bold;");
+            okBox.getChildren().add(okLabel);
+            for (String skill : result.getMatchingSkills()) {
+                Label sLabel = new Label("• " + skill);
+                sLabel.setStyle("-fx-text-fill: #495057; -fx-padding: 0 0 0 10;");
+                okBox.getChildren().add(sLabel);
+            }
+            skillsBox.getChildren().add(okBox);
+        }
+
+        if (result.getPartialSkills() != null && !result.getPartialSkills().isEmpty()) {
+            VBox warningBox = new VBox(5);
+            Label warningLabel = new Label("⚠️ Compétences partielles (" + result.getPartialSkills().size() + ") :");
+            warningLabel.setStyle("-fx-text-fill: #fd7e14; -fx-font-weight: bold;");
+            warningBox.getChildren().add(warningLabel);
+            for (String skill : result.getPartialSkills()) {
+                Label sLabel = new Label("• " + skill);
+                sLabel.setStyle("-fx-text-fill: #495057; -fx-padding: 0 0 0 10;");
+                warningBox.getChildren().add(sLabel);
+            }
+            skillsBox.getChildren().add(warningBox);
+        }
+
+        if (result.getMissingSkills() != null && !result.getMissingSkills().isEmpty()) {
+            VBox errorBox = new VBox(5);
+            Label errorLabel = new Label("❌ Compétences manquantes (" + result.getMissingSkills().size() + ") :");
+            errorLabel.setStyle("-fx-text-fill: #dc3545; -fx-font-weight: bold;");
+            errorBox.getChildren().add(errorLabel);
+            for (String skill : result.getMissingSkills()) {
+                Label sLabel = new Label("• " + skill);
+                sLabel.setStyle("-fx-text-fill: #495057; -fx-padding: 0 0 0 10;");
+                errorBox.getChildren().add(sLabel);
+            }
+            skillsBox.getChildren().add(errorBox);
+        }
+
+        ScrollPane scrollPane = new ScrollPane(skillsBox);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
+        Button btnClose = new Button("Fermer");
+        btnClose.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-padding: 10 25; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-weight: bold;");
+        btnClose.setMaxWidth(Double.MAX_VALUE);
+        btnClose.setOnAction(e -> dialog.close());
+
+        root.getChildren().addAll(title, explBox, formulaBox, scrollPane, btnClose);
+
+        Scene scene = new Scene(root, 550, 650);
+        dialog.setScene(scene);
+        dialog.showAndWait();
     }
 
     /**

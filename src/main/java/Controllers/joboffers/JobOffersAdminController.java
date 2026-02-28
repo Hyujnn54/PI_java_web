@@ -10,6 +10,8 @@ import Services.joboffers.JobOfferService;
 import Services.joboffers.JobOfferWarningService;
 import Services.joboffers.WarningCorrectionService;
 import Services.joboffers.OfferSkillService;
+import Services.joboffers.ModerationService;
+import Models.joboffers.ModerationResult;
 import Utils.UserContext;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -46,6 +48,7 @@ public class JobOffersAdminController {
     private OfferSkillService offerSkillService;
     private JobOfferWarningService warningService;
     private WarningCorrectionService correctionService;
+    private ModerationService moderationService;
 
     // Filtres actifs
     private ContractType selectedContractType = null;
@@ -58,6 +61,7 @@ public class JobOffersAdminController {
         offerSkillService = new OfferSkillService();
         warningService = new JobOfferWarningService();
         correctionService = new WarningCorrectionService();
+        moderationService = new ModerationService();
         buildUI();
         loadJobOffers();
     }
@@ -513,9 +517,13 @@ public class JobOffersAdminController {
             descSection.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-padding: 15;");
             Label descTitle = new Label("📝 Description");
             descTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
+            
             Label descText = new Label(job.getDescription());
             descText.setWrapText(true);
+            descText.setMinHeight(Region.USE_PREF_SIZE); 
+            descText.setMaxWidth(Double.MAX_VALUE);
             descText.setStyle("-fx-text-fill: #495057; -fx-font-size: 13px;");
+            
             descSection.getChildren().addAll(descTitle, descText);
             detailContainer.getChildren().add(descSection);
         }
@@ -553,10 +561,16 @@ public class JobOffersAdminController {
         actionBox.setStyle("-fx-padding: 20 0;");
 
         // Bouton Signaler (principal)
-        Button btnFlag = new Button("⚠️ Signaler cette offre");
+        Button btnFlag = new Button("⚠️ Signaler");
         btnFlag.setStyle("-fx-background-color: #ffc107; -fx-text-fill: #212529; -fx-font-weight: 600; " +
                         "-fx-font-size: 13px; -fx-padding: 12 25; -fx-background-radius: 8; -fx-cursor: hand;");
         btnFlag.setOnAction(e -> showFlagDialog(job));
+
+        // Bouton Modérateur (Perspective API)
+        Button btnModerate = new Button("🛡️ Analyser/Modérer");
+        btnModerate.setStyle("-fx-background-color: #6f42c1; -fx-text-fill: #ffffff; -fx-font-weight: 600; " +
+                             "-fx-font-size: 13px; -fx-padding: 12 25; -fx-background-radius: 8; -fx-cursor: hand;");
+        btnModerate.setOnAction(e -> handleModerateOffer(job));
 
         // Si déjà signalée, option de retirer le signalement
         if (job.isFlagged()) {
@@ -564,9 +578,9 @@ public class JobOffersAdminController {
             btnUnflag.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: 600; " +
                               "-fx-font-size: 13px; -fx-padding: 12 25; -fx-background-radius: 8; -fx-cursor: hand;");
             btnUnflag.setOnAction(e -> handleUnflagOffer(job));
-            actionBox.getChildren().addAll(btnFlag, btnUnflag);
+            actionBox.getChildren().addAll(btnFlag, btnModerate, btnUnflag);
         } else {
-            actionBox.getChildren().add(btnFlag);
+            actionBox.getChildren().addAll(btnFlag, btnModerate);
         }
 
         detailContainer.getChildren().add(actionBox);
@@ -642,6 +656,60 @@ public class JobOffersAdminController {
             }
         } catch (SQLException e) {
             System.err.println("Erreur chargement des avertissements: " + e.getMessage());
+        }
+    }
+
+    private void handleModerateOffer(JobOffer job) {
+        String textToAnalyze = job.getTitle() + " - " + (job.getDescription() != null ? job.getDescription() : "");
+        
+        ModerationResult result = moderationService.analyzeText(textToAnalyze);
+
+        if (result == null) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erreur de modération");
+            alert.setHeaderText("Analyse échouée");
+            alert.setContentText("Impossible de joindre l'API Perspective ou de traiter la demande.");
+            alert.showAndWait();
+            return;
+        }
+
+        if (result.isFlagged()) {
+             String warningMsg = String.format("L'offre semble contenir du contenu offensant.\n" +
+                                               "Toxicité: %.2f, Insulte: %.2f, Menaces: %.2f, Haine: %.2f\n" +
+                                               "Merci de corriger la description sinon elle sera supprimée.",
+                                               result.getToxicity(), result.getInsult(), result.getThreat(), result.getIdentityAttack());
+             
+             try {
+                 JobOfferWarning warning = new JobOfferWarning(
+                     job.getId(),
+                     job.getRecruiterId(),
+                     UserContext.getAdminId() != null ? UserContext.getAdminId() : 1L,
+                     "Contenu potentiellement non conforme",
+                     warningMsg
+                 );
+                 warningService.createWarning(warning);
+                 
+                 job.setFlagged(true);
+                 jobOfferService.updateJobOffer(job);
+                 loadJobOffers();
+                 
+                 Alert alert = new Alert(Alert.AlertType.WARNING);
+                 alert.setTitle("Modération automatique");
+                 alert.setHeaderText("⚠️ Contenu inapproprié détecté");
+                 alert.setContentText("L'offre a été automatiquement signalée.\nRaison: " + warningMsg);
+                 alert.showAndWait();
+             } catch(SQLException ex) {
+                 System.err.println("Impossible de créer l'avertissement ou de marquer l'offre comme signalée");
+             }
+        } else {
+            // Offre OK
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Résultat de l'analyse");
+            alert.setHeaderText("✅ Offre OK");
+            alert.setContentText("Le contenu respecte les directives.\n\n"
+                               + "Texte analysé : \"" + textToAnalyze + "\"\n\n"
+                               + "Scores d'analyse :\n" + result.toString());
+            alert.showAndWait();
         }
     }
 

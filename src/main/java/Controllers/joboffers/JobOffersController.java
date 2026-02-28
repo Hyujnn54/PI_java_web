@@ -12,6 +12,7 @@ import Services.joboffers.JobOfferWarningService;
 import Services.joboffers.WarningCorrectionService;
 import Services.joboffers.OfferSkillService;
 import Services.joboffers.FuzzySearchService;
+import Services.joboffers.RecommendationService;
 import Services.joboffers.NotificationService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
@@ -48,6 +49,7 @@ public class JobOffersController {
     private OfferSkillService offerSkillService;
     private JobOfferWarningService warningService;
     private WarningCorrectionService correctionService;
+    private RecommendationService recommendationService;
 
     // Form fields
     private TextField formTitleField;
@@ -80,6 +82,7 @@ public class JobOffersController {
         offerSkillService = new OfferSkillService();
         warningService   = new JobOfferWarningService();
         correctionService = new WarningCorrectionService();
+        recommendationService = new RecommendationService();
         skillRows = new ArrayList<>();
         buildUI();
         loadJobOffers();
@@ -609,8 +612,85 @@ public class JobOffersController {
                 "-fx-font-size: 13px; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
         btnToggle.setOnAction(e -> handleToggleStatus(job));
 
-        actionButtons.getChildren().addAll(btnEdit, btnDelete, btnToggle);
+        Button btnAnalyze = new Button("💡 Analyser l'offre");
+        btnAnalyze.setStyle("-fx-background-color: #6f42c1; -fx-text-fill: white; -fx-font-weight: 600; " +
+                "-fx-font-size: 13px; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
+        btnAnalyze.setOnAction(e -> showRecommendationsDialog(job));
+
+        actionButtons.getChildren().addAll(btnEdit, btnDelete, btnToggle, btnAnalyze);
         detailContainer.getChildren().add(actionButtons);
+    }
+
+    private void showRecommendationsDialog(JobOffer job) {
+        Models.joboffers.JobOfferRecommendation recommendation = recommendationService.analyzeOffer(job);
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Analyse de l'Offre");
+        dialog.setHeaderText("Recommandations Dynamiques pour : " + job.getTitle());
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setPrefWidth(500);
+
+        // 1. KPIs
+        HBox statsBox = new HBox(20);
+        statsBox.setAlignment(Pos.CENTER);
+        statsBox.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-padding: 15;");
+
+        VBox appStat = new VBox(5);
+        appStat.setAlignment(Pos.CENTER);
+        Label lblAppCount = new Label(String.valueOf(recommendation.getApplicationCount()));
+        lblAppCount.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #5BA3F5;");
+        Label lblAppText = new Label("Candidatures");
+        lblAppText.setStyle("-fx-font-size: 12px; -fx-text-fill: #6c757d;");
+        appStat.getChildren().addAll(lblAppCount, lblAppText);
+
+        VBox scoreStat = new VBox(5);
+        scoreStat.setAlignment(Pos.CENTER);
+        Label lblScore = new Label(String.format("%.1f%%", recommendation.getAverageScore()));
+        lblScore.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: " + (recommendation.getAverageScore() < 40 ? "#dc3545" : "#28a745") + ";");
+        Label lblScoreText = new Label("Score Moyen");
+        lblScoreText.setStyle("-fx-font-size: 12px; -fx-text-fill: #6c757d;");
+        scoreStat.getChildren().addAll(lblScore, lblScoreText);
+
+        statsBox.getChildren().addAll(appStat, scoreStat);
+        content.getChildren().add(statsBox);
+
+        // 2. Unattractive Alert
+        if (recommendation.isUnattractive()) {
+            VBox alertBox = new VBox(5);
+            alertBox.setStyle("-fx-background-color: #f8d7da; -fx-padding: 10; -fx-background-radius: 5; -fx-border-color: #f5c6cb; -fx-border-radius: 5;");
+            Label alertTitle = new Label("⚠️ Offre Peu Attractrice");
+            alertTitle.setStyle("-fx-font-weight: bold; -fx-text-fill: #721c24;");
+            Label alertText = new Label("Cette offre génère peu d'intérêt ou attire des profils inadéquats. Suivez les recommandations ci-dessous.");
+            alertText.setStyle("-fx-text-fill: #721c24; -fx-font-size: 12px;");
+            alertText.setWrapText(true);
+            alertBox.getChildren().addAll(alertTitle, alertText);
+            content.getChildren().add(alertBox);
+        }
+
+        // 3. Recommendations List
+        Label recTitle = new Label("💡 Conseils pour optimiser votre offre :");
+        recTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+        content.getChildren().add(recTitle);
+
+        VBox recList = new VBox(10);
+        for (String rec : recommendation.getRecommendations()) {
+            HBox recRow = new HBox(8);
+            recRow.setAlignment(Pos.TOP_LEFT);
+            Label dot = new Label("•");
+            dot.setStyle("-fx-text-fill: #6f42c1; -fx-font-weight: bold;");
+            Label text = new Label(rec);
+            text.setWrapText(true);
+            text.setStyle("-fx-text-fill: #495057; -fx-font-size: 13px;");
+            recRow.getChildren().addAll(dot, text);
+            recList.getChildren().add(recRow);
+        }
+        content.getChildren().add(recList);
+
+        dialog.getDialogPane().setContent(content);
+        dialog.showAndWait();
     }
 
     // =========================================================================
