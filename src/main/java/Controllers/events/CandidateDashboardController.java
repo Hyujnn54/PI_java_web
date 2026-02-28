@@ -1,10 +1,10 @@
-package Controllers;
+package Controllers.events;
 
-import Models.Candidate;
-import Models.EventRegistration;
-import Models.RecruitmentEvent;
-import Models.User;
-import Models.RoleEnum;
+import Models.events.Candidate;
+import Models.events.EventRegistration;
+import Models.events.RecruitmentEvent;
+import Models.events.User;
+import Models.events.RoleEnum;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -15,10 +15,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 import javafx.scene.Node;
 import javafx.geometry.Pos;
-import Services.CandidateService;
-import Services.EventRegistrationService;
-import Services.RecruitmentEventService;
-import Services.UserService;
+import Services.events.CandidateService;
+import Services.events.EventRegistrationService;
+import Services.events.RecruitmentEventService;
+import Services.events.UserService;
 import Utils.SchemaFixer;
 
 import java.net.URL;

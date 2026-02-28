@@ -1,4 +1,4 @@
-package Models;
+package Models.events;
 
 public enum AttendanceStatusEnum {
     PENDING,

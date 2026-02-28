@@ -1,6 +1,6 @@
-package Services;
+package Services.events;
 
-import Models.*;
+import Models.events.*;
 import Utils.MyDatabase;
 
 import java.sql.*;

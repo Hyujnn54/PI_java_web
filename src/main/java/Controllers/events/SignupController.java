@@ -1,15 +1,15 @@
-package Controllers;
+package Controllers.events;
 
-import Models.Candidate;
-import Models.Recruiter;
-import Models.RoleEnum;
-import Models.User;
+import Models.events.Candidate;
+import Models.events.Recruiter;
+import Models.events.RoleEnum;
+import Models.events.User;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-import Services.CandidateService;
-import Services.RecruiterService;
-import Services.UserService;
+import Services.events.CandidateService;
+import Services.events.RecruiterService;
+import Services.events.UserService;
 import Utils.SceneManager;
 
 import java.sql.SQLException;

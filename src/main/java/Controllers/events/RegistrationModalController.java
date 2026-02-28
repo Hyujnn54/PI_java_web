@@ -1,11 +1,11 @@
-package Controllers;
+package Controllers.events;
 
-import Models.Candidate;
-import Models.EventRegistration;
-import Models.RecruitmentEvent;
-import Models.User;
-import Services.EventRegistrationService;
-import Services.UserService;
+import Models.events.Candidate;
+import Models.events.EventRegistration;
+import Models.events.RecruitmentEvent;
+import Models.events.User;
+import Services.events.EventRegistrationService;
+import Services.events.UserService;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;

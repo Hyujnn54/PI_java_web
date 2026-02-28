@@ -55,4 +55,28 @@ public final class SceneManager {
     public static Stage getStage() {
         return stage;
     }
+
+    /**
+     * Switch the current scene by loading a new FXML and updating the stage title.
+     * Used by events/login/signup controllers.
+     */
+    public static void switchScene(Stage targetStage, String fxmlPath, String title) {
+        try {
+            FXMLLoader loader = new FXMLLoader(SceneManager.class.getResource(fxmlPath));
+            Parent root = loader.load();
+            Scene newScene = new Scene(root);
+            if (scene != null && !scene.getStylesheets().isEmpty()) {
+                newScene.getStylesheets().addAll(scene.getStylesheets());
+            }
+            Stage s = (targetStage != null) ? targetStage : stage;
+            s.setScene(newScene);
+            s.setTitle(title);
+            s.centerOnScreen();
+            scene = newScene;
+            if (s != stage) stage = s;
+        } catch (Exception e) {
+            System.err.println("SceneManager.switchScene failed for " + fxmlPath + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 }

@@ -1,4 +1,4 @@
-package Models;
+package Models.events;
 
 public class Candidate {
     private long id; // Shared PK with users.id

@@ -1,7 +1,7 @@
-package Controllers;
+package Controllers.events;
 
-import Models.*;
-import Services.*;
+import Models.events.*;
+import Services.events.*;
 import Utils.SchemaFixer;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -80,7 +80,7 @@ public class RecruiterDashboardController implements Initializable {
     @FXML
     private Label userRoleLabel;
 
-    private Services.EventRegistrationService registrationService;
+    private Services.events.EventRegistrationService registrationService;
     private RecruitmentEventService eventService;
     private RecruiterService recruiterService;
     private UserService userService;
@@ -89,7 +89,7 @@ public class RecruiterDashboardController implements Initializable {
     public RecruiterDashboardController() {
         eventService = new RecruitmentEventService();
         recruiterService = new RecruiterService();
-        registrationService = new Services.EventRegistrationService();
+        registrationService = new Services.events.EventRegistrationService();
         userService = new UserService();
     }
 

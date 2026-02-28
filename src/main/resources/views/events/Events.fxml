@@ -5,7 +5,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="Controllers.EventsViewController"
+            fx:controller="Controllers.events.EventsViewController"
             style="-fx-background-color: #F0F4FA;">
 
     <!-- TOP BAR -->

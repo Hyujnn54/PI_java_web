@@ -1,6 +1,6 @@
 package Utils;
 
-import Models.User;
+import Models.events.User;
 
 /**
  * Classe simple pour stocker l'utilisateur connecté

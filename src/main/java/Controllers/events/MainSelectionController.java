@@ -1,12 +1,11 @@
-package Controllers;
+package Controllers.events;
 
 import javafx.fxml.FXML;
 import javafx.stage.Stage;
-import javafx.scene.control.Button;
 import Utils.SceneManager;
 import Utils.SessionManager;
-import Models.User;
-import Models.RoleEnum;
+import Models.events.User;
+import Models.events.RoleEnum;
 
 public class MainSelectionController {
 
@@ -39,7 +38,6 @@ public class MainSelectionController {
         SessionManager.setCurrentUser(recruiter);
 
         // Navigation
-        SceneManager.switchScene((Stage) Stage.getWindows().get(0), "/GUI/recruiter_dashboard.fxml",
-                "Espace Recruteur");
+        SceneManager.switchScene((Stage) Stage.getWindows().get(0), "/GUI/recruiter_dashboard.fxml", "Espace Recruteur");
     }
 }

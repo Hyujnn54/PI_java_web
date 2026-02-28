@@ -1,8 +1,8 @@
-package Controllers;
+package Controllers.events;
 
-import Models.*;
-import Services.EventRegistrationService;
-import Services.RecruitmentEventService;
+import Models.events.*;
+import Services.events.EventRegistrationService;
+import Services.events.RecruitmentEventService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;

@@ -1,7 +1,7 @@
-package Controllers;
+package Controllers.events;
 
-import Models.User;
-import Services.UserService;
+import Models.events.User;
+import Services.events.UserService;
 import Utils.SceneManager;
 import Utils.SessionManager;
 import javafx.fxml.FXML;

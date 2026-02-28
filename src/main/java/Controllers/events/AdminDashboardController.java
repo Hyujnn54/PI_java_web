@@ -1,7 +1,7 @@
-package Controllers;
+package Controllers.events;
 
-import Models.*;
-import Services.*;
+import Models.events.*;
+import Services.events.*;
 import Utils.SceneManager;
 import Utils.SessionManager;
 import javafx.collections.FXCollections;

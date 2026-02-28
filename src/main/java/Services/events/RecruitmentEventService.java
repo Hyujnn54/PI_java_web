@@ -1,7 +1,7 @@
-package Services;
+package Services.events;
 
-import Models.RecruitmentEvent;
-import Models.Recruiter;
+import Models.events.RecruitmentEvent;
+import Models.events.Recruiter;
 import Utils.MyDatabase;
 
 import java.sql.*;

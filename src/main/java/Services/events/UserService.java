@@ -1,7 +1,7 @@
-package Services;
+package Services.events;
 
-import Models.RoleEnum;
-import Models.User;
+import Models.events.RoleEnum;
+import Models.events.User;
 import Utils.MyDatabase;
 
 import java.sql.*;
