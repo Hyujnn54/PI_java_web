@@ -1,6 +1,6 @@
 package org.example;
 
-import Services.InterviewReminderScheduler;
+import Services.interview.InterviewReminderScheduler;
 import Utils.SceneManager;
 import Utils.UserContext;
 import javafx.application.Application;

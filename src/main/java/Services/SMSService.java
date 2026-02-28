@@ -1,6 +1,7 @@
 package Services;
 
-import Models.Interview;
+import Models.interview.Interview;
+import Services.interview.InterviewService;
 
 import java.io.*;
 import java.net.HttpURLConnection;

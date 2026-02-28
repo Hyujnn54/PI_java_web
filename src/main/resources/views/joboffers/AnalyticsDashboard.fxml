@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:id="mainContainer"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.joboffers.AnalyticsDashboardController"
+      prefHeight="600.0"
+      prefWidth="900.0"
+      style="-fx-background-color: #f5f6f8;">
+</VBox>
+

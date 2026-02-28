@@ -1,6 +1,7 @@
 package Services;
 
-import Models.Interview;
+import Models.interview.Interview;
+import Services.interview.InterviewService;
 
 import javax.mail.Authenticator;
 import javax.mail.Message;

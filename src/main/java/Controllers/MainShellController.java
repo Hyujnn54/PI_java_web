@@ -1,5 +1,6 @@
 package Controllers;
 
+import Controllers.interview.CalendarViewController;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -39,7 +40,7 @@ public class MainShellController {
 
     @FXML private StackPane contentArea;
 
-    private String activePage = "/Applications.fxml";
+    private String activePage = "/views/application/Applications.fxml";
 
     @FXML
     private void initialize() {
@@ -59,14 +60,14 @@ public class MainShellController {
 
     @FXML
     private void handleApplicationsNav() {
-        activePage = "/Applications.fxml";
+        activePage = "/views/application/Applications.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnApplications);
     }
 
     @FXML
     private void handleInterviewsNav() {
-        activePage = "/InterviewManagement.fxml";
+        activePage = "/views/interview/InterviewManagement.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnInterviews);
     }
@@ -75,11 +76,11 @@ public class MainShellController {
     private void handleJobOffersNav() {
         Utils.UserContext.Role role = Utils.UserContext.getRole();
         if (role == Utils.UserContext.Role.ADMIN) {
-            activePage = "/JobOffersAdmin.fxml";
+            activePage = "/views/joboffers/JobOffersAdmin.fxml";
         } else if (role == Utils.UserContext.Role.RECRUITER) {
-            activePage = "/JobOffers.fxml";
+            activePage = "/views/joboffers/JobOffers.fxml";
         } else {
-            activePage = "/JobOffersBrowse.fxml";
+            activePage = "/views/joboffers/JobOffersBrowse.fxml";
         }
         loadContentView(activePage);
         highlightActiveButton(btnJobOffers);
@@ -92,28 +93,28 @@ public class MainShellController {
 
     @FXML
     private void handleStatistics() {
-        activePage = "/AnalyticsDashboard.fxml";
+        activePage = "/views/joboffers/AnalyticsDashboard.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnStatistics);
     }
 
     @FXML
     private void handleDashboardNav() {
-        activePage = "/AdminApplicationStatistics.fxml";
+        activePage = "/views/application/AdminApplicationStatistics.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnDashboard);
     }
 
     @FXML
     private void handleAdminStatsNav() {
-        activePage = "/AdminApplicationStatistics.fxml";
+        activePage = "/views/application/AdminApplicationStatistics.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnAdminStats);
     }
 
     @FXML
     private void handleAdminApplicationsNav() {
-        activePage = "/AdminApplications.fxml";
+        activePage = "/views/application/AdminApplications.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnAdminApplications);
     }
@@ -222,8 +223,8 @@ public class MainShellController {
         // Scheduler info
         javafx.scene.control.Separator sep2 = new javafx.scene.control.Separator();
         javafx.scene.control.Label schedulerInfo = new javafx.scene.control.Label(
-            "⏰ Scheduler actif : " + Services.InterviewReminderScheduler.isRunning()
-            + "   |   Rappels envoyés : " + Services.InterviewReminderScheduler.getSentCount());
+            "⏰ Scheduler actif : " + Services.interview.InterviewReminderScheduler.isRunning()
+            + "   |   Rappels envoyés : " + Services.interview.InterviewReminderScheduler.getSentCount());
         schedulerInfo.setStyle("-fx-font-size: 12px; -fx-text-fill: #7f8c8d;");
 
         content.getChildren().addAll(
@@ -334,3 +335,4 @@ public class MainShellController {
         a.setTitle("Erreur"); a.setHeaderText(header); a.setContentText(content); a.showAndWait();
     }
 }
+

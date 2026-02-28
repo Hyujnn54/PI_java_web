@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.application.AdminDashboardController" spacing="20" styleClass="page"
+      stylesheets="@styles.css" style="-fx-background-color: #F5F6F8;">
+
+    <padding>
+        <Insets top="25" left="25" right="25" bottom="25"/>
+    </padding>
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox spacing="5" HBox.hgrow="ALWAYS">
+            <Label text="Statistiques des Candidatures"
+                   style="-fx-font-size: 26px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;"/>
+            <Label text="Vue d'ensemble de toutes les offres et candidatures"
+                   style="-fx-font-size: 13px; -fx-text-fill: #7f8c8d;"/>
+        </VBox>
+        <Button fx:id="btnRefresh" text="🔄 Actualiser"
+                style="-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 600;
+                       -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;
+                       -fx-font-size: 13px;"/>
+    </HBox>
+
+    <!-- Global Statistics -->
+    <VBox spacing="14"
+          style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20;
+                 -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.07),12,0,0,2);">
+        <Label text="Vue globale"
+               style="-fx-font-weight: 700; -fx-font-size: 15px; -fx-text-fill: #2c3e50;"/>
+        <HBox fx:id="globalStatsContainer" spacing="14" style="-fx-padding: 4 0 0 0;"/>
+    </VBox>
+
+    <!-- Per-Offer Statistics -->
+    <VBox spacing="14" VBox.vgrow="ALWAYS"
+          style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20;
+                 -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.07),12,0,0,2);">
+        <Label text="Par offre d'emploi"
+               style="-fx-font-weight: 700; -fx-font-size: 15px; -fx-text-fill: #2c3e50;"/>
+        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                    style="-fx-background: transparent; -fx-background-color: transparent;">
+            <VBox fx:id="offerStatsContainer" spacing="14" style="-fx-padding: 4 0;"/>
+        </ScrollPane>
+    </VBox>
+
+</VBox>
+

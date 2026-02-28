@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.application.AdminApplicationsController"
+      spacing="20"
+      style="-fx-background-color: #f8f9fa;">
+
+    <padding>
+        <Insets top="25" left="25" right="25" bottom="25"/>
+    </padding>
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox spacing="5" HBox.hgrow="ALWAYS">
+            <Label text="📋 Toutes les Candidatures"
+                   style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Label fx:id="lblTotalCount" text="Vue globale — Admin"
+                   style="-fx-font-size: 14px; -fx-text-fill: #7f8c8d;"/>
+        </VBox>
+    </HBox>
+
+    <!-- Search Bar -->
+    <HBox spacing="12" alignment="CENTER_LEFT"
+          style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 12 15;
+                 -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.06),10,0,0,2);">
+        <ComboBox fx:id="cbSearchCriteria" promptText="Rechercher par..."
+                  prefWidth="180"
+                  style="-fx-background-color: #f8f9fa; -fx-background-radius: 8;
+                         -fx-border-color: #e9ecef; -fx-border-radius: 8;"/>
+        <TextField fx:id="txtSearch" promptText="Rechercher..."
+                   HBox.hgrow="ALWAYS"
+                   style="-fx-background-color: #f8f9fa; -fx-background-radius: 8;
+                          -fx-padding: 10 14; -fx-border-color: #e9ecef; -fx-border-radius: 8;"/>
+        <Button fx:id="btnSearch" text="🔍 Rechercher"
+                onAction="#handleSearch"
+                style="-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 600;
+                       -fx-padding: 10 18; -fx-background-radius: 8; -fx-cursor: hand;"/>
+        <Button fx:id="btnClear" text="✕ Effacer"
+                onAction="#handleClear"
+                style="-fx-background-color: #e9ecef; -fx-text-fill: #6c757d; -fx-font-weight: 600;
+                       -fx-padding: 10 14; -fx-background-radius: 8; -fx-cursor: hand;"/>
+    </HBox>
+
+    <!-- Filter Row -->
+    <HBox spacing="14" alignment="CENTER_LEFT"
+          style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 10 15;
+                 -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.04),6,0,0,1);">
+        <Label text="Statut :"
+               style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #555;"/>
+        <ComboBox fx:id="cbStatusFilter" promptText="Tous" prefWidth="160"
+                  style="-fx-background-color: #f8f9fa; -fx-background-radius: 8;
+                         -fx-border-color: #e9ecef; -fx-border-radius: 8;"/>
+        <CheckBox fx:id="chkShowArchived" text="Afficher archivés"
+                  style="-fx-font-size: 13px; -fx-text-fill: #555;"/>
+    </HBox>
+
+    <!-- Split View -->
+    <HBox spacing="20" VBox.vgrow="ALWAYS">
+
+        <!-- LEFT: Application list -->
+        <VBox spacing="12" prefWidth="420" minWidth="380" maxWidth="460"
+              style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20;
+                     -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.08),15,0,0,2);">
+            <Label text="Liste des Candidatures"
+                   style="-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;"/>
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                        style="-fx-background: transparent; -fx-background-color: transparent;">
+                <VBox fx:id="applicationListContainer" spacing="10" style="-fx-padding: 5 0;"/>
+            </ScrollPane>
+        </VBox>
+
+        <!-- RIGHT: Detail view -->
+        <VBox HBox.hgrow="ALWAYS"
+              style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20;
+                     -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.08),15,0,0,2);">
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                        style="-fx-background: transparent; -fx-background-color: transparent;">
+                <VBox fx:id="detailContainer" spacing="14" style="-fx-padding: 5 5 5 0;">
+                    <Label text="← Sélectionnez une candidature"
+                           style="-fx-text-fill: #adb5bd; -fx-font-size: 15px; -fx-padding: 40 0 0 20;"/>
+                </VBox>
+            </ScrollPane>
+        </VBox>
+
+    </HBox>
+
+</VBox>
