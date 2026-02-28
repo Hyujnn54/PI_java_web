@@ -125,7 +125,14 @@ public class MainShellController {
 
     @FXML
     private void handleEventsNav() {
-        activePage = "/views/events/Events.fxml";
+        Utils.UserContext.Role role = Utils.UserContext.getRole();
+        if (role == Utils.UserContext.Role.ADMIN) {
+            activePage = "/views/events/AdminEvents.fxml";
+        } else if (role == Utils.UserContext.Role.RECRUITER) {
+            activePage = "/views/events/RecruiterEvents.fxml";
+        } else {
+            activePage = "/views/events/CandidateEvents.fxml";
+        }
         loadContentView(activePage);
         highlightActiveButton(btnEvents);
     }

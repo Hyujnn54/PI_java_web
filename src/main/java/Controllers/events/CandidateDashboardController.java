@@ -92,7 +92,10 @@ public class CandidateDashboardController implements Initializable {
 
     private void loadCandidateData() {
         try {
-            currentCandidate = candidateService.getByUserId(5);
+            // Use the actual logged-in user ID from UserContext
+            Long contextId = Utils.UserContext.getUserId();
+            long lookupId = (contextId != null) ? contextId : 5L;
+            currentCandidate = candidateService.getByUserId(lookupId);
             if (currentCandidate == null) {
                 java.util.List<Candidate> all = candidateService.getAll();
                 if (!all.isEmpty()) {

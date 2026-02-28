@@ -160,8 +160,10 @@ public class RecruiterDashboardController implements Initializable {
 
     private void loadRecruiterData() {
         try {
-            // 1. Essayer le recruteur par défaut (ID 4)
-            currentRecruiter = recruiterService.getByUserId(4);
+            // Use the actual logged-in recruiter ID from UserContext
+            Long contextId = Utils.UserContext.getUserId();
+            long lookupId = (contextId != null) ? contextId : 4L;
+            currentRecruiter = recruiterService.getByUserId(lookupId);
 
             // 2. Si non trouvé, prendre le premier recruteur de la table
             if (currentRecruiter == null) {
