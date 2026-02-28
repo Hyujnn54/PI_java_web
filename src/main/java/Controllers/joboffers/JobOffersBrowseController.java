@@ -916,7 +916,7 @@ public class JobOffersBrowseController {
     private void sendApplicationConfirmationEmail(Long candidateId, String offerTitle) {
         new Thread(() -> {
             try {
-                Services.UserService.UserInfo info = Services.UserService.getUserInfo(candidateId);
+                Services.events.UserService.UserInfo info = Services.events.UserService.getUserInfo(candidateId);
                 if (info == null || info.email() == null || info.email().isBlank()) {
                     System.err.println("[JobOffersBrowse] No email found for candidate " + candidateId + " — skipping confirmation.");
                     return;
@@ -965,7 +965,7 @@ public class JobOffersBrowseController {
                 }
 
                 // Fetch candidate information
-                Services.UserService.UserInfo candidateInfo = Services.UserService.getUserInfo(candidateId);
+                Services.events.UserService.UserInfo candidateInfo = Services.events.UserService.getUserInfo(candidateId);
                 if (candidateInfo == null) {
                     javafx.application.Platform.runLater(() -> {
                         loadingAlert.close();
@@ -975,7 +975,7 @@ public class JobOffersBrowseController {
                 }
 
                 // Fetch candidate skills from database
-                java.util.List<String> candidateSkills = Services.UserService.getCandidateSkills(candidateId);
+                java.util.List<String> candidateSkills = Services.events.UserService.getCandidateSkills(candidateId);
 
                 // Extract CV content if PDF is uploaded
                 String cvContent = "";
@@ -1000,7 +1000,7 @@ public class JobOffersBrowseController {
                         : "Non spécifié";
 
                 // Get company name from recruiter
-                String companyName = Services.UserService.getRecruiterCompanyName(job.getRecruiterId());
+                String companyName = Services.events.UserService.getRecruiterCompanyName(job.getRecruiterId());
                 if (companyName == null || companyName.isEmpty()) {
                     companyName = "Votre entreprise";
                 }
