@@ -13,10 +13,14 @@ import java.util.List;
 import java.util.Map;
 
 public class JobOfferService {
-    private Connection connection;
 
     public JobOfferService() {
-        this.connection = MyDatabase.getInstance().getConnection();
+        // No cached connection - always use conn() to get a live connection
+    }
+
+    /** Always returns a live connection, reconnecting if needed. */
+    private Connection conn() {
+        return MyDatabase.getInstance().getConnection();
     }
 
     private static Connection getStaticConnection() {
@@ -144,7 +148,7 @@ public class JobOfferService {
     public JobOffer createJobOffer(JobOffer jobOffer) throws SQLException {
         String query = "INSERT INTO job_offer (recruiter_id, title, description, location, latitude, longitude, contract_type, created_at, deadline, status) " +
                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = conn().prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, jobOffer.getRecruiterId());
             ps.setString(2, jobOffer.getTitle());
             ps.setString(3, jobOffer.getDescription());
@@ -171,7 +175,7 @@ public class JobOfferService {
     // READ - Get by ID (instance)
     public JobOffer getJobOfferById(Long id) throws SQLException {
         String query = "SELECT * FROM job_offer WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return mapResultSetToJobOffer(rs);
@@ -183,7 +187,7 @@ public class JobOfferService {
     public List<JobOffer> getAllJobOffers() throws SQLException {
         List<JobOffer> jobOffers = new ArrayList<>();
         String query = "SELECT * FROM job_offer ORDER BY created_at DESC";
-        try (Statement stmt = connection.createStatement();
+        try (Statement stmt = conn().createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) jobOffers.add(mapResultSetToJobOffer(rs));
         }
@@ -197,7 +201,7 @@ public class JobOfferService {
     public List<JobOffer> getJobOffersByStatus(Status status) throws SQLException {
         List<JobOffer> jobOffers = new ArrayList<>();
         String query = "SELECT * FROM job_offer WHERE status = ? ORDER BY created_at DESC";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setString(1, status.name());
             ResultSet rs = ps.executeQuery();
             while (rs.next()) jobOffers.add(mapResultSetToJobOffer(rs));
@@ -208,7 +212,7 @@ public class JobOfferService {
     public List<JobOffer> getJobOffersByRecruiterId(Long recruiterId) throws SQLException {
         List<JobOffer> jobOffers = new ArrayList<>();
         String query = "SELECT * FROM job_offer WHERE recruiter_id = ? ORDER BY created_at DESC";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, recruiterId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) jobOffers.add(mapResultSetToJobOffer(rs));
@@ -219,7 +223,7 @@ public class JobOfferService {
     public List<JobOffer> searchJobOffers(String searchTerm, String searchField) throws SQLException {
         List<JobOffer> jobOffers = new ArrayList<>();
         String query = "SELECT * FROM job_offer WHERE " + searchField + " LIKE ? ORDER BY created_at DESC";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setString(1, "%" + searchTerm + "%");
             ResultSet rs = ps.executeQuery();
             while (rs.next()) jobOffers.add(mapResultSetToJobOffer(rs));
@@ -231,7 +235,7 @@ public class JobOfferService {
     public boolean updateJobOffer(JobOffer jobOffer) throws SQLException {
         String query = "UPDATE job_offer SET recruiter_id = ?, title = ?, description = ?, location = ?, " +
                       "latitude = ?, longitude = ?, contract_type = ?, deadline = ?, status = ? WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, jobOffer.getRecruiterId());
             ps.setString(2, jobOffer.getTitle());
             ps.setString(3, jobOffer.getDescription());
@@ -251,7 +255,7 @@ public class JobOfferService {
     // DELETE (instance)
     public boolean deleteJobOffer(Long id) throws SQLException {
         String query = "DELETE FROM job_offer WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, id);
             return ps.executeUpdate() > 0;
         }
@@ -259,7 +263,7 @@ public class JobOfferService {
 
     public boolean updateJobOfferStatus(Long id, Status status) throws SQLException {
         String query = "UPDATE job_offer SET status = ? WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setString(1, status.name());
             ps.setLong(2, id);
             return ps.executeUpdate() > 0;
@@ -287,7 +291,7 @@ public class JobOfferService {
         }
         queryBuilder.append(" ORDER BY created_at DESC");
 
-        try (PreparedStatement ps = connection.prepareStatement(queryBuilder.toString())) {
+        try (PreparedStatement ps = conn().prepareStatement(queryBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
             ResultSet rs = ps.executeQuery();
             while (rs.next()) jobOffers.add(mapResultSetToJobOffer(rs));
@@ -315,7 +319,7 @@ public class JobOfferService {
         }
         queryBuilder.append(" ORDER BY created_at DESC");
 
-        try (PreparedStatement ps = connection.prepareStatement(queryBuilder.toString())) {
+        try (PreparedStatement ps = conn().prepareStatement(queryBuilder.toString())) {
             for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
             ResultSet rs = ps.executeQuery();
             while (rs.next()) jobOffers.add(mapResultSetToJobOffer(rs));
@@ -326,7 +330,7 @@ public class JobOfferService {
     public List<String> getAllLocations() throws SQLException {
         List<String> locations = new ArrayList<>();
         String query = "SELECT DISTINCT location FROM job_offer WHERE location IS NOT NULL AND location != '' ORDER BY location";
-        try (Statement stmt = connection.createStatement();
+        try (Statement stmt = conn().createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) locations.add(rs.getString("location"));
         }
@@ -339,7 +343,7 @@ public class JobOfferService {
         Map<ContractType, Integer> stats = new HashMap<>();
         for (ContractType type : ContractType.values()) stats.put(type, 0);
         String query = "SELECT contract_type, COUNT(*) as total FROM job_offer GROUP BY contract_type";
-        try (Statement stmt = connection.createStatement();
+        try (Statement stmt = conn().createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
                 try {
@@ -355,7 +359,7 @@ public class JobOfferService {
         Map<ContractType, Integer> stats = new HashMap<>();
         for (ContractType type : ContractType.values()) stats.put(type, 0);
         String query = "SELECT contract_type, COUNT(*) as total FROM job_offer WHERE recruiter_id = ? GROUP BY contract_type";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, recruiterId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
@@ -370,7 +374,7 @@ public class JobOfferService {
 
     public int getTotalOffresGlobal() throws SQLException {
         String query = "SELECT COUNT(*) as total FROM job_offer";
-        try (Statement stmt = connection.createStatement();
+        try (Statement stmt = conn().createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             if (rs.next()) return rs.getInt("total");
         }
@@ -379,7 +383,7 @@ public class JobOfferService {
 
     public int getTotalOffresByRecruiter(Long recruiterId) throws SQLException {
         String query = "SELECT COUNT(*) as total FROM job_offer WHERE recruiter_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, recruiterId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return rs.getInt("total");
@@ -389,7 +393,7 @@ public class JobOfferService {
 
     public int getExpiredOffresGlobal() throws SQLException {
         String query = "SELECT COUNT(*) as total FROM job_offer WHERE deadline < NOW()";
-        try (Statement stmt = connection.createStatement();
+        try (Statement stmt = conn().createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             if (rs.next()) return rs.getInt("total");
         }
@@ -398,7 +402,7 @@ public class JobOfferService {
 
     public int getExpiredOffresByRecruiter(Long recruiterId) throws SQLException {
         String query = "SELECT COUNT(*) as total FROM job_offer WHERE recruiter_id = ? AND deadline < NOW()";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, recruiterId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return rs.getInt("total");
@@ -462,3 +466,4 @@ public class JobOfferService {
         return jobOffer;
     }
 }
+

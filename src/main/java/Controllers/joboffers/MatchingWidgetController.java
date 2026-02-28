@@ -7,7 +7,6 @@ import Models.joboffers.JobOffer;
 import Models.joboffers.MatchingResult;
 import Models.joboffers.SkillLevel;
 import Services.joboffers.MatchingService;
-import Services.joboffers.NominatimMapService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -283,15 +282,6 @@ public class MatchingWidgetController {
             // Sauvegarder les données
             candidateProfile.setLocation(txtLocation.getText().trim());
 
-            // Géocoder la localisation
-            if (!txtLocation.getText().trim().isEmpty()) {
-                NominatimMapService mapService = new NominatimMapService();
-                NominatimMapService.GeoLocation geo = mapService.geocode(txtLocation.getText().trim());
-                if (geo != null) {
-                    candidateProfile.setLatitude(geo.getLatitude());
-                    candidateProfile.setLongitude(geo.getLongitude());
-                }
-            }
 
             // Types de contrat
             candidateProfile.getPreferredContractTypes().clear();

@@ -28,10 +28,12 @@ public class MatchingService {
     private static final double DISTANCE_MEDIUM = 50;      // < 50 km = 60%
     private static final double DISTANCE_FAR = 100;        // < 100 km = 40%
 
-    private OfferSkillService offerSkillService;
-
     public MatchingService() {
-        this.offerSkillService = new OfferSkillService();
+        // OfferSkillService is instantiated fresh per call to avoid stale connections
+    }
+
+    private OfferSkillService offerSkillService() {
+        return new OfferSkillService();
     }
 
     /**
@@ -42,7 +44,7 @@ public class MatchingService {
 
         try {
             // 1. Calculer le score des compétences
-            List<OfferSkill> requiredSkills = offerSkillService.getSkillsByOfferId(offer.getId());
+            List<OfferSkill> requiredSkills = offerSkillService().getSkillsByOfferId(offer.getId());
             double skillsScore = calculateSkillsScore(candidate.getSkills(), requiredSkills);
             result.setSkillsScore(skillsScore);
             result.setTotalRequiredSkills(requiredSkills.size());

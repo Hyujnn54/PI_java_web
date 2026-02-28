@@ -11,19 +11,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Service pour gérer les corrections soumises par les recruteurs
+ * Service pour gÃ©rer les corrections soumises par les recruteurs
  */
 public class WarningCorrectionService {
 
-    private Connection connection;
-
     public WarningCorrectionService() {
-        this.connection = MyDatabase.getInstance().getConnection();
+        // No cached connection - always use conn() to get a live connection
         createTableIfNotExists();
     }
 
+    private Connection conn() {
+        return MyDatabase.getInstance().getConnection();
+    }
+
     /**
-     * Crée la table si elle n'existe pas
+     * CrÃ©e la table si elle n'existe pas
      */
     private void createTableIfNotExists() {
         String createTableSQL = """
@@ -46,10 +48,10 @@ public class WarningCorrectionService {
             ) ENGINE=InnoDB
             """;
 
-        try (Statement stmt = connection.createStatement()) {
+        try (Statement stmt = conn().createStatement()) {
             stmt.execute(createTableSQL);
         } catch (SQLException e) {
-            System.err.println("Erreur création table warning_correction: " + e.getMessage());
+            System.err.println("Erreur crÃ©ation table warning_correction: " + e.getMessage());
         }
     }
 
@@ -64,7 +66,7 @@ public class WarningCorrectionService {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
-        try (PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = conn().prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, correction.getWarningId());
             ps.setLong(2, correction.getJobOfferId());
             ps.setLong(3, correction.getRecruiterId());
@@ -85,7 +87,7 @@ public class WarningCorrectionService {
                     }
                 }
 
-                // Mettre à jour le statut du warning à SEEN (en attente de validation admin)
+                // Mettre Ã  jour le statut du warning Ã  SEEN (en attente de validation admin)
                 updateWarningStatus(correction.getWarningId(), "SEEN");
             }
 
@@ -94,11 +96,11 @@ public class WarningCorrectionService {
     }
 
     /**
-     * Met à jour le statut d'un warning
+     * Met Ã  jour le statut d'un warning
      */
     private void updateWarningStatus(Long warningId, String status) throws SQLException {
         String query = "UPDATE job_offer_warning SET status = ? WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setString(1, status);
             ps.setLong(2, warningId);
             ps.executeUpdate();
@@ -109,14 +111,14 @@ public class WarningCorrectionService {
      * Approuver une correction (admin)
      */
     public boolean approveCorrection(Long correctionId, String adminNote) throws SQLException {
-        // Mettre à jour la correction
+        // Mettre Ã  jour la correction
         String updateCorrectionQuery = """
             UPDATE warning_correction 
             SET status = ?, reviewed_at = ?, admin_note = ?
             WHERE id = ?
             """;
 
-        try (PreparedStatement ps = connection.prepareStatement(updateCorrectionQuery)) {
+        try (PreparedStatement ps = conn().prepareStatement(updateCorrectionQuery)) {
             ps.setString(1, CorrectionStatus.APPROVED.name());
             ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
             ps.setString(3, adminNote);
@@ -125,10 +127,10 @@ public class WarningCorrectionService {
             int updated = ps.executeUpdate();
 
             if (updated > 0) {
-                // Récupérer la correction pour avoir les IDs
+                // RÃ©cupÃ©rer la correction pour avoir les IDs
                 WarningCorrection correction = getCorrectionById(correctionId);
                 if (correction != null) {
-                    // Marquer le warning comme résolu
+                    // Marquer le warning comme rÃ©solu
                     updateWarningStatus(correction.getWarningId(), "RESOLVED");
 
                     // Remettre l'offre en ligne (OPEN et non flagged)
@@ -150,7 +152,7 @@ public class WarningCorrectionService {
             WHERE id = ?
             """;
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setString(1, CorrectionStatus.REJECTED.name());
             ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
             ps.setString(3, adminNote);
@@ -161,11 +163,11 @@ public class WarningCorrectionService {
     }
 
     /**
-     * Déflaguer et rouvrir une offre
+     * DÃ©flaguer et rouvrir une offre
      */
     private void unflagAndReopenJobOffer(Long jobOfferId) throws SQLException {
         String query = "UPDATE job_offer SET is_flagged = 0, flagged_at = NULL, status = ? WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setString(1, Status.OPEN.name());
             ps.setLong(2, jobOfferId);
             ps.executeUpdate();
@@ -173,12 +175,12 @@ public class WarningCorrectionService {
     }
 
     /**
-     * Récupérer une correction par ID
+     * RÃ©cupÃ©rer une correction par ID
      */
     public WarningCorrection getCorrectionById(Long id) throws SQLException {
         String query = "SELECT * FROM warning_correction WHERE id = ?";
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, id);
             ResultSet rs = ps.executeQuery();
 
@@ -190,13 +192,13 @@ public class WarningCorrectionService {
     }
 
     /**
-     * Récupérer toutes les corrections en attente (pour admin)
+     * RÃ©cupÃ©rer toutes les corrections en attente (pour admin)
      */
     public List<WarningCorrection> getPendingCorrections() throws SQLException {
         List<WarningCorrection> corrections = new ArrayList<>();
         String query = "SELECT * FROM warning_correction WHERE status = ? ORDER BY submitted_at DESC";
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setString(1, CorrectionStatus.PENDING.name());
             ResultSet rs = ps.executeQuery();
 
@@ -213,7 +215,7 @@ public class WarningCorrectionService {
     public int countPendingCorrections() throws SQLException {
         String query = "SELECT COUNT(*) FROM warning_correction WHERE status = ?";
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setString(1, CorrectionStatus.PENDING.name());
             ResultSet rs = ps.executeQuery();
 
@@ -225,13 +227,13 @@ public class WarningCorrectionService {
     }
 
     /**
-     * Récupérer les corrections pour un warning spécifique
+     * RÃ©cupÃ©rer les corrections pour un warning spÃ©cifique
      */
     public List<WarningCorrection> getCorrectionsByWarningId(Long warningId) throws SQLException {
         List<WarningCorrection> corrections = new ArrayList<>();
         String query = "SELECT * FROM warning_correction WHERE warning_id = ? ORDER BY submitted_at DESC";
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, warningId);
             ResultSet rs = ps.executeQuery();
 
@@ -243,13 +245,13 @@ public class WarningCorrectionService {
     }
 
     /**
-     * Récupérer les corrections pour une offre spécifique
+     * RÃ©cupÃ©rer les corrections pour une offre spÃ©cifique
      */
     public List<WarningCorrection> getCorrectionsByJobOfferId(Long jobOfferId) throws SQLException {
         List<WarningCorrection> corrections = new ArrayList<>();
         String query = "SELECT * FROM warning_correction WHERE job_offer_id = ? ORDER BY submitted_at DESC";
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
+        try (PreparedStatement ps = conn().prepareStatement(query)) {
             ps.setLong(1, jobOfferId);
             ResultSet rs = ps.executeQuery();
 

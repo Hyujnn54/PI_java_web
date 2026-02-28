@@ -710,38 +710,32 @@ public class JobOffersAdminController {
                 loadingLabel.setText("⏳ Génération en cours...");
                 btnGenerate.setDisable(true);
 
-                // TODO: Auto-generate feature disabled - GrokAIService.generateWarningMessage not implemented
-                /*
-                // Exécuter dans un thread séparé pour ne pas bloquer l'UI
                 new Thread(() -> {
                     try {
-                        GrokAIService grokService = new GrokAIService();
-                        String generatedMessage = grokService.generateWarningMessage(
+                        String generatedMessage = generateWarningMessageWithAI(
                             selectedReason,
                             job.getTitle(),
                             job.getDescription()
                         );
 
-                        // Mettre à jour l'UI dans le thread JavaFX
                         javafx.application.Platform.runLater(() -> {
                             if (generatedMessage != null && !generatedMessage.isEmpty()) {
                                 messageArea.setText(generatedMessage);
                                 loadingLabel.setText("✅ Message généré avec succès");
                             } else {
-                                loadingLabel.setText("⚠️ Impossible de générer, utilisez un message par défaut");
+                                messageArea.setText(getDefaultWarningMessage(selectedReason, job.getTitle()));
+                                loadingLabel.setText("ℹ️ Message par défaut utilisé");
                             }
                             btnGenerate.setDisable(false);
                         });
                     } catch (Exception ex) {
                         javafx.application.Platform.runLater(() -> {
-                            loadingLabel.setText("❌ Erreur: " + ex.getMessage());
+                            messageArea.setText(getDefaultWarningMessage(selectedReason, job.getTitle()));
+                            loadingLabel.setText("⚠️ IA indisponible - message par défaut utilisé");
                             btnGenerate.setDisable(false);
                         });
                     }
                 }).start();
-                */
-                loadingLabel.setText("ℹ️ Entrez votre message d'avertissement");
-                btnGenerate.setDisable(false);
             }
         });
 
@@ -1054,6 +1048,136 @@ public class JobOffersAdminController {
     @FXML
     private void handleClearSearch() {
         resetFilters();
+    }
+
+    /**
+     * Generates a warning message using the Groq AI API
+     */
+    private String generateWarningMessageWithAI(String reason, String jobTitle, String jobDescription) {
+        try {
+            String GROQ_API_KEY = "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";
+            String GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions";
+            String[] MODELS     = {"llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"};
+
+            String descPreview = (jobDescription != null && jobDescription.length() > 300)
+                    ? jobDescription.substring(0, 300) + "..." : jobDescription;
+
+            String prompt = String.format(
+                "Tu es un administrateur RH professionnel. Rédige un message d'avertissement formel et constructif " +
+                "(150-250 mots, en français) adressé au recruteur concernant son offre d'emploi.\n\n" +
+                "Raison du signalement: %s\n" +
+                "Titre de l'offre: %s\n" +
+                "Description: %s\n\n" +
+                "Le message doit:\n" +
+                "1. Expliquer clairement le problème détecté\n" +
+                "2. Mentionner les points spécifiques à corriger\n" +
+                "3. Indiquer les conséquences si non corrigé\n" +
+                "4. Rester professionnel et constructif\n\n" +
+                "Génère UNIQUEMENT le message, sans introduction ni titre.",
+                reason, jobTitle, descPreview != null ? descPreview : "Non fournie"
+            );
+
+            for (String model : MODELS) {
+                try {
+                    java.net.URL url = new java.net.URL(GROQ_URL);
+                    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json");
+                    conn.setRequestProperty("Authorization", "Bearer " + GROQ_API_KEY);
+                    conn.setDoOutput(true);
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(30000);
+
+                    String body = "{\"model\":\"" + model + "\",\"messages\":[" +
+                            "{\"role\":\"system\",\"content\":\"Tu es un assistant administrateur RH professionnel.\"}," +
+                            "{\"role\":\"user\",\"content\":\"" + escapeJson(prompt) + "\"}]," +
+                            "\"max_tokens\":400,\"temperature\":0.7}";
+
+                    conn.getOutputStream().write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+                    if (conn.getResponseCode() == 200) {
+                        StringBuilder sb = new StringBuilder();
+                        try (java.io.BufferedReader br = new java.io.BufferedReader(
+                                new java.io.InputStreamReader(conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                            String line; while ((line = br.readLine()) != null) sb.append(line);
+                        }
+                        String json = sb.toString();
+                        int s = json.indexOf("\"content\":"); if (s < 0) continue;
+                        s = json.indexOf("\"", s + 10) + 1;
+                        int e2 = json.indexOf("\"", s);
+                        while (e2 > 0 && json.charAt(e2 - 1) == '\\') e2 = json.indexOf("\"", e2 + 1);
+                        if (s > 0 && e2 > s) {
+                            String content = json.substring(s, e2)
+                                    .replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\").trim();
+                            if (!content.isBlank()) return content;
+                        }
+                    }
+                } catch (Exception ex) {
+                    System.err.println("Groq model " + model + " failed: " + ex.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("generateWarningMessageWithAI error: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private String escapeJson(String text) {
+        if (text == null) return "";
+        return text.replace("\\", "\\\\").replace("\"", "\\\"")
+                   .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+    }
+
+    /**
+     * Returns a professional default warning message when AI is unavailable
+     */
+    private String getDefaultWarningMessage(String reason, String jobTitle) {
+        String base = "Madame, Monsieur,\n\n" +
+            "Nous vous informons que votre offre d'emploi intitulée \"" + jobTitle + "\" a été signalée par notre équipe d'administration pour la raison suivante : ";
+        String end = "\n\nNous vous demandons de prendre les mesures correctives nécessaires dans les meilleurs délais. " +
+            "Sans correction de votre part, cette offre pourra être retirée de la plateforme.\n\n" +
+            "Cordialement,\nL'équipe d'administration";
+
+        return switch (reason) {
+            case "Contenu inapproprié" -> base +
+                "contenu inapproprié détecté dans l'offre.\n\nPoints à corriger :\n" +
+                "- Supprimez tout contenu offensant, discriminatoire ou contraire à nos conditions d'utilisation\n" +
+                "- Reformulez les sections problématiques de manière professionnelle\n" +
+                "- Assurez-vous que le contenu respecte la législation en vigueur" + end;
+            case "Information trompeuse" -> base +
+                "informations trompeuses ou inexactes détectées.\n\nPoints à corriger :\n" +
+                "- Vérifiez et corrigez les informations sur le salaire, les avantages ou les conditions\n" +
+                "- Assurez-vous que le titre du poste correspond aux missions décrites\n" +
+                "- Supprimez toute promesse irréaliste ou non vérifiable" + end;
+            case "Discrimination" -> base +
+                "critères discriminatoires détectés.\n\nPoints à corriger :\n" +
+                "- Supprimez toute mention d'âge, sexe, origine, religion ou état civil non pertinente\n" +
+                "- Reformulez les exigences pour qu'elles se basent uniquement sur les compétences professionnelles\n" +
+                "- Assurez-vous de la conformité avec la législation anti-discrimination" + end;
+            case "Information incomplète" -> base +
+                "informations essentielles manquantes.\n\nPoints à corriger :\n" +
+                "- Complétez la description des missions et responsabilités\n" +
+                "- Précisez les qualifications et compétences requises\n" +
+                "- Ajoutez les informations sur le lieu de travail et le type de contrat" + end;
+            case "Offre en double" -> base +
+                "doublon détecté avec une ou plusieurs offres existantes.\n\nPoints à corriger :\n" +
+                "- Supprimez les offres en double\n" +
+                "- Consolidez les informations dans une seule offre mise à jour\n" +
+                "- Différenciez clairement cette offre si les postes sont distincts" + end;
+            case "Offre expirée non mise à jour" -> base +
+                "offre expirée non mise à jour.\n\nPoints à corriger :\n" +
+                "- Mettez à jour la date limite de candidature\n" +
+                "- Confirmez que le poste est toujours disponible\n" +
+                "- Fermez l'offre si le poste a été pourvu" + end;
+            case "Spam" -> base +
+                "contenu de type spam ou publicité non autorisée.\n\nPoints à corriger :\n" +
+                "- Reformulez l'offre pour qu'elle corresponde à un vrai poste à pourvoir\n" +
+                "- Supprimez tout contenu publicitaire ou promotionnel non lié au poste\n" +
+                "- Respectez les règles de publication de notre plateforme" + end;
+            default -> base +
+                reason + ".\n\nNous vous prions de revoir votre offre et d'apporter les corrections nécessaires " +
+                "pour qu'elle soit conforme aux règles de notre plateforme." + end;
+        };
     }
 
     private void showAlert(String title, String message, Alert.AlertType type) {
