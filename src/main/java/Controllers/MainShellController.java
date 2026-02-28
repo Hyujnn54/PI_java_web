@@ -21,6 +21,10 @@ import java.io.IOException;
 
 public class MainShellController {
 
+    // ── Static singleton ──────────────────────────────────────────────────────
+    private static MainShellController instance;
+    public static MainShellController getInstance() { return instance; }
+
     // Navigation buttons
     @FXML private Button btnInterviews;
     @FXML private Button btnApplications;
@@ -51,6 +55,7 @@ public class MainShellController {
 
     @FXML
     public void initialize() {
+        instance = this;
         String name = Utils.UserContext.getUserName() != null ? Utils.UserContext.getUserName() : "Utilisateur";
         String role = Utils.UserContext.getRoleLabel();
         if (lblUserName != null) lblUserName.setText(name);
@@ -334,9 +339,9 @@ public class MainShellController {
     // -------------------------------------------------------------------------
 
     // ── Dark theme CSS URL (loaded once) ─────────────────────────────────────
-    private static String DARK_CSS_URL = null;
+    private static String DARK_CSS_URL  = null;
     private static String LIGHT_CSS_URL = null;
-    private static {
+    static {
         try {
             DARK_CSS_URL  = MainShellController.class.getResource("/dark-theme.css").toExternalForm();
             LIGHT_CSS_URL = MainShellController.class.getResource("/styles.css").toExternalForm();
@@ -422,28 +427,80 @@ public class MainShellController {
         if (node == null) return;
         String style = node.getStyle();
         if (style != null && !style.isBlank()) {
-            // Replace white/near-white inline backgrounds
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f0f2f6\\b",         "-fx-background-color:#141C28");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#eaedf3\\b",         "-fx-background-color:#141C28");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#D8DCE6\\b",             "-fx-border-color:#1F2A3A");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#D0D5E0\\b",             "-fx-border-color:#1F2A3A");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#C8CED8\\b",             "-fx-border-color:#1F2A3A");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#7A8899\\b",                "-fx-text-fill:#4A5A6A");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#4A5568\\b",                "-fx-text-fill:#4A5A6A");
+            // ── Backgrounds (white / near-white) ─────────────────────────────
             style = style.replaceAll("(?i)-fx-background-color:\\s*white\\b",           "-fx-background-color:#1A2535");
-            style = style.replaceAll("(?i)-fx-background-color:\\s*#fff\\b",            "-fx-background-color:#1A2535");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#fff[;\\s]",         "-fx-background-color:#1A2535;");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#fff$",              "-fx-background-color:#1A2535");
             style = style.replaceAll("(?i)-fx-background-color:\\s*#ffffff\\b",         "-fx-background-color:#1A2535");
-            style = style.replaceAll("(?i)-fx-background-color:\\s*#FFFFFF\\b",         "-fx-background-color:#1A2535");
             style = style.replaceAll("(?i)-fx-background-color:\\s*#f8f9fa\\b",         "-fx-background-color:#151F2E");
-            style = style.replaceAll("(?i)-fx-background-color:\\s*#F5F6F8\\b",         "-fx-background-color:#0F1923");
-            style = style.replaceAll("(?i)-fx-background-color:\\s*#EBF0F8\\b",         "-fx-background-color:#0F1923");
-            style = style.replaceAll("(?i)-fx-background-color:\\s*#F0F4FA\\b",         "-fx-background-color:#0F1923");
-            style = style.replaceAll("(?i)-fx-background-color:\\s*#E4EBF5\\b",         "-fx-background-color:#151F2E");
-            style = style.replaceAll("(?i)-fx-background-color:\\s*#F7FAFF\\b",         "-fx-background-color:#1A2535");
-            style = style.replaceAll("(?i)-fx-background-color:\\s*#DCEEFB\\b",         "-fx-background-color:#1B3C60");
-            // Replace light text colors with dark-mode text
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f7faff\\b",         "-fx-background-color:#1A2535");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f5f6f8\\b",         "-fx-background-color:#0F1923");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#ebf0f8\\b",         "-fx-background-color:#0F1923");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f0f4fa\\b",         "-fx-background-color:#0F1923");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f0f2f5\\b",         "-fx-background-color:#0F1923");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f5f5f5\\b",         "-fx-background-color:#0F1923");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#fafafa\\b",         "-fx-background-color:#0F1923");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f4f6fb\\b",         "-fx-background-color:#0F1923");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f2f6fc\\b",         "-fx-background-color:#0F1923");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#e4ebf5\\b",         "-fx-background-color:#151F2E");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#dceefb\\b",         "-fx-background-color:#1B3C60");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#e9ecef\\b",         "-fx-background-color:#1F2D40");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#dee2e6\\b",         "-fx-background-color:#1F2D40");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#e8eef8\\b",         "-fx-background-color:#151F2E");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#eef2f7\\b",         "-fx-background-color:#151F2E");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f1f5f9\\b",         "-fx-background-color:#151F2E");
+            // rgba light whites
+            style = style.replaceAll("(?i)-fx-background-color:\\s*rgba\\(255,\\s*255,\\s*255,[^)]+\\)", "-fx-background-color:#1A2535");
+            style = style.replaceAll("(?i)-fx-background:\\s*white\\b",                 "-fx-background:#1A2535");
+            style = style.replaceAll("(?i)-fx-background:\\s*#ffffff\\b",               "-fx-background:#1A2535");
+            // ── Text fills ───────────────────────────────────────────────────
             style = style.replaceAll("(?i)-fx-text-fill:\\s*#2c3e50\\b",                "-fx-text-fill:#E8EEF5");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#1e1e2e\\b",                "-fx-text-fill:#E8EEF5");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#1a1a2e\\b",                "-fx-text-fill:#E8EEF5");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#1E293B\\b",                "-fx-text-fill:#E8EEF5");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#334155\\b",                "-fx-text-fill:#C8D8E8");
             style = style.replaceAll("(?i)-fx-text-fill:\\s*#495057\\b",                "-fx-text-fill:#C8D8E8");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#4b5563\\b",                "-fx-text-fill:#C8D8E8");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#475569\\b",                "-fx-text-fill:#C8D8E8");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#555\\b",                   "-fx-text-fill:#C8D8E8");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#333\\b",                   "-fx-text-fill:#C8D8E8");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#222\\b",                   "-fx-text-fill:#C8D8E8");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#111\\b",                   "-fx-text-fill:#C8D8E8");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*black\\b",                  "-fx-text-fill:#C8D8E8");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#7f8c8d\\b",                "-fx-text-fill:#5A7090");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#6c757d\\b",                "-fx-text-fill:#5A7090");
             style = style.replaceAll("(?i)-fx-text-fill:\\s*#8FA3B8\\b",                "-fx-text-fill:#5A7090");
             style = style.replaceAll("(?i)-fx-text-fill:\\s*#A0B0C0\\b",                "-fx-text-fill:#3D5270");
-            // Light borders → dark
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#adb5bd\\b",                "-fx-text-fill:#3D5270");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#64748B\\b",                "-fx-text-fill:#5A7090");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#5A7080\\b",                "-fx-text-fill:#5A7090");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#5a6a7a\\b",                "-fx-text-fill:#5A7090");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#6b7280\\b",                "-fx-text-fill:#5A7090");
+            // ── Borders ──────────────────────────────────────────────────────
             style = style.replaceAll("(?i)-fx-border-color:\\s*#E8EEF8\\b",             "-fx-border-color:#243044");
             style = style.replaceAll("(?i)-fx-border-color:\\s*#E4EBF5\\b",             "-fx-border-color:#243044");
             style = style.replaceAll("(?i)-fx-border-color:\\s*#D4DCE8\\b",             "-fx-border-color:#1F2D40");
             style = style.replaceAll("(?i)-fx-border-color:\\s*#dee2e6\\b",             "-fx-border-color:#243044");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#e9ecef\\b",             "-fx-border-color:#243044");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#e5e7eb\\b",             "-fx-border-color:#243044");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#DCEEFB\\b",             "-fx-border-color:#1B3C60");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#e2e8f0\\b",             "-fx-border-color:#243044");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#cbd5e1\\b",             "-fx-border-color:#243044");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#d1d5db\\b",             "-fx-border-color:#243044");
+            // ── Effects ───────────────────────────────────────────────────────
+            style = style.replaceAll(
+                "(?i)-fx-effect:\\s*dropshadow\\(gaussian,\\s*rgba\\(91,\\s*163,\\s*245,[^)]+\\),[^)]+\\)",
+                "-fx-effect:dropshadow(gaussian,rgba(0,100,180,0.25),14,0,0,4)");
+            style = style.replaceAll(
+                "(?i)-fx-effect:\\s*dropshadow\\(gaussian,\\s*rgba\\(([2-9][0-9]|1[5-9][0-9]|2[0-4][0-9]|25[0-5]),\\s*([2-9][0-9]|1[5-9][0-9]|2[0-4][0-9]|25[0-5]),[^)]+\\),[^)]+\\)",
+                "-fx-effect:dropshadow(gaussian,rgba(0,0,0,0.35),12,0,0,3)");
             node.setStyle(style);
         }
         // Recurse into children
@@ -453,6 +510,13 @@ public class MainShellController {
             }
         }
     }
+
+    /** Public entry point so controllers can call back to re-patch dynamically added nodes */
+    public void repatchDark(javafx.scene.Node node) {
+        if (darkMode) patchNodeDark(node);
+    }
+
+    public boolean isDarkMode() { return darkMode; }
 
     private void highlightActiveButton(Button activeBtn) {
         resetButtonStyles();

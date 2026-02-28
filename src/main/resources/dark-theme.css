@@ -95,6 +95,26 @@
 .dark .label-title, .dark .detail-candidate-position,
 .dark .applicant-count { -fx-text-fill: #7EC8FF; }
 
+/* ── CheckBox ─────────────────────────────────────────────── */
+.dark .check-box { -fx-text-fill: #C8D8E8; }
+.dark .check-box .box {
+    -fx-background-color: #0F1923;
+    -fx-border-color: #3D5270;
+    -fx-border-width: 2;
+    -fx-border-radius: 4;
+}
+.dark .check-box:selected .box { -fx-background-color: #2279C2; -fx-border-color: #2279C2; }
+.dark .check-box .mark { -fx-background-color: white; }
+
+/* ── Separator ────────────────────────────────────────────── */
+.dark .separator .line { -fx-border-color: #243044; -fx-border-width: 1 0 0 0; }
+
+/* ── ScrollPane viewport (prevents white flash) ───────────── */
+.dark .scroll-pane { -fx-background-color: transparent; -fx-background: #0F1923; }
+.dark .scroll-pane > .viewport { -fx-background-color: transparent; }
+.dark .transparent-scroll { -fx-background-color: transparent; -fx-background: transparent; }
+.dark .transparent-scroll > .viewport { -fx-background-color: transparent; }
+
 /* ── Form inputs ──────────────────────────────────────────── */
 .dark .text-field, .dark .text-area, .dark .combo-box,
 .dark .modern-text-field, .dark .modern-text-area,
@@ -337,4 +357,82 @@
 /* Separator */
 .dark .separator .line { -fx-border-color: #243044; }
 
+/* ── Universal fallback overrides for all nested nodes ─────── */
+/* These catch dynamically-built cards that use inline white styles */
+.dark Label { -fx-text-fill: #C8D8E8; }
+.dark Hyperlink { -fx-text-fill: #5BA3F5; }
+.dark .text { -fx-fill: #C8D8E8; }
 
+/* ScrollPane backgrounds */
+.dark ScrollPane { -fx-background-color: transparent; -fx-background: #0F1923; }
+.dark ScrollPane > .viewport { -fx-background-color: transparent; }
+.dark ScrollPane .scroll-bar:vertical,
+.dark ScrollPane .scroll-bar:horizontal {
+    -fx-background-color: #0F1923;
+}
+.dark ScrollPane .scroll-bar .thumb {
+    -fx-background-color: #243044;
+    -fx-background-radius: 4;
+}
+
+/* DatePicker dark */
+.dark .date-picker { -fx-background-color: #0F1923; -fx-border-color: #243044; }
+.dark .date-picker .arrow-button { -fx-background-color: #1A2535; }
+.dark .date-picker-popup { -fx-background-color: #1A2535; -fx-border-color: #243044; }
+.dark .date-picker-popup .calendar-grid { -fx-background-color: #1A2535; }
+.dark .date-picker-popup .day-cell { -fx-background-color: transparent; -fx-text-fill: #C8D8E8; }
+.dark .date-picker-popup .day-cell:hover { -fx-background-color: #1F3048; }
+.dark .date-picker-popup .day-cell:selected { -fx-background-color: #1B6CB0; -fx-text-fill: white; }
+.dark .date-picker-popup .week-number-cell { -fx-text-fill: #3D5270; }
+.dark .date-picker-popup .spinner .button { -fx-background-color: transparent; }
+.dark .date-picker-popup .spinner Label { -fx-text-fill: #E8EEF5; }
+.dark .date-picker-popup .month-year-pane { -fx-background-color: #151F2E; }
+
+/* TabPane dark */
+.dark .tab-pane .tab-header-area { -fx-background-color: #1A2535; }
+.dark .tab-pane .tab { -fx-background-color: #151F2E; -fx-text-base-color: #5A7090; }
+.dark .tab-pane .tab:selected { -fx-background-color: #1B6CB0; -fx-text-base-color: white; }
+.dark .tab-pane .tab-content-area { -fx-background-color: #0F1923; }
+
+/* ProgressBar */
+.dark .progress-bar { -fx-background-color: #243044; }
+.dark .progress-bar .bar { -fx-background-color: #2279C2; }
+
+/* ListView */
+.dark .list-view { -fx-background-color: #1A2535; -fx-border-color: #243044; }
+.dark .list-cell { -fx-background-color: transparent; -fx-text-fill: #C8D8E8; }
+.dark .list-cell:odd { -fx-background-color: #172030; }
+.dark .list-cell:hover { -fx-background-color: #1F3048; -fx-text-fill: #7EC8FF; }
+.dark .list-cell:selected { -fx-background-color: #1B3C60; -fx-text-fill: white; }
+
+/* Spinner */
+.dark .spinner { -fx-background-color: #0F1923; -fx-border-color: #243044; }
+.dark .spinner .text-field { -fx-background-color: #0F1923; -fx-text-fill: #C8D8E8; }
+
+/* ToggleButton */
+.dark .toggle-button { -fx-background-color: #1A2535; -fx-text-fill: #C8D8E8; -fx-border-color: #243044; }
+.dark .toggle-button:selected { -fx-background-color: #1B6CB0; -fx-text-fill: white; }
+
+/* Alert / Dialog */
+.dark .dialog-pane { -fx-background-color: #1A2535; }
+.dark .dialog-pane .header-panel { -fx-background-color: #151F2E; }
+.dark .dialog-pane .content { -fx-text-fill: #C8D8E8; }
+.dark .dialog-pane .label { -fx-text-fill: #C8D8E8; }
+.dark .dialog-pane .button-bar .button { -fx-background-color: #1F3048; -fx-text-fill: #C8D8E8; }
+.dark .dialog-pane .button-bar .button:hover { -fx-background-color: #2279C2; -fx-text-fill: white; }
+
+/* GridPane / VBox / HBox — only when no explicit bg is set they show through */
+.dark VBox.stats-box,
+.dark HBox.stats-box { -fx-background-color: #1A2535; }
+
+/* Interview / Application right panel */
+.dark VBox#rightPanelContent,
+.dark VBox#detailContainer { -fx-background-color: #1A2535; }
+
+/* ── Past interview cards (dark mode) ──────────────────────── */
+/* patchNodeDark handles the inline styles, but these help for future-proofing */
+.dark .interview-card-past {
+    -fx-background-color: #141C28;
+    -fx-border-color: #1F2A3A;
+    -fx-opacity: 0.78;
+}

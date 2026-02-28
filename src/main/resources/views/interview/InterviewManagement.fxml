@@ -36,8 +36,8 @@
                         styleClass="modern-combo"/>
             <ComboBox fx:id="comboSearchMode"   prefWidth="155" visible="false" managed="false" styleClass="modern-combo"/>
             <ComboBox fx:id="comboSearchStatus" prefWidth="175" visible="false" managed="false" styleClass="modern-combo"/>
-            <Button fx:id="btnSearchInterview" text="🔍 Rechercher" styleClass="btn-primary"
-                    style="-fx-padding:8 16; -fx-font-size:12px;" onAction="#handleSearchInterview"/>
+            <Button fx:id="btnSearchInterview" text="🔍" styleClass="btn-primary"
+                    style="-fx-padding:8 14; -fx-font-size:12px;" onAction="#handleSearchInterview"/>
             <Button fx:id="btnClearSearch" text="✕" styleClass="btn-secondary"
                     style="-fx-padding:8 12; -fx-font-size:12px;" onAction="#handleClearSearch"/>
         </HBox>
@@ -45,177 +45,81 @@
             <Label text="Trier par :" style="-fx-font-size:13px; -fx-text-fill:#495057; -fx-font-weight:600;"/>
             <ComboBox fx:id="comboSortBy"  prefWidth="185" styleClass="modern-combo"/>
             <ComboBox fx:id="comboSortDir" prefWidth="130" styleClass="modern-combo"/>
-            <Button text="↕ Appliquer" styleClass="btn-secondary"
-                    style="-fx-padding:8 14; -fx-font-size:12px;" onAction="#handleApplySort"/>
+            <Button text="↕" styleClass="btn-secondary"
+                    style="-fx-padding:8 12; -fx-font-size:12px;" onAction="#handleApplySort"/>
         </HBox>
     </VBox>
 
-    <!-- ── SplitPane: LEFT = card list, RIGHT = edit/feedback panel ── -->
-    <SplitPane VBox.vgrow="ALWAYS" dividerPositions="0.58"
+    <!-- ── SplitPane: LEFT = card list  |  RIGHT = dynamic detail panel ── -->
+    <SplitPane VBox.vgrow="ALWAYS" dividerPositions="0.55"
                style="-fx-background-color: transparent; -fx-padding: 0; -fx-box-border: transparent;">
 
-        <!-- LEFT PANE: interview cards + action buttons -->
-        <VBox spacing="10"
-              style="-fx-background-color: #EBF0F8; -fx-padding: 0 8 0 0;">
+        <!-- LEFT: scrollable card list only -->
+        <ScrollPane fitToWidth="true" styleClass="transparent-scroll"
+                    style="-fx-background: transparent; -fx-background-color: #EBF0F8;">
+            <VBox fx:id="interviewsListContainer" spacing="10"
+                  style="-fx-background-color: #EBF0F8;">
+                <padding><Insets bottom="16" top="4" left="2" right="8"/></padding>
+            </VBox>
+        </ScrollPane>
 
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
-                        styleClass="transparent-scroll"
-                        style="-fx-background: transparent; -fx-background-color: transparent;">
-                <VBox fx:id="interviewsListContainer" spacing="10">
-                    <padding><Insets bottom="10" top="4"/></padding>
-                </VBox>
-            </ScrollPane>
+        <!-- RIGHT: dynamically populated by controller -->
+        <ScrollPane fitToWidth="true" styleClass="transparent-scroll"
+                    style="-fx-background: transparent; -fx-background-color: #EBF0F8;">
+            <VBox fx:id="rightPanel" spacing="14"
+                  style="-fx-background-color: #EBF0F8;">
+                <padding><Insets top="4" left="8" right="4" bottom="16"/></padding>
 
-            <!-- Bottom action buttons (recruiter) -->
-            <HBox fx:id="bottomActionButtons" spacing="12" alignment="CENTER_RIGHT"
-                  visible="false" managed="false"
-                  style="-fx-padding:8 4 4 4; -fx-background-color: transparent;">
-                <Button fx:id="btnUpdate" text="✏  Modifier"  styleClass="btn-primary"  onAction="#handleUpdateInterview"/>
-                <Button fx:id="btnDelete" text="🗑  Supprimer" styleClass="btn-danger"   onAction="#handleDeleteInterview"/>
-            </HBox>
-        </VBox>
-
-        <!-- RIGHT PANE: always-visible panel area (feedback or edit form) -->
-        <ScrollPane fitToWidth="true"
-                    styleClass="transparent-scroll"
-                    style="-fx-background: transparent; -fx-background-color: transparent;">
-            <VBox spacing="14" style="-fx-padding: 0 0 0 8;">
-
-                <!-- Empty state placeholder -->
-                <VBox fx:id="rightPanelPlaceholder"
-                      alignment="CENTER" spacing="16"
-                      style="-fx-background-color: white; -fx-background-radius: 14; -fx-padding: 40 24;
+                <!-- placeholder shown by default -->
+                <VBox fx:id="rightPanelPlaceholder" alignment="CENTER" spacing="16"
+                      style="-fx-background-color: white; -fx-background-radius: 14; -fx-padding: 50 24;
                              -fx-border-color:#E8EEF8; -fx-border-width:1; -fx-border-radius:14;
                              -fx-effect: dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
-                    <Label text="📋"   style="-fx-font-size:40px;"/>
+                    <Label text="📋" style="-fx-font-size:40px;"/>
                     <Label text="Selectionnez un entretien"
                            style="-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:#2c3e50;"/>
-                    <Label text="Cliquez sur un entretien dans la liste pour le modifier ou ajouter un retour"
-                           style="-fx-font-size:12px; -fx-text-fill:#8FA3B8;" wrapText="true"/>
+                    <Label text="Cliquez sur une carte pour voir les details, modifier ou gerer le retour"
+                           style="-fx-font-size:12px; -fx-text-fill:#8FA3B8; -fx-text-alignment:center;"
+                           wrapText="true"/>
                 </VBox>
 
-                <!-- ── Feedback Panel ── -->
-                <VBox fx:id="feedbackPanel" visible="false" managed="false" spacing="14"
-                      style="-fx-background-color: white; -fx-background-radius: 14; -fx-padding: 22;
-                             -fx-effect: dropshadow(gaussian,rgba(91,163,245,0.12),14,0,0,4);
-                             -fx-border-color:#E8EEF8; -fx-border-width:1; -fx-border-radius:14;">
+                <!-- dynamic content injected here by controller -->
+                <VBox fx:id="rightPanelContent" spacing="14" managed="false" visible="false"/>
 
-                    <HBox alignment="CENTER_LEFT" spacing="10">
-                        <Label text="Retour d'Entretien"
-                               style="-fx-font-size:16px; -fx-font-weight:700; -fx-text-fill:#2c3e50;"/>
+                <!-- hidden FXML form fields wired to @FXML — kept invisible, used by handlers -->
+                <VBox visible="false" managed="false">
+                    <DatePicker fx:id="datePicker"/>
+                    <TextField  fx:id="txtTime"/>
+                    <TextField  fx:id="txtDuration"/>
+                    <ComboBox   fx:id="comboMode"/>
+                    <TextField  fx:id="txtMeetingLink"/>
+                    <HBox       fx:id="meetingLinkBox">
+                        <Button fx:id="btnGenerateMeetingLink" onAction="#handleGenerateMeetingLink"/>
+                        <Button fx:id="btnOpenMeetingLink"     onAction="#handleOpenMeetingLink"/>
                     </HBox>
-
-                    <Separator/>
-
-                    <GridPane hgap="14" vgap="12">
-                        <columnConstraints>
-                            <ColumnConstraints minWidth="110" prefWidth="120"/>
-                            <ColumnConstraints hgrow="ALWAYS"/>
-                        </columnConstraints>
-                        <Label text="Decision:" styleClass="info-label"
-                               GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <ComboBox fx:id="comboFeedbackDecision" maxWidth="Infinity"
-                                  styleClass="modern-combo" promptText="Selectionner..."
-                                  GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-
-                        <Label text="Score (0-100):" styleClass="info-label"
-                               GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <HBox spacing="10" alignment="CENTER_LEFT"
-                              GridPane.columnIndex="1" GridPane.rowIndex="1">
-                            <TextField fx:id="txtFeedbackScore" promptText="0-100"
-                                       prefWidth="90" styleClass="dialog-input"/>
-                            <Label fx:id="lblScoreIndicator"
-                                   style="-fx-font-size:12px; -fx-font-weight:600;"/>
-                        </HBox>
-
-                        <Label text="Commentaires:" styleClass="info-label"
-                               GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                        <TextArea fx:id="txtFeedbackComments" promptText="Commentaires..."
-                                  GridPane.columnIndex="1" GridPane.rowIndex="2"
-                                  styleClass="dialog-input" prefRowCount="5" wrapText="true"/>
-                    </GridPane>
-
-                    <HBox spacing="10" alignment="CENTER_RIGHT">
-                        <Button fx:id="btnUpdateFeedbackAction" text="💾 Enregistrer"
-                                styleClass="btn-primary" onAction="#handleUpdateFeedbackAction"/>
-                        <Button fx:id="btnDeleteFeedback" text="🗑 Supprimer" styleClass="btn-danger"
-                                onAction="#handleDeleteFeedback" visible="false" managed="false"/>
-                        <Button fx:id="btnCancelFeedback" text="Annuler"
-                                styleClass="btn-secondary" onAction="#handleCancelFeedback"/>
+                    <TextField  fx:id="txtLocation"/>
+                    <TextArea   fx:id="txtNotes"/>
+                    <Label      fx:id="lblMeetingLink"/>
+                    <Label      fx:id="lblLocation"/>
+                    <ComboBox   fx:id="comboFeedbackDecision"/>
+                    <TextField  fx:id="txtFeedbackScore"/>
+                    <Label      fx:id="lblScoreIndicator"/>
+                    <TextArea   fx:id="txtFeedbackComments"/>
+                    <Button     fx:id="btnUpdateFeedbackAction" onAction="#handleUpdateFeedbackAction"/>
+                    <Button     fx:id="btnDeleteFeedback"       onAction="#handleDeleteFeedback"/>
+                    <Button     fx:id="btnCancelFeedback"       onAction="#handleCancelFeedback"/>
+                    <Button     fx:id="btnSave"                 onAction="#handleSaveInterview"/>
+                    <TextField  fx:id="txtApplicationId"/>
+                    <TextField  fx:id="txtRecruiterId"/>
+                    <ComboBox   fx:id="comboStatus"/>
+                    <!-- legacy bottom buttons — hidden -->
+                    <HBox fx:id="bottomActionButtons">
+                        <Button fx:id="btnUpdate" onAction="#handleUpdateInterview"/>
+                        <Button fx:id="btnDelete" onAction="#handleDeleteInterview"/>
                     </HBox>
-                </VBox>
-
-                <!-- ── Edit Dialog ── -->
-                <VBox fx:id="editDialog" visible="false" managed="false" spacing="14"
-                      style="-fx-background-color: white; -fx-background-radius: 14; -fx-padding: 22;
-                             -fx-effect: dropshadow(gaussian,rgba(91,163,245,0.12),14,0,0,4);
-                             -fx-border-color:#E8EEF8; -fx-border-width:1; -fx-border-radius:14;">
-
-                    <HBox alignment="CENTER_LEFT" spacing="10">
-                        <Label text="Modifier l'Entretien"
-                               style="-fx-font-size:16px; -fx-font-weight:700; -fx-text-fill:#2c3e50;"/>
-                    </HBox>
-
-                    <Separator/>
-
-                    <GridPane hgap="14" vgap="12">
-                        <columnConstraints>
-                            <ColumnConstraints minWidth="110" prefWidth="120"/>
-                            <ColumnConstraints hgrow="ALWAYS"/>
-                        </columnConstraints>
-
-                        <Label text="Date:" styleClass="info-label"
-                               GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="0">
-                            <DatePicker fx:id="datePicker" HBox.hgrow="ALWAYS" styleClass="dialog-input"/>
-                            <TextField fx:id="txtTime" promptText="HH:mm"
-                                       prefWidth="75" styleClass="dialog-input"/>
-                        </HBox>
-
-                        <Label text="Duree (min):" styleClass="info-label"
-                               GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtDuration" promptText="ex: 60"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="1" styleClass="dialog-input"/>
-
-                        <Label text="Mode:" styleClass="info-label"
-                               GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                        <ComboBox fx:id="comboMode" maxWidth="Infinity"
-                                  GridPane.columnIndex="1" GridPane.rowIndex="2" styleClass="dialog-input"/>
-
-                        <Label fx:id="lblMeetingLink" text="Lien:" styleClass="info-label"
-                               GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                        <HBox fx:id="meetingLinkBox" spacing="6" alignment="CENTER_LEFT"
-                              GridPane.columnIndex="1" GridPane.rowIndex="3">
-                            <TextField fx:id="txtMeetingLink" promptText="Cliquez Generer..."
-                                       HBox.hgrow="ALWAYS" styleClass="dialog-input" editable="false"/>
-                            <Button fx:id="btnGenerateMeetingLink" text="Gen."
-                                    styleClass="btn-success" style="-fx-padding:8 10;"
-                                    onAction="#handleGenerateMeetingLink"/>
-                            <Button fx:id="btnOpenMeetingLink" text="↗"
-                                    styleClass="btn-primary" style="-fx-padding:8 10;"
-                                    onAction="#handleOpenMeetingLink" visible="false" managed="false"/>
-                        </HBox>
-
-                        <Label fx:id="lblLocation" text="Lieu:" styleClass="info-label"
-                               GridPane.columnIndex="0" GridPane.rowIndex="4"/>
-                        <TextField fx:id="txtLocation" promptText="Adresse..."
-                                   GridPane.columnIndex="1" GridPane.rowIndex="4" styleClass="dialog-input"/>
-
-                        <Label text="Notes:" styleClass="info-label"
-                               GridPane.columnIndex="0" GridPane.rowIndex="5"/>
-                        <TextArea fx:id="txtNotes" promptText="Notes..."
-                                  GridPane.columnIndex="1" GridPane.rowIndex="5"
-                                  styleClass="dialog-input" prefRowCount="3"/>
-
-                        <TextField fx:id="txtApplicationId" visible="false" managed="false"/>
-                        <TextField fx:id="txtRecruiterId"   visible="false" managed="false"/>
-                        <ComboBox  fx:id="comboStatus"       visible="false" managed="false"/>
-                    </GridPane>
-
-                    <HBox spacing="10" alignment="CENTER_RIGHT">
-                        <Button text="Annuler"    onAction="#handleCancelEdit"      styleClass="btn-secondary"/>
-                        <Button fx:id="btnSave" text="💾 Enregistrer" onAction="#handleSaveInterview" styleClass="btn-primary"/>
-                    </HBox>
+                    <!-- legacy panels — hidden -->
+                    <VBox fx:id="feedbackPanel"/>
+                    <VBox fx:id="editDialog"/>
                 </VBox>
 
             </VBox>

@@ -7,7 +7,7 @@
 <VBox fx:id="mainContainer" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="Controllers.joboffers.AnalyticsDashboardController"
       spacing="20" styleClass="page"
-      stylesheets="@/styles.css" style="-fx-background-color: #f8f9fa;"
+      stylesheets="@/styles.css" style="-fx-background-color: #EBF0F8;"
       VBox.vgrow="ALWAYS">
 
     <padding>
@@ -20,4 +20,5 @@
     <VBox fx:id="chartsContainer" spacing="20" VBox.vgrow="ALWAYS"/>
 
 </VBox>
+
 
