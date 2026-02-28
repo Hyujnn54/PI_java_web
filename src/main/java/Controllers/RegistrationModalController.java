@@ -1,15 +1,14 @@
 package Controllers;
 
-import entities.Candidate;
-import entities.EventRegistration;
-import entities.RecruitmentEvent;
-import entities.User;
+import Models.Candidate;
+import Models.EventRegistration;
+import Models.RecruitmentEvent;
+import Models.User;
+import Services.EventRegistrationService;
+import Services.UserService;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.stage.Stage;
-import services.EventRegistrationService;
-import services.UserService;
 
 import java.sql.SQLException;
 

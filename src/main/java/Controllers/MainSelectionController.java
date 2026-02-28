@@ -3,10 +3,10 @@ package Controllers;
 import javafx.fxml.FXML;
 import javafx.stage.Stage;
 import javafx.scene.control.Button;
-import utils.SceneManager;
-import utils.SessionManager;
-import entities.User;
-import entities.RoleEnum;
+import Utils.SceneManager;
+import Utils.SessionManager;
+import Models.User;
+import Models.RoleEnum;
 
 public class MainSelectionController {
 

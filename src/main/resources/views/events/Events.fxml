@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="Controllers.EventsViewController"
+            style="-fx-background-color: #F0F4FA;">
+
+    <!-- TOP BAR -->
+    <top>
+        <VBox style="-fx-background-color: white; -fx-padding: 20 28 16 28;
+                     -fx-border-color: #E4EBF5; -fx-border-width: 0 0 1 0;">
+            <HBox alignment="CENTER_LEFT" spacing="16">
+                <Label text="🎪  Événements de Recrutement"
+                       style="-fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #1E293B;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="btnRefresh" text="↻  Actualiser" onAction="#handleRefresh"
+                        style="-fx-background-color: #EBF3FF; -fx-text-fill: #1565C0;
+                               -fx-font-weight: 600; -fx-background-radius: 8; -fx-padding: 8 16;
+                               -fx-cursor: hand; -fx-border-color: #BBDEFB; -fx-border-width: 1; -fx-border-radius: 8;"/>
+            </HBox>
+            <Label text="Parcourez et inscrivez-vous aux événements de recrutement disponibles"
+                   style="-fx-font-size: 13px; -fx-text-fill: #64748B; -fx-padding: 4 0 0 0;"/>
+        </VBox>
+    </top>
+
+    <!-- CONTENT -->
+    <center>
+        <SplitPane dividerPositions="0.62" style="-fx-background-color: #F0F4FA;">
+
+            <!-- LEFT: Events list -->
+            <VBox spacing="0" style="-fx-background-color: #F0F4FA; -fx-padding: 20;">
+                <!-- Search + Filter bar -->
+                <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 0 0 16 0;">
+                    <TextField fx:id="searchField" promptText="🔍  Rechercher un événement..."
+                               style="-fx-background-color: white; -fx-background-radius: 10;
+                                      -fx-border-color: #E4EBF5; -fx-border-width: 1; -fx-border-radius: 10;
+                                      -fx-padding: 10 14; -fx-font-size: 13px;"
+                               onKeyReleased="#handleSearch">
+                        <HBox.margin><Insets/></HBox.margin>
+                    </TextField>
+                    <ComboBox fx:id="typeFilter" promptText="Tous les types"
+                              style="-fx-background-color: white; -fx-background-radius: 10;
+                                     -fx-border-color: #E4EBF5; -fx-border-width: 1; -fx-border-radius: 10;
+                                     -fx-padding: 6 10; -fx-font-size: 13px;"
+                              onAction="#handleFilter" prefWidth="160"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="lblCount" text="0 événements"
+                           style="-fx-font-size: 12px; -fx-text-fill: #8FA3B8;"/>
+                </HBox>
+
+                <!-- Events scroll list -->
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                            style="-fx-background-color: transparent; -fx-background: transparent;
+                                   -fx-border-color: transparent;">
+                    <VBox fx:id="eventsContainer" spacing="14"
+                          style="-fx-padding: 4 8 20 4; -fx-background-color: transparent;"/>
+                </ScrollPane>
+            </VBox>
+
+            <!-- RIGHT: Detail panel -->
+            <VBox fx:id="detailPanel" spacing="0"
+                  style="-fx-background-color: white; -fx-background-radius: 16;
+                         -fx-border-color: #E4EBF5; -fx-border-width: 1; -fx-border-radius: 16;
+                         -fx-padding: 0; -fx-effect: dropshadow(gaussian, rgba(100,150,220,0.08), 12,0,0,3);">
+
+                <!-- Placeholder -->
+                <VBox fx:id="detailPlaceholder" alignment="CENTER" spacing="12" VBox.vgrow="ALWAYS"
+                      style="-fx-padding: 60 40;">
+                    <Label text="🎪" style="-fx-font-size: 48px;"/>
+                    <Label text="Sélectionnez un événement"
+                           style="-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #334155;"/>
+                    <Label text="Cliquez sur un événement dans la liste\npour voir les détails et vous inscrire."
+                           style="-fx-font-size: 13px; -fx-text-fill: #8FA3B8; -fx-text-alignment: center;"
+                           textAlignment="CENTER" wrapText="true"/>
+                </VBox>
+
+                <!-- Event detail content -->
+                <VBox fx:id="detailContent" spacing="0" managed="false" visible="false" VBox.vgrow="ALWAYS">
+                    <!-- Header banner -->
+                    <VBox fx:id="detailHeader" spacing="8"
+                          style="-fx-background-color: linear-gradient(to right, #1565C0, #1976D2);
+                                 -fx-background-radius: 16 16 0 0; -fx-padding: 28 28 24 28;">
+                        <Label fx:id="detailType"
+                               style="-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 6;
+                                      -fx-padding: 4 10; -fx-font-size: 11px; -fx-font-weight: 700;
+                                      -fx-text-fill: white;"/>
+                        <Label fx:id="detailTitle"
+                               style="-fx-font-size: 20px; -fx-font-weight: 800; -fx-text-fill: white;"
+                               wrapText="true"/>
+                    </VBox>
+
+                    <!-- Info section -->
+                    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                                style="-fx-background-color: transparent; -fx-background: transparent;
+                                       -fx-border-color: transparent;">
+                        <VBox spacing="16" style="-fx-padding: 24 28;">
+                            <Label fx:id="detailDescription"
+                                   style="-fx-font-size: 13px; -fx-text-fill: #475569; -fx-line-spacing: 4;"
+                                   wrapText="true"/>
+
+                            <!-- Info grid -->
+                            <VBox spacing="10"
+                                  style="-fx-background-color: #F8FAFF; -fx-background-radius: 12;
+                                         -fx-padding: 18; -fx-border-color: #E4EBF5;
+                                         -fx-border-width: 1; -fx-border-radius: 12;">
+                                <HBox spacing="12" alignment="CENTER_LEFT">
+                                    <Label text="📍" style="-fx-font-size: 16px;"/>
+                                    <VBox spacing="1">
+                                        <Label text="Lieu" style="-fx-font-size: 10px; -fx-text-fill: #8FA3B8; -fx-font-weight: 600;"/>
+                                        <Label fx:id="detailLocation" style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #1E293B;"/>
+                                    </VBox>
+                                </HBox>
+                                <HBox spacing="12" alignment="CENTER_LEFT">
+                                    <Label text="📅" style="-fx-font-size: 16px;"/>
+                                    <VBox spacing="1">
+                                        <Label text="Date" style="-fx-font-size: 10px; -fx-text-fill: #8FA3B8; -fx-font-weight: 600;"/>
+                                        <Label fx:id="detailDate" style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #1E293B;"/>
+                                    </VBox>
+                                </HBox>
+                                <HBox spacing="12" alignment="CENTER_LEFT">
+                                    <Label text="👥" style="-fx-font-size: 16px;"/>
+                                    <VBox spacing="1">
+                                        <Label text="Capacité" style="-fx-font-size: 10px; -fx-text-fill: #8FA3B8; -fx-font-weight: 600;"/>
+                                        <Label fx:id="detailCapacity" style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #1E293B;"/>
+                                    </VBox>
+                                </HBox>
+                            </VBox>
+
+                            <!-- Status message -->
+                            <Label fx:id="lblRegistrationStatus" managed="false" visible="false"
+                                   wrapText="true"
+                                   style="-fx-font-size: 12px; -fx-padding: 10 14;
+                                          -fx-background-radius: 8; -fx-border-radius: 8;"/>
+
+                            <!-- Action buttons -->
+                            <HBox spacing="10">
+                                <Button fx:id="btnApply" text="✅  S'inscrire" onAction="#handleApply"
+                                        maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                                        style="-fx-background-color: #1565C0; -fx-text-fill: white;
+                                               -fx-font-weight: 700; -fx-font-size: 14px;
+                                               -fx-background-radius: 10; -fx-padding: 12 20; -fx-cursor: hand;"/>
+                                <Button fx:id="btnCancel" text="❌  Annuler" onAction="#handleCancelRegistration"
+                                        maxWidth="Infinity" HBox.hgrow="ALWAYS" managed="false" visible="false"
+                                        style="-fx-background-color: #FEF2F2; -fx-text-fill: #DC2626;
+                                               -fx-font-weight: 700; -fx-font-size: 14px;
+                                               -fx-background-radius: 10; -fx-padding: 12 20; -fx-cursor: hand;
+                                               -fx-border-color: #FECACA; -fx-border-width: 1; -fx-border-radius: 10;"/>
+                            </HBox>
+                        </VBox>
+                    </ScrollPane>
+                </VBox>
+            </VBox>
+        </SplitPane>
+    </center>
+</BorderPane>
+

@@ -1,7 +1,12 @@
 package Services;
 
+import Models.RoleEnum;
+import Models.User;
 import Utils.MyDatabase;
+
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserService {
 
@@ -31,81 +36,141 @@ public class UserService {
         public Integer experienceYears() { return experienceYears; }
     }
 
-    /**
-     * Get user information for a candidate
-     */
+    private Connection connection;
+
+    public UserService() {
+        connection = MyDatabase.getInstance().getConnection();
+    }
+
+    private void checkConnection() throws SQLException {
+        if (connection == null || connection.isClosed()) {
+            connection = MyDatabase.getInstance().getConnection();
+        }
+        if (connection == null) {
+            throw new SQLException("No database connection.");
+        }
+    }
+
+    // ── Events-module methods ──────────────────────────────────────────────
+
+    public void add(User user) throws SQLException {
+        checkConnection();
+        String query = "INSERT INTO users (email, password, first_name, last_name, phone, role, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+        ps.setString(1, user.getEmail());
+        ps.setString(2, user.getPassword());
+        ps.setString(3, user.getFirstName());
+        ps.setString(4, user.getLastName());
+        ps.setString(5, user.getPhone());
+        ps.setString(6, user.getRole() != null ? user.getRole().toString() : "CANDIDATE");
+        ps.setBoolean(7, user.isActive());
+        ps.setTimestamp(8, Timestamp.valueOf(java.time.LocalDateTime.now()));
+        ps.executeUpdate();
+        ResultSet rs = ps.getGeneratedKeys();
+        if (rs.next()) { user.setId(rs.getLong(1)); }
+    }
+
+    public User login(String email, String password) throws SQLException {
+        checkConnection();
+        String query = "SELECT * FROM users WHERE email = ? AND password = ? AND is_active = 1";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setString(1, email);
+        ps.setString(2, password);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) { return mapUser(rs); }
+        return null;
+    }
+
+    public User getById(long id) throws SQLException {
+        checkConnection();
+        String query = "SELECT * FROM users WHERE id = ?";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setLong(1, id);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) { return mapUser(rs); }
+        return null;
+    }
+
+    public List<User> getAll() throws SQLException {
+        checkConnection();
+        List<User> users = new ArrayList<>();
+        Statement st = connection.createStatement();
+        ResultSet rs = st.executeQuery("SELECT * FROM users");
+        while (rs.next()) { users.add(mapUser(rs)); }
+        return users;
+    }
+
+    public void update(User user) throws SQLException {
+        checkConnection();
+        String query = "UPDATE users SET email=?, first_name=?, last_name=?, phone=?, role=?, is_active=? WHERE id=?";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setString(1, user.getEmail());
+        ps.setString(2, user.getFirstName());
+        ps.setString(3, user.getLastName());
+        ps.setString(4, user.getPhone());
+        ps.setString(5, user.getRole() != null ? user.getRole().toString() : "CANDIDATE");
+        ps.setBoolean(6, user.isActive());
+        ps.setLong(7, user.getId());
+        ps.executeUpdate();
+    }
+
+    private User mapUser(ResultSet rs) throws SQLException {
+        User user = new User();
+        user.setId(rs.getLong("id"));
+        user.setEmail(rs.getString("email"));
+        user.setPassword(rs.getString("password"));
+        user.setFirstName(rs.getString("first_name"));
+        user.setLastName(rs.getString("last_name"));
+        user.setPhone(rs.getString("phone"));
+        try { user.setRole(RoleEnum.valueOf(rs.getString("role"))); } catch (Exception ignored) {}
+        user.setActive(rs.getBoolean("is_active"));
+        try { user.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime()); } catch (Exception ignored) {}
+        return user;
+    }
+
+    // ── Original merge-2 static helper methods ────────────────────────────
+
     public static UserInfo getUserInfo(Long userId) {
         try (Connection conn = MyDatabase.getInstance().getConnection()) {
             String query = "SELECT u.first_name, u.last_name, u.email, u.phone, " +
                           "c.education_level, c.experience_years " +
-                          "FROM users u " +
-                          "LEFT JOIN candidate c ON u.id = c.id " +
+                          "FROM users u LEFT JOIN candidate c ON u.id = c.id " +
                           "WHERE u.id = ? AND u.role = 'CANDIDATE'";
-
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setLong(1, userId);
             ResultSet rs = stmt.executeQuery();
-
             if (rs.next()) {
                 return new UserInfo(
-                    rs.getString("first_name"),
-                    rs.getString("last_name"),
-                    rs.getString("email"),
-                    rs.getString("phone"),
+                    rs.getString("first_name"), rs.getString("last_name"),
+                    rs.getString("email"), rs.getString("phone"),
                     rs.getString("education_level"),
-                    rs.getObject("experience_years") != null ? rs.getInt("experience_years") : null
-                );
+                    rs.getObject("experience_years") != null ? rs.getInt("experience_years") : null);
             }
-        } catch (SQLException e) {
-            System.err.println("Error fetching user info: " + e.getMessage());
-            e.printStackTrace();
-        }
+        } catch (SQLException e) { System.err.println("Error fetching user info: " + e.getMessage()); }
         return null;
     }
 
-    /**
-     * Get recruiter company name
-     */
     public static String getRecruiterCompanyName(Long recruiterId) {
         try (Connection conn = MyDatabase.getInstance().getConnection()) {
-            String query = "SELECT company_name FROM recruiter WHERE id = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
+            PreparedStatement stmt = conn.prepareStatement("SELECT company_name FROM recruiter WHERE id = ?");
             stmt.setLong(1, recruiterId);
             ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return rs.getString("company_name");
-            }
-        } catch (SQLException e) {
-            System.err.println("Error fetching recruiter info: " + e.getMessage());
-            e.printStackTrace();
-        }
+            if (rs.next()) { return rs.getString("company_name"); }
+        } catch (SQLException e) { System.err.println("Error fetching recruiter info: " + e.getMessage()); }
         return null;
     }
 
-    /**
-     * Get candidate skills from database
-     */
     public static java.util.List<String> getCandidateSkills(Long candidateId) {
         java.util.List<String> skills = new java.util.ArrayList<>();
         try (Connection conn = MyDatabase.getInstance().getConnection()) {
-            String query = "SELECT skill_name, level FROM candidate_skill WHERE candidate_id = ? ORDER BY level DESC, skill_name ASC";
-            PreparedStatement stmt = conn.prepareStatement(query);
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT skill_name, level FROM candidate_skill WHERE candidate_id = ? ORDER BY level DESC, skill_name ASC");
             stmt.setLong(1, candidateId);
             ResultSet rs = stmt.executeQuery();
-
             while (rs.next()) {
-                String skillName = rs.getString("skill_name");
-                String level = rs.getString("level");
-                skills.add(skillName + " (" + level + ")");
+                skills.add(rs.getString("skill_name") + " (" + rs.getString("level") + ")");
             }
-        } catch (SQLException e) {
-            System.err.println("Error fetching candidate skills: " + e.getMessage());
-            e.printStackTrace();
-        }
+        } catch (SQLException e) { System.err.println("Error fetching candidate skills: " + e.getMessage()); }
         return skills;
     }
 }
-
-
-

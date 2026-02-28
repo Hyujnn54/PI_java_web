@@ -1,9 +1,10 @@
 package Controllers;
 
-import entities.Candidate;
-import entities.EventRegistration;
-import entities.RecruitmentEvent;
-import entities.User;
+import Models.Candidate;
+import Models.EventRegistration;
+import Models.RecruitmentEvent;
+import Models.User;
+import Models.RoleEnum;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -14,12 +15,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 import javafx.scene.Node;
 import javafx.geometry.Pos;
-import services.CandidateService;
-import services.EventRegistrationService;
-import services.RecruitmentEventService;
-import services.UserService;
-import entities.RoleEnum;
-import utils.SchemaFixer;
+import Services.CandidateService;
+import Services.EventRegistrationService;
+import Services.RecruitmentEventService;
+import Services.UserService;
+import Utils.SchemaFixer;
 
 import java.net.URL;
 import java.sql.SQLException;
@@ -94,13 +94,12 @@ public class CandidateDashboardController implements Initializable {
         try {
             currentCandidate = candidateService.getByUserId(5);
             if (currentCandidate == null) {
-                java.util.List<entities.Candidate> all = candidateService.getAll();
+                java.util.List<Candidate> all = candidateService.getAll();
                 if (!all.isEmpty()) {
                     currentCandidate = all.get(0);
                 }
             }
             if (currentCandidate == null) {
-                UserService userService = new UserService();
                 String testEmail = "candidat.test@talentbridge.com";
                 User testUser = null;
                 for (User u : userService.getAll()) {
@@ -137,7 +136,7 @@ public class CandidateDashboardController implements Initializable {
 
                 // Fetch User details for top bar
                 try {
-                    entities.User user = userService.getById(currentCandidate.getId());
+                    User user = userService.getById(currentCandidate.getId());
                     if (user != null) {
                         userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
                         userRoleLabel.setText("CANDIDAT");

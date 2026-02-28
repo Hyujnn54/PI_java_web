@@ -1,10 +1,7 @@
 package Services;
 
-import entities.AttendanceStatusEnum;
-import entities.Candidate;
-import entities.EventRegistration;
-import entities.RecruitmentEvent;
-import utils.MyDatabase;
+import Models.*;
+import Utils.MyDatabase;
 
 import java.sql.*;
 import java.time.LocalDateTime;

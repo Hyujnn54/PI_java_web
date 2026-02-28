@@ -13,34 +13,19 @@ public class User {
     private RoleEnum role;
     private LocalDateTime createdAt;
 
-    // Constructeur par défaut
-    public User() {
-    }
+    public User() {}
 
-    // Constructeur complet
-    public User(long id, String email, String password, String firstName, 
+    public User(long id, String email, String password, String firstName,
                 String lastName, String phone, boolean isActive, RoleEnum role, LocalDateTime createdAt) {
-        this.id = id;
-        this.email = email;
-        this.password = password;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.phone = phone;
-        this.isActive = isActive;
-        this.role = role;
-        this.createdAt = createdAt;
+        this.id = id; this.email = email; this.password = password;
+        this.firstName = firstName; this.lastName = lastName; this.phone = phone;
+        this.isActive = isActive; this.role = role; this.createdAt = createdAt;
     }
 
-    // Constructeur sans ID (pour insertion)
-    public User(String email, String password, String firstName, 
+    public User(String email, String password, String firstName,
                 String lastName, String phone, boolean isActive, RoleEnum role) {
-        this.email = email;
-        this.password = password;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.phone = phone;
-        this.isActive = isActive;
-        this.role = role;
+        this.email = email; this.password = password; this.firstName = firstName;
+        this.lastName = lastName; this.phone = phone; this.isActive = isActive; this.role = role;
     }
 
     // Getters et Setters

@@ -1,18 +1,16 @@
-
 package Application;
 
+import Models.User;
+import Models.RoleEnum;
+import Utils.SessionManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import entities.User;
-import entities.RoleEnum;
-import utils.SessionManager;
 
 /**
  * Point d'entrée FRONT OFFICE (Candidat)
- * Skip login - démarre directement sur le dashboard candidat
  */
 public class MainAppFrontOffice extends Application {
 

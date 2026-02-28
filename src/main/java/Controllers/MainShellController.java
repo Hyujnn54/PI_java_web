@@ -29,6 +29,7 @@ public class MainShellController {
     @FXML private Button btnInterviews;
     @FXML private Button btnApplications;
     @FXML private Button btnJobOffers;
+    @FXML private Button btnEvents;
     @FXML private Button btnCalendar;
     @FXML private Button btnStatistics;
     @FXML private Button btnDashboard;
@@ -66,7 +67,7 @@ public class MainShellController {
 
         // Animate sidebar nav buttons in with staggered fade+slide
         Button[] navBtns = {btnApplications, btnInterviews, btnJobOffers,
-                            btnCalendar, btnStatistics, btnAdminStats,
+                            btnEvents, btnCalendar, btnStatistics, btnAdminStats,
                             btnAdminApplications, btnFullscreenToggle};
         for (int i = 0; i < navBtns.length; i++) {
             Button btn = navBtns[i];
@@ -120,6 +121,13 @@ public class MainShellController {
         }
         loadContentView(activePage);
         highlightActiveButton(btnJobOffers);
+    }
+
+    @FXML
+    private void handleEventsNav() {
+        activePage = "/views/events/Events.fxml";
+        loadContentView(activePage);
+        highlightActiveButton(btnEvents);
     }
 
     @FXML
@@ -526,7 +534,7 @@ public class MainShellController {
     }
 
     private void resetButtonStyles() {
-        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers,
+        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers, btnEvents,
                                btnCalendar, btnStatistics,
                                btnDashboard, btnAdminStats, btnAdminApplications, btnFullscreenToggle};
         for (Button btn : navButtons) {
@@ -555,11 +563,15 @@ public class MainShellController {
             btnApplications.setManaged(!isAdmin);
         }
         if (btnJobOffers != null) {
-            if (isAdmin) btnJobOffers.setText("💼   Gérer les offres");
-            else if (isRecruiter) btnJobOffers.setText("💼   Mes Offres");
-            else btnJobOffers.setText("💼   Offres d'emploi");
+            if (isAdmin) btnJobOffers.setText("🏢   Gérer les offres");
+            else if (isRecruiter) btnJobOffers.setText("🏢   Mes Offres");
+            else btnJobOffers.setText("🏢   Offres d'emploi");
             btnJobOffers.setVisible(true);
             btnJobOffers.setManaged(true);
+        }
+        if (btnEvents != null) {
+            btnEvents.setVisible(true);
+            btnEvents.setManaged(true);
         }
         if (btnCalendar != null) {
             btnCalendar.setVisible(!isAdmin);

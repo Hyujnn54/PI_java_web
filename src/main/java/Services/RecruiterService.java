@@ -1,7 +1,7 @@
 package Services;
 
-import entities.Recruiter;
-import utils.MyDatabase;
+import Models.Recruiter;
+import Utils.MyDatabase;
 
 import java.sql.*;
 import java.util.ArrayList;

@@ -1,23 +1,17 @@
 package Controllers;
 
-import entities.Recruiter;
-import entities.RecruitmentEvent;
+import Models.*;
+import Services.*;
+import Utils.SchemaFixer;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import services.RecruitmentEventService;
-import services.RecruiterService;
-import entities.User;
-import entities.RoleEnum;
-import services.UserService;
-import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.*;
 import javafx.scene.Node;
 import javafx.geometry.Pos;
-import utils.SchemaFixer;
 import java.net.URL;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -30,22 +24,22 @@ public class RecruiterDashboardController implements Initializable {
 
     // Attendees Table
     @FXML
-    private TableView<entities.EventRegistration> attendeesTable;
+    private TableView<EventRegistration> attendeesTable;
     @FXML
-    private TableColumn<entities.EventRegistration, String> eventTitleCol;
+    private TableColumn<EventRegistration, String> eventTitleCol;
     @FXML
-    private TableColumn<entities.EventRegistration, String> candLastNameCol;
+    private TableColumn<EventRegistration, String> candLastNameCol;
     @FXML
-    private TableColumn<entities.EventRegistration, String> candFirstNameCol;
+    private TableColumn<EventRegistration, String> candFirstNameCol;
     @FXML
-    private TableColumn<entities.EventRegistration, String> candEmailCol;
+    private TableColumn<EventRegistration, String> candEmailCol;
     @FXML
-    private TableColumn<entities.EventRegistration, String> statusCol;
+    private TableColumn<EventRegistration, String> statusCol;
     @FXML
-    private TableColumn<entities.EventRegistration, LocalDateTime> regDateCol;
+    private TableColumn<EventRegistration, LocalDateTime> regDateCol;
 
     @FXML
-    private ComboBox<entities.AttendanceStatusEnum> registrationStatusCombo;
+    private ComboBox<AttendanceStatusEnum> registrationStatusCombo;
 
     @FXML
     private TextField titleField;
@@ -86,7 +80,7 @@ public class RecruiterDashboardController implements Initializable {
     @FXML
     private Label userRoleLabel;
 
-    private services.EventRegistrationService registrationService;
+    private Services.EventRegistrationService registrationService;
     private RecruitmentEventService eventService;
     private RecruiterService recruiterService;
     private UserService userService;
@@ -95,7 +89,7 @@ public class RecruiterDashboardController implements Initializable {
     public RecruiterDashboardController() {
         eventService = new RecruitmentEventService();
         recruiterService = new RecruiterService();
-        registrationService = new services.EventRegistrationService();
+        registrationService = new Services.EventRegistrationService();
         userService = new UserService();
     }
 
@@ -112,7 +106,7 @@ public class RecruiterDashboardController implements Initializable {
 
     private void setupComboBoxes() {
         typeCombo.setItems(FXCollections.observableArrayList("Job_Faire", "WEBINAIRE", "Interview day"));
-        registrationStatusCombo.setItems(FXCollections.observableArrayList(entities.AttendanceStatusEnum.values()));
+        registrationStatusCombo.setItems(FXCollections.observableArrayList(AttendanceStatusEnum.values()));
     }
 
     private void setupAttendeesTable() {
@@ -146,7 +140,7 @@ public class RecruiterDashboardController implements Initializable {
     private void refreshAllAttendees() {
         if (currentRecruiter == null) return;
         try {
-            ObservableList<entities.EventRegistration> list = FXCollections
+            ObservableList<EventRegistration> list = FXCollections
                     .observableArrayList(registrationService.getByRecruiter(currentRecruiter.getId()));
             attendeesTable.setItems(list);
         } catch (SQLException e) {
@@ -156,7 +150,7 @@ public class RecruiterDashboardController implements Initializable {
 
     private void refreshAttendees(long eventId) {
         try {
-            ObservableList<entities.EventRegistration> list = FXCollections
+            ObservableList<EventRegistration> list = FXCollections
                     .observableArrayList(registrationService.getByEvent(eventId));
             attendeesTable.setItems(list);
         } catch (SQLException e) {
@@ -171,7 +165,7 @@ public class RecruiterDashboardController implements Initializable {
 
             // 2. Si non trouvé, prendre le premier recruteur de la table
             if (currentRecruiter == null) {
-                java.util.List<entities.Recruiter> all = recruiterService.getAll();
+                java.util.List<Recruiter> all = recruiterService.getAll();
                 if (!all.isEmpty()) {
                     currentRecruiter = all.get(0);
                 }
@@ -179,7 +173,6 @@ public class RecruiterDashboardController implements Initializable {
 
             // 3. Si toujours rien, créer un profil par défaut pour le test
             if (currentRecruiter == null) {
-                UserService userService = new UserService();
                 String testEmail = "recruteur.test@talentbridge.com";
 
                 // Vérifier si l'utilisateur existe déjà par email
@@ -202,7 +195,7 @@ public class RecruiterDashboardController implements Initializable {
                     userService.add(testUser);
                 }
 
-                currentRecruiter = new entities.Recruiter();
+                currentRecruiter = new Recruiter();
                 currentRecruiter.setId(testUser.getId());
                 currentRecruiter.setCompanyName("Société de Test");
                 currentRecruiter.setCompanyLocation("Tunis");
@@ -221,7 +214,7 @@ public class RecruiterDashboardController implements Initializable {
 
                 // Fetch User details for top bar
                 try {
-                    entities.User user = userService.getById(currentRecruiter.getId());
+                    User user = userService.getById(currentRecruiter.getId());
                     if (user != null) {
                         userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
                         userRoleLabel.setText("RECRUTEUR");
@@ -430,8 +423,8 @@ public class RecruiterDashboardController implements Initializable {
 
     @FXML
     private void handleUpdateRegistrationStatus() {
-        entities.EventRegistration selected = attendeesTable.getSelectionModel().getSelectedItem();
-        entities.AttendanceStatusEnum newStatus = registrationStatusCombo.getValue();
+        EventRegistration selected = attendeesTable.getSelectionModel().getSelectedItem();
+        AttendanceStatusEnum newStatus = registrationStatusCombo.getValue();
 
         if (selected == null || newStatus == null) {
             showAlert("Avertissement", "Veuillez sélectionner une inscription et un nouveau statut.");
@@ -567,3 +560,4 @@ public class RecruiterDashboardController implements Initializable {
         alert.showAndWait();
     }
 }
+

@@ -15,7 +15,7 @@
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.RecruiterDashboardController" stylesheets="@../style/modern.css">
+<BorderPane xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.RecruiterDashboardController" stylesheets="@../style/modern.css">
    <top>
       <HBox styleClass="top-bar" alignment="CENTER_RIGHT" spacing="15.0">
          <children>

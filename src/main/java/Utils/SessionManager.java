@@ -1,6 +1,6 @@
 package Utils;
 
-import entities.User;
+import Models.User;
 
 /**
  * Classe simple pour stocker l'utilisateur connecté

@@ -78,6 +78,10 @@
                         text="💼   Offres d'emploi"
                         styleClass="sidebar-nav-btn" maxWidth="Infinity"/>
 
+                <Button fx:id="btnEvents" onAction="#handleEventsNav"
+                        text="🎪   Événements"
+                        styleClass="sidebar-nav-btn" maxWidth="Infinity"/>
+
                 <Button fx:id="btnCalendar" onAction="#handleCalendarNav"
                         text="🗓   Calendrier"
                         styleClass="sidebar-nav-btn" maxWidth="Infinity"/>

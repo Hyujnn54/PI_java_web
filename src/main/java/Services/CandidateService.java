@@ -1,7 +1,7 @@
 package Services;
 
-import entities.Candidate;
-import utils.MyDatabase;
+import Models.Candidate;
+import Utils.MyDatabase;
 
 import java.sql.*;
 import java.util.ArrayList;
