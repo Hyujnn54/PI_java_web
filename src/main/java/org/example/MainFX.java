@@ -2,6 +2,7 @@ package org.example;
 
 import Services.InterviewReminderScheduler;
 import Utils.SceneManager;
+import Utils.UserContext;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -25,6 +26,10 @@ public class MainFX extends Application {
         primaryStage = stage;
 
         try {
+            // Initialize default user context (Recruiter with ID 1)
+            UserContext.login(1L, "Recruteur Démo", "recruteur@talentbridge.com", UserContext.Role.RECRUITER);
+            System.out.println("Contexte utilisateur initialisé : " + UserContext.getRoleLabel() + " (ID: " + UserContext.getUserId() + ")");
+
             System.out.println("Loading MainShell.fxml...");
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));
             Parent root = fxmlLoader.load();

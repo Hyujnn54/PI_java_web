@@ -91,11 +91,41 @@
     -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.50), 12, 0, 0, 4);
 }
 
-/* Keep old names as aliases so any leftover references don't break */
-.sidebar-button          { -fx-padding: 16px 22px; -fx-text-fill: #5a6a7a; -fx-font-size: 15px; -fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-cursor: hand; -fx-background-radius: 10; }
-.sidebar-button:hover    { -fx-background-color: #EBF3FE; -fx-text-fill: #5BA3F5; }
-.sidebar-button-active   { -fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 700; -fx-background-radius: 10; -fx-padding: 16px 22px; -fx-alignment: CENTER_LEFT; -fx-cursor: hand; }
-.sidebar-button-active:hover { -fx-background-color: #4A90E2; -fx-text-fill: white; }
+/* sidebar-button aliases used by offer branch */
+.sidebar-button {
+    -fx-padding: 16px 22px;
+    -fx-text-fill: #5a6a7a;
+    -fx-font-size: 15px;
+    -fx-font-weight: 500;
+    -fx-background-color: transparent;
+    -fx-alignment: CENTER_LEFT;
+    -fx-cursor: hand;
+    -fx-background-radius: 10;
+    -fx-border-width: 0;
+}
+.sidebar-button:hover {
+    -fx-background-color: #EBF3FE;
+    -fx-text-fill: #5BA3F5;
+    -fx-font-weight: 600;
+}
+.sidebar-button:pressed {
+    -fx-background-color: #D6E9FD;
+}
+.sidebar-button-active {
+    -fx-background-color: #5BA3F5;
+    -fx-text-fill: white;
+    -fx-font-weight: 700;
+    -fx-background-radius: 10;
+    -fx-padding: 16px 22px;
+    -fx-alignment: CENTER_LEFT;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+    -fx-effect: dropshadow(gaussian, rgba(91,163,245,0.35), 10, 0, 0, 3);
+}
+.sidebar-button-active:hover {
+    -fx-background-color: #4A90E2;
+    -fx-text-fill: white;
+}
 
 .sidebar-separator {
     -fx-background-color: #e9ecef;

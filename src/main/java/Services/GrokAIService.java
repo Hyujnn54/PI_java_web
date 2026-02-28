@@ -12,6 +12,7 @@ import org.json.JSONArray;
 
 /**
  * Service for generating / translating cover letters using Groq API.
+ * Used by the Applications module.
  */
 public class GrokAIService {
 
@@ -130,7 +131,6 @@ public class GrokAIService {
             while ((line = br.readLine()) != null) response.append(line);
         }
 
-        // Parse OpenAI-compatible response: choices[0].message.content
         JSONObject json = new JSONObject(response.toString());
         JSONArray choices = json.optJSONArray("choices");
         if (choices != null && choices.length() > 0) {
@@ -182,12 +182,10 @@ public class GrokAIService {
 
     private static String translateWithMyMemory(String text, String targetLangCode) {
         try {
-            // MyMemory supports up to 500 chars per call — split if needed
             if (text.length() <= 500) {
                 return callMyMemory(text, targetLangCode);
             }
 
-            // Split into chunks of ~480 chars at sentence boundaries
             StringBuilder result = new StringBuilder();
             String[] sentences = text.split("(?<=[.!?])\\s+");
             StringBuilder chunk = new StringBuilder();
@@ -206,7 +204,7 @@ public class GrokAIService {
             return result.toString().trim();
         } catch (Exception e) {
             System.err.println("MyMemory translation failed: " + e.getMessage());
-            return text; // return original if all fails
+            return text;
         }
     }
 
@@ -222,9 +220,7 @@ public class GrokAIService {
         conn.setReadTimeout(15000);
 
         int code = conn.getResponseCode();
-        if (code != 200) {
-            throw new Exception("MyMemory HTTP " + code);
-        }
+        if (code != 200) throw new Exception("MyMemory HTTP " + code);
 
         java.io.BufferedReader br = new java.io.BufferedReader(
                 new java.io.InputStreamReader(conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));

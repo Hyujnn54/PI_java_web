@@ -5,8 +5,10 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 
 import java.io.IOException;
 
@@ -20,6 +22,8 @@ public class MainShellController {
     @FXML private Button btnInterviews;
     @FXML private Button btnApplications;
     @FXML private Button btnJobOffers;
+    @FXML private Button btnCalendar;
+    @FXML private Button btnStatistics;
     @FXML private Button btnDashboard;
     @FXML private Button btnAdminStats;
     @FXML private Button btnAdminApplications;
@@ -39,10 +43,9 @@ public class MainShellController {
 
     @FXML
     private void initialize() {
-        if (lblUserName != null) lblUserName.setText("Utilisateur");
+        if (lblUserName != null) lblUserName.setText(Utils.UserContext.getUserName() != null ? Utils.UserContext.getUserName() : "Utilisateur");
         if (lblUserRole != null) lblUserRole.setText(Utils.UserContext.getRoleLabel());
         applyRoleToShell();
-        // Load appropriate default page based on role
         if (Utils.UserContext.getRole() == Utils.UserContext.Role.ADMIN) {
             handleAdminStatsNav();
         } else {
@@ -70,10 +73,28 @@ public class MainShellController {
 
     @FXML
     private void handleJobOffersNav() {
-        boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
-        activePage = isRecruiter ? "/JobOffers.fxml" : "/JobOffersBrowse.fxml";
+        Utils.UserContext.Role role = Utils.UserContext.getRole();
+        if (role == Utils.UserContext.Role.ADMIN) {
+            activePage = "/JobOffersAdmin.fxml";
+        } else if (role == Utils.UserContext.Role.RECRUITER) {
+            activePage = "/JobOffers.fxml";
+        } else {
+            activePage = "/JobOffersBrowse.fxml";
+        }
         loadContentView(activePage);
         highlightActiveButton(btnJobOffers);
+    }
+
+    @FXML
+    private void handleCalendarNav() {
+        CalendarViewController.show();
+    }
+
+    @FXML
+    private void handleStatistics() {
+        activePage = "/AnalyticsDashboard.fxml";
+        loadContentView(activePage);
+        highlightActiveButton(btnStatistics);
     }
 
     @FXML
@@ -103,8 +124,15 @@ public class MainShellController {
 
     @FXML
     private void handleDisconnect() {
-        showInfo("Déconnexion", "Fonctionnalité de Déconnexion",
-            "La fonctionnalité de connexion/déconnexion est désactivée pour le moment.\nRedémarrez l'application pour réinitialiser.");
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmAlert.setTitle("Déconnexion");
+        confirmAlert.setHeaderText("Êtes-vous sûr de vouloir vous déconnecter ?");
+        confirmAlert.setContentText("La fonctionnalité de connexion/déconnexion est visuelle pour le moment.\nRedémarrez l'application pour réinitialiser.");
+        confirmAlert.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                showInfo("Déconnexion", "Déconnecté", "Redémarrez l'application pour vous reconnecter.");
+            }
+        });
     }
 
     @FXML
@@ -154,7 +182,7 @@ public class MainShellController {
             new Thread(() -> {
                 Services.EmailService.sendTestTo(email, name.isEmpty() ? "Test Utilisateur" : name);
                 javafx.application.Platform.runLater(() -> {
-                    emailStatus.setText("✅ Email envoyé à: " + email + "\n(vérifiez la console pour confirmation)");
+                    emailStatus.setText("✅ Email envoyé à: " + email);
                     emailStatus.setStyle("-fx-text-fill: #28a745; -fx-font-size: 12px;");
                 });
             }, "TestEmailThread").start();
@@ -185,7 +213,7 @@ public class MainShellController {
             new Thread(() -> {
                 Services.SMSService.sendTestTo(phone, name.isEmpty() ? "Test" : name);
                 javafx.application.Platform.runLater(() -> {
-                    smsStatus.setText("✅ SMS dispatché vers: " + phone + "\n(vérifiez la console pour confirmation)");
+                    smsStatus.setText("✅ SMS dispatché vers: " + phone);
                     smsStatus.setStyle("-fx-text-fill: #28a745; -fx-font-size: 12px;");
                 });
             }, "TestSMSThread").start();
@@ -200,8 +228,7 @@ public class MainShellController {
 
         content.getChildren().addAll(
             emailLbl, emailField, emailNameField, btnSendEmail, emailStatus,
-            sep,
-            smsLbl, phoneField, smsNameField, btnSendSMS, smsStatus,
+            sep, smsLbl, phoneField, smsNameField, btnSendSMS, smsStatus,
             sep2, schedulerInfo
         );
 
@@ -242,16 +269,17 @@ public class MainShellController {
     private void highlightActiveButton(Button activeBtn) {
         resetButtonStyles();
         if (activeBtn == null) return;
-        activeBtn.getStyleClass().removeAll("sidebar-nav-btn");
+        activeBtn.getStyleClass().removeAll("sidebar-nav-btn", "sidebar-button");
         activeBtn.getStyleClass().add("sidebar-nav-btn-active");
     }
 
     private void resetButtonStyles() {
         Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers,
+                               btnCalendar, btnStatistics,
                                btnDashboard, btnAdminStats, btnAdminApplications, btnFullscreenToggle};
         for (Button btn : navButtons) {
             if (btn == null) continue;
-            btn.getStyleClass().removeAll("sidebar-nav-btn-active");
+            btn.getStyleClass().removeAll("sidebar-nav-btn-active", "sidebar-button-active");
             if (!btn.getStyleClass().contains("sidebar-nav-btn"))
                 btn.getStyleClass().add("sidebar-nav-btn");
         }
@@ -260,6 +288,7 @@ public class MainShellController {
     private void applyRoleToShell() {
         boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
         boolean isAdmin     = Utils.UserContext.getRole() == Utils.UserContext.Role.ADMIN;
+        boolean isCandidate = Utils.UserContext.getRole() == Utils.UserContext.Role.CANDIDATE;
 
         if (lblUserRole != null) lblUserRole.setText(Utils.UserContext.getRoleLabel());
 
@@ -274,21 +303,25 @@ public class MainShellController {
             btnApplications.setManaged(!isAdmin);
         }
         if (btnJobOffers != null) {
-            btnJobOffers.setVisible(!isAdmin);
-            btnJobOffers.setManaged(!isAdmin);
+            if (isAdmin) btnJobOffers.setText("💼   Gérer les offres");
+            else if (isRecruiter) btnJobOffers.setText("💼   Mes Offres");
+            else btnJobOffers.setText("💼   Offres d'emploi");
+            btnJobOffers.setVisible(true);
+            btnJobOffers.setManaged(true);
         }
-        if (btnDashboard != null) {
-            btnDashboard.setVisible(false);
-            btnDashboard.setManaged(false);
+        if (btnCalendar != null) {
+            btnCalendar.setVisible(!isAdmin);
+            btnCalendar.setManaged(!isAdmin);
         }
-        if (btnAdminStats != null) {
-            btnAdminStats.setVisible(isAdmin);
-            btnAdminStats.setManaged(isAdmin);
+        if (btnStatistics != null) {
+            btnStatistics.setVisible(!isCandidate);
+            btnStatistics.setManaged(!isCandidate);
+            if (isAdmin) btnStatistics.setText("📊   Statistiques Globales");
+            else         btnStatistics.setText("📊   Mes Statistiques");
         }
-        if (btnAdminApplications != null) {
-            btnAdminApplications.setVisible(isAdmin);
-            btnAdminApplications.setManaged(isAdmin);
-        }
+        if (btnDashboard != null) { btnDashboard.setVisible(false); btnDashboard.setManaged(false); }
+        if (btnAdminStats != null) { btnAdminStats.setVisible(isAdmin); btnAdminStats.setManaged(isAdmin); }
+        if (btnAdminApplications != null) { btnAdminApplications.setVisible(isAdmin); btnAdminApplications.setManaged(isAdmin); }
     }
 
     private void showInfo(String title, String header, String content) {
