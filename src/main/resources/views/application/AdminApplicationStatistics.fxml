@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
@@ -6,7 +6,7 @@
 
 <VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="Controllers.application.AdminDashboardController" spacing="20" styleClass="page"
-      stylesheets="@styles.css" style="-fx-background-color: #F5F6F8;">
+      stylesheets="@/styles.css" style="-fx-background-color: #F5F6F8;">
 
     <padding>
         <Insets top="25" left="25" right="25" bottom="25"/>

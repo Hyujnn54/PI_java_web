@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
@@ -7,7 +7,7 @@
 <VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="Controllers.interview.InterviewManagementController"
       spacing="25" style="-fx-background-color: #f8f9fa; -fx-padding: 25;"
-      stylesheets="@styles.css">
+      stylesheets="@/styles.css">
 
     <!-- Header Section with Search and Calendar -->
     <HBox alignment="CENTER_LEFT" spacing="15">
