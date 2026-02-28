@@ -735,10 +735,10 @@ public class JobOffersController {
             loadingLbl.setText("Generation en cours...");
             btnGen.setDisable(true);
             new Thread(() -> {
-                String generated = generateCorrectionNote(wReason, wMessage, job.getTitle(), job.getDescription());
+                String generated = generateCorrectionNote(wReason, wMessage, job.getTitle());
                 javafx.application.Platform.runLater(() -> {
                     corrNote.setText(generated != null ? generated : "");
-                    loadingLbl.setText(generated != null ? "Description generee." : "Echec - ecrivez manuellement.");
+                    loadingLbl.setText(generated != null && !generated.isEmpty() ? "Description generee." : "Echec - ecrivez manuellement.");
                     btnGen.setDisable(false);
                 });
             }).start();
@@ -929,7 +929,7 @@ public class JobOffersController {
             new Thread(() -> {
                 String sugg = generateJobSuggestions(t);
                 javafx.application.Platform.runLater(() -> {
-                    if (sugg != null) { parseAndFillForm(sugg); aiStatus.setText("Formulaire rempli!"); }
+                    if (sugg != null && !sugg.isBlank()) { parseAndFillForm(sugg); aiStatus.setText("Formulaire rempli!"); }
                     else aiStatus.setText("Echec de la generation.");
                     btnAI.setDisable(false);
                 });
@@ -1234,12 +1234,41 @@ public class JobOffersController {
     // =========================================================================
 
     private String generateJobSuggestions(String jobTitle) {
+        String prompt = buildJobSuggestionsPrompt(jobTitle);
+        // 1st try: Gemini
         try {
-            String prompt = "Tu es expert RH. Genere les infos pour: '" + jobTitle + "'.\n" +
-                    "Format EXACT:\nDESCRIPTION: [4-5 phrases]\nSKILLS: [skill1, skill2, skill3, skill4, skill5]";
             String r = callGeminiAPI(prompt);
-            return r != null ? r : getDefaultJobSuggestions(jobTitle);
-        } catch (Exception e) { return getDefaultJobSuggestions(jobTitle); }
+            if (r != null && r.contains("DESCRIPTION:") && r.contains("SKILLS:")) return r;
+        } catch (Exception e) {
+            System.err.println("Gemini failed: " + e.getMessage());
+        }
+        // 2nd try: Groq (same API used by GrokAIService)
+        try {
+            String r = callGroqAPI(prompt);
+            if (r != null && r.contains("DESCRIPTION:") && r.contains("SKILLS:")) return r;
+        } catch (Exception e) {
+            System.err.println("Groq failed: " + e.getMessage());
+        }
+        // Fallback: smart domain-based defaults
+        return getDefaultJobSuggestions(jobTitle);
+    }
+
+    private String buildJobSuggestionsPrompt(String jobTitle) {
+        return "You are an expert HR recruiter with deep knowledge of all industries and technical domains.\n" +
+               "Generate a realistic job offer for the position: \"" + jobTitle + "\"\n\n" +
+               "IMPORTANT RULES:\n" +
+               "- The SKILLS must be SPECIFIC and TECHNICAL to this exact role (e.g. for 'Cloud Security Engineer': AWS Security, IAM, Zero Trust, SIEM, Terraform)\n" +
+               "- Do NOT use generic skills like 'Communication', 'Organisation', 'Travail en equipe' unless the role is purely managerial\n" +
+               "- List 6 to 8 skills that a recruiter would actually search for in this domain\n" +
+               "- The DESCRIPTION must be 4-5 sentences describing real responsibilities for this role in French\n" +
+               "- Use professional French\n\n" +
+               "Respond ONLY in this exact format (no extra text, no markdown, no asterisks):\n" +
+               "DESCRIPTION: [4-5 sentences in French describing the role and responsibilities]\n" +
+               "SKILLS: [skill1, skill2, skill3, skill4, skill5, skill6, skill7]\n\n" +
+               "Example for 'Developpeur Web Full Stack':\n" +
+               "DESCRIPTION: Nous recherchons un Developpeur Web Full Stack pour concevoir et developper des applications web modernes. Vous serez responsable du developpement front-end et back-end de nos plateformes. Vous travaillerez en collaboration etroite avec les equipes produit et design. Vous participerez aux revues de code et aux choix d'architecture technique.\n" +
+               "SKILLS: React, Node.js, TypeScript, PostgreSQL, Docker, REST API, Git\n\n" +
+               "Now generate for: \"" + jobTitle + "\"";
     }
 
     private String generateCorrectionNote(String reason, String message, String jobTitle) {
@@ -1257,7 +1286,7 @@ public class JobOffersController {
         c.setRequestMethod("POST"); c.setRequestProperty("Content-Type", "application/json");
         c.setDoOutput(true); c.setConnectTimeout(15000); c.setReadTimeout(60000);
         String body = "{\"contents\":[{\"parts\":[{\"text\":\"" + escapeJson(prompt) + "\"}]}]," +
-                "\"generationConfig\":{\"maxOutputTokens\":1000,\"temperature\":0.7}}";
+                "\"generationConfig\":{\"maxOutputTokens\":800,\"temperature\":0.85}}";
         c.getOutputStream().write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         if (c.getResponseCode() != 200) throw new Exception("Gemini HTTP " + c.getResponseCode());
         StringBuilder sb = new StringBuilder();
@@ -1266,6 +1295,46 @@ public class JobOffersController {
             String line; while ((line = br.readLine()) != null) sb.append(line);
         }
         return extractGeminiContent(sb.toString());
+    }
+
+    private String callGroqAPI(String prompt) throws Exception {
+        String[] MODELS = {"llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"};
+        String GROQ_KEY = "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";
+        String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+        for (String model : MODELS) {
+            try {
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(GROQ_URL).openConnection();
+                c.setRequestMethod("POST");
+                c.setRequestProperty("Content-Type", "application/json");
+                c.setRequestProperty("Authorization", "Bearer " + GROQ_KEY);
+                c.setDoOutput(true); c.setConnectTimeout(15000); c.setReadTimeout(30000);
+                String body = "{\"model\":\"" + model + "\",\"messages\":[" +
+                        "{\"role\":\"system\",\"content\":\"You are an expert HR recruiter. Follow the user format exactly.\"}," +
+                        "{\"role\":\"user\",\"content\":\"" + escapeJson(prompt) + "\"}]," +
+                        "\"max_tokens\":600,\"temperature\":0.85}";
+                c.getOutputStream().write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                if (c.getResponseCode() != 200) continue;
+                StringBuilder sb = new StringBuilder();
+                try (java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(c.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                    String line; while ((line = br.readLine()) != null) sb.append(line);
+                }
+                // Extract content from Groq's OpenAI-compatible response
+                String json = sb.toString();
+                int s = json.indexOf("\"content\":"); if (s < 0) continue;
+                s = json.indexOf("\"", s + 10) + 1;
+                int e = json.indexOf("\"", s);
+                while (e > 0 && json.charAt(e - 1) == '\\') e = json.indexOf("\"", e + 1);
+                if (s > 0 && e > s) {
+                    String content = json.substring(s, e)
+                            .replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\").trim();
+                    if (!content.isBlank()) return content;
+                }
+            } catch (Exception ex) {
+                System.err.println("Groq model " + model + " failed: " + ex.getMessage());
+            }
+        }
+        throw new Exception("All Groq models failed");
     }
 
     private String callGrokAPI(String prompt) throws Exception {
@@ -1317,30 +1386,288 @@ public class JobOffersController {
     private void parseAndFillForm(String suggestions) {
         try {
             String d = extractField(suggestions, "DESCRIPTION:");
-            if (d != null) formDescription.setText(d);
+            if (d != null && !d.isBlank()) {
+                // Strip any markdown artifacts
+                d = d.replaceAll("\\*+", "").replaceAll("#+ ?", "").trim();
+                formDescription.setText(d);
+            }
             String sk = extractField(suggestions, "SKILLS:");
-            if (sk != null) {
-                skillsContainer.getChildren().clear(); skillRows.clear();
+            if (sk != null && !sk.isBlank()) {
+                // Strip brackets/markdown artifacts
+                sk = sk.replaceAll("[\\[\\]\\*`]", "").trim();
+                skillsContainer.getChildren().clear();
+                skillRows.clear();
                 for (String s : sk.split(",")) {
-                    String n = s.trim();
-                    if (n.length() >= 2) addSkillRow(new OfferSkill(null, n, SkillLevel.INTERMEDIATE));
+                    String raw = s.trim();
+                    if (raw.isBlank()) continue;
+                    // Try to extract a skill level hint from the name
+                    SkillLevel level = SkillLevel.INTERMEDIATE;
+                    String name = raw;
+                    // e.g. "Python (Avance)" or "Python - Expert" or "Python (Beginner)"
+                    String lower = raw.toLowerCase();
+                    if (lower.contains("avance") || lower.contains("advanced") || lower.contains("expert") || lower.contains("senior")) {
+                        level = SkillLevel.ADVANCED;
+                        name = raw.replaceAll("(?i)\\s*[-–(]\\s*(avance|advanced|expert|senior)[)\\s]*", "").trim();
+                    } else if (lower.contains("debut") || lower.contains("beginner") || lower.contains("junior") || lower.contains("notions")) {
+                        level = SkillLevel.BEGINNER;
+                        name = raw.replaceAll("(?i)\\s*[-–(]\\s*(debut\\w*|beginner|junior|notions)[)\\s]*", "").trim();
+                    } else if (lower.contains("intermediaire") || lower.contains("intermediate")) {
+                        level = SkillLevel.INTERMEDIATE;
+                        name = raw.replaceAll("(?i)\\s*[-–(]\\s*(intermediaire|intermediate)[)\\s]*", "").trim();
+                    }
+                    if (name.length() >= 2) addSkillRow(new OfferSkill(null, name, level));
                 }
                 if (skillRows.isEmpty()) addSkillRow(null);
             }
-        } catch (Exception e) { System.err.println("parseAndFillForm error: " + e.getMessage()); }
+        } catch (Exception e) {
+            System.err.println("parseAndFillForm error: " + e.getMessage());
+        }
     }
 
     private String extractField(String text, String fieldName) {
-        int s = text.indexOf(fieldName); if (s < 0) return null;
+        if (text == null) return null;
+        int s = text.indexOf(fieldName);
+        if (s < 0) {
+            // Try case-insensitive
+            String lower = text.toLowerCase();
+            s = lower.indexOf(fieldName.toLowerCase());
+            if (s < 0) return null;
+        }
         s += fieldName.length();
-        int e = text.indexOf("\n", s);
-        return text.substring(s, e < 0 ? text.length() : e).trim();
+        // Skip any leading whitespace/colon
+        while (s < text.length() && (text.charAt(s) == ' ' || text.charAt(s) == ':')) s++;
+        // For SKILLS, stop at newline; for DESCRIPTION, grab until next labelled field
+        int e;
+        if (fieldName.equals("SKILLS:")) {
+            e = text.indexOf("\n", s);
+            if (e < 0) e = text.length();
+        } else {
+            // Stop at the next all-caps FIELD: pattern
+            int nextField = text.indexOf("\nSKILLS:", s);
+            if (nextField < 0) nextField = text.indexOf("\nSKILL:", s);
+            e = nextField < 0 ? text.length() : nextField;
+        }
+        String result = text.substring(s, e).trim();
+        // Remove surrounding quotes if any
+        if (result.startsWith("\"") && result.endsWith("\"")) result = result.substring(1, result.length() - 1);
+        return result.isBlank() ? null : result;
     }
 
     private String getDefaultJobSuggestions(String jobTitle) {
-        return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " motive(e) pour rejoindre notre equipe. " +
-               "Vous contribuerez au developpement et aux projets strategiques de l'entreprise.\n" +
-               "SKILLS: Communication, Travail en equipe, Organisation, Adaptabilite, Rigueur";
+        String t = jobTitle.toLowerCase();
+
+        // ── Web / Frontend ──────────────────────────────────────────────────
+        if (contains(t, "frontend", "front-end", "react", "angular", "vue", "ui developer")) {
+            return "DESCRIPTION: Nous recherchons un(e) Developpeur(se) Frontend passionné(e) pour creer des interfaces utilisateur modernes et performantes. " +
+                   "Vous traduirez les maquettes UI/UX en composants riches et accessibles. " +
+                   "Vous collaborerez avec les equipes backend pour integrer les APIs REST et GraphQL. " +
+                   "Vous veillerez aux performances, a la compatibilite cross-browser et a l'accessibilite.\n" +
+                   "SKILLS: React, TypeScript, HTML5, CSS3, Redux, REST API, Git";
+        }
+        // ── Backend ─────────────────────────────────────────────────────────
+        if (contains(t, "backend", "back-end", "java developer", "spring", "node.js developer", "python developer", "django", "fastapi")) {
+            return "DESCRIPTION: Nous recherchons un(e) Developpeur(se) Backend pour concevoir et maintenir des services robustes et scalables. " +
+                   "Vous serez charge(e) de la conception des APIs, de l'architecture des bases de donnees et de l'optimisation des performances. " +
+                   "Vous participerez aux revues de code et a la mise en place de bonnes pratiques DevOps. " +
+                   "Une experience en environnements microservices est fortement appreciee.\n" +
+                   "SKILLS: Java, Spring Boot, PostgreSQL, Docker, REST API, JUnit, Maven";
+        }
+        // ── Full Stack ───────────────────────────────────────────────────────
+        if (contains(t, "full stack", "fullstack", "full-stack")) {
+            return "DESCRIPTION: Nous recherchons un(e) Developpeur(se) Full Stack pour prendre en charge le cycle complet de developpement de nos applications. " +
+                   "Vous interviendrez aussi bien sur la couche frontend que backend et contribuerez aux decisions d'architecture. " +
+                   "Vous travaillerez en methode Agile au sein d'une equipe pluridisciplinaire. " +
+                   "Une bonne maitrise des outils de CI/CD et du cloud est un atout majeur.\n" +
+                   "SKILLS: React, Node.js, TypeScript, PostgreSQL, Docker, REST API, Git";
+        }
+        // ── Mobile ──────────────────────────────────────────────────────────
+        if (contains(t, "mobile", "android", "ios", "flutter", "react native", "kotlin", "swift")) {
+            return "DESCRIPTION: Nous recherchons un(e) Developpeur(se) Mobile pour concevoir des applications performantes sur iOS et/ou Android. " +
+                   "Vous participerez a la conception, au developpement et au deploiement des features mobiles. " +
+                   "Vous integrerez des APIs REST et veillerez a l'optimisation des performances et de l'UX. " +
+                   "Vous contribuerez aux tests unitaires et aux revues de code.\n" +
+                   "SKILLS: Flutter, Dart, Firebase, REST API, Android SDK, iOS Swift, Git";
+        }
+        // ── Cloud Security ───────────────────────────────────────────────────
+        if (contains(t, "cloud security", "securite cloud", "security engineer", "ingenieur securite")) {
+            return "DESCRIPTION: Nous recherchons un(e) Ingenieur(e) en Securite Cloud pour proteger nos infrastructures et donnees dans le cloud. " +
+                   "Vous concevrez et implémenterez des architectures Zero Trust et des politiques IAM rigoureuses. " +
+                   "Vous superviserez les incidents de securite via SIEM et coordonnerez la reponse aux menaces. " +
+                   "Vous realiserez des audits de conformite (ISO 27001, SOC2) et des tests de penetration reguliers.\n" +
+                   "SKILLS: AWS Security, IAM, Zero Trust, SIEM, Terraform, Kubernetes Security, Penetration Testing";
+        }
+        // ── Cloud / DevOps / Infrastructure ─────────────────────────────────
+        if (contains(t, "cloud", "devops", "infrastructure", "sre", "platform engineer", "aws", "azure", "gcp", "kubernetes", "terraform")) {
+            return "DESCRIPTION: Nous recherchons un(e) Ingenieur(e) Cloud/DevOps pour automatiser et fiabiliser nos infrastructures. " +
+                   "Vous gererez le provisionning des ressources cloud et optimiserez les pipelines CI/CD. " +
+                   "Vous mettrez en place la supervision, les alertes et les pratiques de reliability engineering. " +
+                   "Vous travaillerez en etroite collaboration avec les equipes de developpement pour accelerer les livraisons.\n" +
+                   "SKILLS: Kubernetes, Terraform, AWS, Docker, CI/CD, Prometheus, Ansible";
+        }
+        // ── Cybersecurity / Security Analyst ────────────────────────────────
+        if (contains(t, "cybersecurite", "cybersecurity", "soc analyst", "analyste securite", "penetration", "pentest", "ethical hacker")) {
+            return "DESCRIPTION: Nous recherchons un(e) Analyste en Cybersecurite pour surveiller, detecter et repondre aux menaces informatiques. " +
+                   "Vous analyserez les vulnerabilites de nos systemes et proposerez des plans de remediation. " +
+                   "Vous conduirez des tests d'intrusion et des audits de securite reguliers. " +
+                   "Vous formerez les equipes internes aux bonnes pratiques de securite.\n" +
+                   "SKILLS: SIEM, Penetration Testing, Wireshark, Metasploit, OWASP, Nmap, Python Scripting";
+        }
+        // ── Data Science / ML / AI ───────────────────────────────────────────
+        if (contains(t, "data scientist", "machine learning", "deep learning", "ia ", "intelligence artificielle", "nlp", "computer vision", "ml engineer")) {
+            return "DESCRIPTION: Nous recherchons un(e) Data Scientist / Ingenieur(e) ML pour concevoir des modeles predictifs a fort impact metier. " +
+                   "Vous collecterez, nettoierez et analyserez de larges datasets pour en extraire des insights actionnables. " +
+                   "Vous developperez et deploierez des modeles de machine learning en production. " +
+                   "Vous collaborerez avec les equipes produit pour integrer l'IA dans nos solutions.\n" +
+                   "SKILLS: Python, TensorFlow, PyTorch, Scikit-learn, SQL, MLflow, Pandas";
+        }
+        // ── Data Engineer ────────────────────────────────────────────────────
+        if (contains(t, "data engineer", "ingenieur donnees", "big data", "spark", "kafka", "etl", "pipeline")) {
+            return "DESCRIPTION: Nous recherchons un(e) Data Engineer pour construire et maintenir nos pipelines de donnees a grande echelle. " +
+                   "Vous concevrez des architectures data robustes (data lake, data warehouse) et optimiserez les flux de donnees. " +
+                   "Vous garantirez la qualite, la disponibilite et la securite des donnees. " +
+                   "Vous travaillerez en collaboration avec les data scientists pour mettre en production leurs modeles.\n" +
+                   "SKILLS: Apache Spark, Kafka, Airflow, Python, SQL, AWS S3, dbt";
+        }
+        // ── Data Analyst / BI ────────────────────────────────────────────────
+        if (contains(t, "data analyst", "business intelligence", "bi developer", "analyste", "power bi", "tableau", "reporting")) {
+            return "DESCRIPTION: Nous recherchons un(e) Data Analyst pour transformer les donnees en insights strategiques. " +
+                   "Vous concevrez des tableaux de bord interactifs et produirez des rapports reguliers pour les parties prenantes. " +
+                   "Vous collaborerez avec les metiers pour comprendre leurs besoins et traduire les KPIs en analyses. " +
+                   "Vous assurerez la qualite et la fiabilite des donnees tout au long du cycle analytique.\n" +
+                   "SKILLS: Power BI, SQL, Python, Excel, Tableau, DAX, Data Modeling";
+        }
+        // ── Network / Systems ────────────────────────────────────────────────
+        if (contains(t, "network", "reseau", "cisco", "systeme", "sysadmin", "system admin", "linux admin", "infrastructure")) {
+            return "DESCRIPTION: Nous recherchons un(e) Administrateur(trice) Systemes & Reseaux pour gerer et securiser notre infrastructure IT. " +
+                   "Vous administrerez les serveurs, routeurs, switches et firewall de l'entreprise. " +
+                   "Vous veillerez a la disponibilite des systemes et interviendrez en cas d'incidents. " +
+                   "Vous documenterez les procedures et formerez les utilisateurs.\n" +
+                   "SKILLS: Cisco, Linux, Active Directory, VMware, VPN, Firewalls, Bash Scripting";
+        }
+        // ── QA / Test ────────────────────────────────────────────────────────
+        if (contains(t, "qa", "quality assurance", "test", "testeur", "automation test", "selenium")) {
+            return "DESCRIPTION: Nous recherchons un(e) Ingenieur(e) QA pour garantir la qualite de nos applications logicielles. " +
+                   "Vous concevrez et executerez des plans de tests fonctionnels, de regression et de performance. " +
+                   "Vous developperez des tests automatises et integrerez les tests dans les pipelines CI/CD. " +
+                   "Vous collaborerez etroitement avec les developpeurs pour identifier et corriger les defauts au plus tot.\n" +
+                   "SKILLS: Selenium, Cypress, JUnit, Postman, JIRA, CI/CD, Python";
+        }
+        // ── Product / Project ────────────────────────────────────────────────
+        if (contains(t, "product manager", "product owner", "chef de produit", "po ", "pm ")) {
+            return "DESCRIPTION: Nous recherchons un(e) Product Manager pour piloter la vision et la roadmap de notre produit. " +
+                   "Vous definirez les priorites du backlog en collaboration avec les parties prenantes. " +
+                   "Vous animerez les rituels Agile et veillerez a la bonne execution des sprints. " +
+                   "Vous analyserez les retours utilisateurs et les metriques pour orienter les decisions produit.\n" +
+                   "SKILLS: Agile/Scrum, JIRA, User Story Mapping, A/B Testing, Analytics, Figma, OKRs";
+        }
+        // ── Project Manager ──────────────────────────────────────────────────
+        if (contains(t, "project manager", "chef de projet", "gestionnaire de projet", "scrum master")) {
+            return "DESCRIPTION: Nous recherchons un(e) Chef(fe) de Projet pour coordonner et piloter nos projets IT de bout en bout. " +
+                   "Vous gererez les plannings, budgets et ressources tout en assurant la communication avec les parties prenantes. " +
+                   "Vous identifierez et mitegerez les risques projet et veillerez au respect des delais. " +
+                   "Vous animerez les equipes pluridisciplinaires en methode Agile ou Waterfall.\n" +
+                   "SKILLS: Gestion de projet, Agile/Scrum, MS Project, JIRA, Risk Management, Leadership, PMP";
+        }
+        // ── UX/UI Designer ───────────────────────────────────────────────────
+        if (contains(t, "ux", "ui ", "design", "graphi", "product designer", "figma")) {
+            return "DESCRIPTION: Nous recherchons un(e) Designer UX/UI pour creer des experiences utilisateurs intuitives et esthetiques. " +
+                   "Vous realiserez des recherches utilisateurs, wireframes et prototypes interactifs. " +
+                   "Vous collaborerez avec les developpeurs pour garantir la fidelite du design en production. " +
+                   "Vous contribuerez a l'evolution du Design System et des guidelines visuelles.\n" +
+                   "SKILLS: Figma, Adobe XD, User Research, Prototyping, Design System, Accessibility, Sketch";
+        }
+        // ── Embedded / IoT ───────────────────────────────────────────────────
+        if (contains(t, "embedded", "embarque", "iot", "firmware", "microcontroleur", "arduino", "raspberry")) {
+            return "DESCRIPTION: Nous recherchons un(e) Ingenieur(e) Systemes Embarques pour developper des logiciels et firmwares pour nos dispositifs connectes. " +
+                   "Vous concevrez et programmerez des microcontroleurs et cartes embarquees. " +
+                   "Vous optimiserez les performances temps-reel et la consommation energetique. " +
+                   "Vous travaillerez en collaboration avec les equipes hardware et cloud.\n" +
+                   "SKILLS: C/C++, RTOS, Embedded Linux, I2C/SPI/UART, ARM Cortex, MQTT, Git";
+        }
+        // ── ERP / SAP ────────────────────────────────────────────────────────
+        if (contains(t, "erp", "sap", "odoo", "oracle")) {
+            return "DESCRIPTION: Nous recherchons un(e) Consultant(e) ERP pour implementer et optimiser nos solutions de gestion d'entreprise. " +
+                   "Vous analyserez les processus metier et proposerez des configurations adaptees. " +
+                   "Vous formerez les utilisateurs et assurerez le support post-implementation. " +
+                   "Vous coordonnerez les migrations de donnees et les tests d'acceptation.\n" +
+                   "SKILLS: SAP S/4HANA, ABAP, SAP FI/CO, SAP MM, BAPI/BADI, SQL, Project Management";
+        }
+        // ── Accounting / Finance ─────────────────────────────────────────────
+        if (contains(t, "comptable", "accounting", "finance", "tresorier", "controleur", "auditeur", "audit")) {
+            return "DESCRIPTION: Nous recherchons un(e) Comptable / Responsable Financier(e) rigoureux(se) pour gerer la comptabilite de l'entreprise. " +
+                   "Vous serez en charge de la tenue des comptes, des declarations fiscales et des clotures mensuelles. " +
+                   "Vous produirez les etats financiers et les reportings destines a la direction. " +
+                   "Vous veillerez a la conformite avec les normes comptables en vigueur.\n" +
+                   "SKILLS: Comptabilite generale, Excel, SAP, Fiscalite, IFRS, Analyse financiere, Sage";
+        }
+        // ── HR ───────────────────────────────────────────────────────────────
+        if (contains(t, "rh", "ressources humaines", "human resources", "recrutement", "talent acquisition", "drh")) {
+            return "DESCRIPTION: Nous recherchons un(e) Responsable RH pour accompagner la croissance de notre equipe. " +
+                   "Vous piloterez les processus de recrutement, d'integration et de gestion des carrieres. " +
+                   "Vous developperez la marque employeur et les strategies de fidelisation des talents. " +
+                   "Vous assurerez la conformite avec la legislation du travail et gererez les relations sociales.\n" +
+                   "SKILLS: Recrutement, ATS, Droit du travail, SIRH, Gestion de la paie, People Analytics, LinkedIn Recruiter";
+        }
+        // ── Marketing / Digital ──────────────────────────────────────────────
+        if (contains(t, "marketing", "digital", "seo", "sem", "social media", "content", "growth")) {
+            return "DESCRIPTION: Nous recherchons un(e) Responsable Marketing Digital pour accelerer notre croissance en ligne. " +
+                   "Vous definirez et execterez la strategie d'acquisition et de fidelisation digitale. " +
+                   "Vous gererez les campagnes payantes et le contenu organique sur tous les canaux. " +
+                   "Vous analyserez les performances et optimiserez continuellement le ROI des actions marketing.\n" +
+                   "SKILLS: SEO/SEM, Google Analytics, Meta Ads, HubSpot, Email Marketing, A/B Testing, Copywriting";
+        }
+        // ── Sales / Commercial ───────────────────────────────────────────────
+        if (contains(t, "commercial", "sales", "business developer", "account manager", "ingenieur commercial")) {
+            return "DESCRIPTION: Nous recherchons un(e) Commercial(e) / Business Developer dynamique pour developper notre portefeuille clients. " +
+                   "Vous identifierez les opportunites, realiserez la prospection et menerez les cycles de vente de bout en bout. " +
+                   "Vous construirez des relations durables avec les clients et detecterez les besoins d'upsell. " +
+                   "Vous atteidrez et depasserez vos objectifs de CA trimestrels.\n" +
+                   "SKILLS: Prospection B2B, CRM Salesforce, Negociation, Pipeline Management, Presentation Clients, Closing, HubSpot";
+        }
+        // ── Mechanical / Civil Engineering ───────────────────────────────────
+        if (contains(t, "mecanique", "mechanical", "genie civil", "civil engineer", "btp", "structure")) {
+            return "DESCRIPTION: Nous recherchons un(e) Ingenieur(e) Mecanique / Genie Civil pour concevoir et superviser nos projets de construction et d'equipements. " +
+                   "Vous realiserez les etudes techniques, les plans et les calculs de dimensionnement. " +
+                   "Vous superviserez l'execution des travaux et veillerez au respect des normes et de la securite. " +
+                   "Vous coordonnerez les interventions des sous-traitants et gererez les plannings.\n" +
+                   "SKILLS: AutoCAD, SolidWorks, Calcul de structure, Gestion de chantier, Normes Eurocode, MS Project, BIM";
+        }
+        // ── Healthcare / Pharma ──────────────────────────────────────────────
+        if (contains(t, "medecin", "pharmacien", "infirmier", "sante", "health", "medical", "pharma", "biotech")) {
+            return "DESCRIPTION: Nous recherchons un(e) professionnel(le) de sante pour renforcer notre equipe medicale. " +
+                   "Vous assurerez la prise en charge des patients/projets dans le respect des protocoles cliniques. " +
+                   "Vous collaborerez avec les equipes pluridisciplinaires pour optimiser les soins/produits. " +
+                   "Vous contribuerez a la recherche et a l'amelioration continue des pratiques.\n" +
+                   "SKILLS: Protocoles cliniques, BPF/BPC, Reglementation sante, Recherche clinique, Excel, Dossier patient electronique, Anglais scientifique";
+        }
+        // ── Generic Technical fallback ───────────────────────────────────────
+        if (contains(t, "ingenieur", "engineer", "developpeur", "developer", "architecte", "architect", "tech")) {
+            return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " talentueux(se) pour renforcer notre equipe technique. " +
+                   "Vous participerez a la conception, au developpement et a l'amelioration de nos solutions. " +
+                   "Vous travaillerez en methodologie Agile au sein d'une equipe dynamique et innovante. " +
+                   "Vous contribuerez aux revues de code, aux choix techniques et a l'amelioration continue.\n" +
+                   "SKILLS: Programmation, Architecture logicielle, Git, CI/CD, Tests automatises, Docker, Agile/Scrum";
+        }
+        // ── Generic catch-all ────────────────────────────────────────────────
+        return "DESCRIPTION: Nous recherchons un(e) " + jobTitle + " motive(e) et experimente(e) pour rejoindre notre equipe. " +
+               "Vous prendrez en charge les missions principales liees a ce poste avec autonomie et rigueur. " +
+               "Vous collaborerez avec les differentes equipes pour atteindre les objectifs fixes. " +
+               "Votre expertise contribuera directement a la croissance de l'entreprise.\n" +
+               "SKILLS: " + getDomainSkillsFromTitle(jobTitle);
+    }
+
+    /** Extracts domain keywords from title for the catch-all fallback */
+    private String getDomainSkillsFromTitle(String jobTitle) {
+        String t = jobTitle.toLowerCase();
+        if (contains(t, "logistique", "supply chain", "transport")) return "Supply Chain, ERP, Excel, Gestion des stocks, SAP, Negociation fournisseurs, Lean";
+        if (contains(t, "juridique", "legal", "avocat", "juriste")) return "Droit des affaires, Redaction contractuelle, Veille juridique, RGPD, Negociation, LexisNexis";
+        if (contains(t, "architecte", "architect")) return "Architecture systeme, Design Patterns, Microservices, Cloud, Documentation technique, Leadership technique";
+        return "Expertise metier, Communication professionnelle, Gestion de projet, Analyse, Resolution de problemes, Reporting, Anglais professionnel";
+    }
+
+    private boolean contains(String text, String... keywords) {
+        for (String kw : keywords) if (text.contains(kw)) return true;
+        return false;
     }
 
     private String getDefaultCorrectionNote(String reason) {
@@ -1364,6 +1691,13 @@ public class JobOffersController {
         SkillRow(TextField n, ComboBox<SkillLevel> l) { this.nameField = n; this.levelCombo = l; }
     }
 }
+
+
+
+
+
+
+
 
 
 

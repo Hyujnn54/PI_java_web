@@ -4,430 +4,316 @@ import Models.interview.Interview;
 import Models.interview.InterviewFeedback;
 import Services.interview.InterviewFeedbackService;
 import Services.interview.InterviewService;
-import Services.EmailService;
+import Utils.MyDatabase;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.GridPane;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
- * Modern Interview Management Controller
- * Role-based UI with no visible IDs and modern card design
+ * Interview Management Controller — recruiter + candidate, with search/sort.
  */
 public class InterviewManagementController {
 
-    @FXML private VBox interviewsListContainer;
+    @FXML private VBox  interviewsListContainer;
     @FXML private Button btnScheduleNew;
-    @FXML private VBox editDialog;
-    @FXML private HBox bottomActionButtons;
+    @FXML private VBox  editDialog;
+    @FXML private HBox  bottomActionButtons;
 
-    // Search and Calendar controls
-    @FXML private HBox searchBox;
-    @FXML private ComboBox<String> comboSearchCriteria;
-    @FXML private TextField txtSearchInterview;
-    @FXML private Button btnCalendar;
+    // Search / sort bar
+    @FXML private VBox              searchBox;
+    @FXML private ComboBox<String>  comboSearchCriteria;
+    @FXML private TextField         txtSearchInterview;
+    @FXML private DatePicker        dateSearchPicker;
+    @FXML private ComboBox<String>  comboSearchMode;
+    @FXML private ComboBox<String>  comboSearchStatus;
+    @FXML private Button            btnSearchInterview;
+    @FXML private Button            btnClearSearch;
+    @FXML private ComboBox<String>  comboSortBy;
+    @FXML private ComboBox<String>  comboSortDir;
 
-    // Feedback panel controls (bottom panel like interview edit)
-    @FXML private VBox feedbackPanel;
+    // Feedback panel
+    @FXML private VBox             feedbackPanel;
     @FXML private ComboBox<String> comboFeedbackDecision;
-    @FXML private TextField txtFeedbackScore;
-    @FXML private Label lblScoreIndicator;
-    @FXML private TextArea txtFeedbackComments;
-    @FXML private Button btnUpdateFeedbackAction;
-    @FXML private Button btnDeleteFeedback;
+    @FXML private TextField        txtFeedbackScore;
+    @FXML private Label            lblScoreIndicator;
+    @FXML private TextArea         txtFeedbackComments;
+    @FXML private Button           btnUpdateFeedbackAction;
+    @FXML private Button           btnDeleteFeedback;
 
-    // Modern form fields (no visible IDs)
-    @FXML private DatePicker datePicker;
-    @FXML private TextField txtTime;
-    @FXML private TextField txtDuration;
+    // Edit form
+    @FXML private DatePicker       datePicker;
+    @FXML private TextField        txtTime;
+    @FXML private TextField        txtDuration;
     @FXML private ComboBox<String> comboMode;
-    @FXML private TextField txtMeetingLink;
-    @FXML private HBox meetingLinkBox;
-    @FXML private Button btnGenerateMeetingLink;
-    @FXML private Button btnOpenMeetingLink;
-    @FXML private TextField txtLocation;
-    @FXML private TextArea txtNotes;
-    @FXML private Label lblMeetingLink;
-    @FXML private Label lblLocation;
-    @FXML private Button btnSave;
-    @FXML private TextField txtApplicationId;
-    @FXML private TextField txtRecruiterId;
+    @FXML private TextField        txtMeetingLink;
+    @FXML private HBox             meetingLinkBox;
+    @FXML private Button           btnGenerateMeetingLink;
+    @FXML private Button           btnOpenMeetingLink;
+    @FXML private TextField        txtLocation;
+    @FXML private TextArea         txtNotes;
+    @FXML private Label            lblMeetingLink;
+    @FXML private Label            lblLocation;
+    @FXML private Button           btnSave;
+    @FXML private TextField        txtApplicationId;
+    @FXML private TextField        txtRecruiterId;
     @FXML private ComboBox<String> comboStatus;
 
-    // Additional search controls
-    @FXML private ComboBox<String> comboSearchMode;
-    @FXML private DatePicker dateSearchPicker;
-    @FXML private ComboBox<String> comboSearchStatus;
-    @FXML private Button btnSearchInterview;
-    @FXML private Button btnClearSearch;
-
     private Interview selectedInterview = null;
-    private boolean isEditMode = false;
+    private boolean   isEditMode        = false;
+
+    // The full list currently displayed (for in-place sort without re-fetching)
+    private List<Interview> currentList = new ArrayList<>();
+
+    // =========================================================================
+    // Init
+    // =========================================================================
 
     @FXML
     public void initialize() {
-        // Clean up any corrupted data and verify database state
         Utils.DatabaseSchemaUtil.cleanupCorruptedData();
         Utils.DatabaseSchemaUtil.verifyInterviewData();
-
         setupComboBoxes();
         loadInterviews();
         hideEditDialog();
-        hideBottomActionButtons(); // Hide action buttons initially
+        hideBottomActionButtons();
     }
 
     private void setupComboBoxes() {
+        // Edit-form mode
         if (comboMode != null) {
-            // Database enum values mapped to French display names
             comboMode.setItems(FXCollections.observableArrayList("En Ligne", "Sur Site"));
-
-            // Add listener to toggle meeting link/location visibility based on mode
-            comboMode.valueProperty().addListener((obs, oldVal, newVal) -> toggleModeFields(newVal));
+            comboMode.valueProperty().addListener((obs, o, n) -> toggleModeFields(n));
         }
 
-        // Setup feedback decision combobox
-        if (comboFeedbackDecision != null) {
+        // Feedback decision
+        if (comboFeedbackDecision != null)
             comboFeedbackDecision.setItems(FXCollections.observableArrayList("Accepté", "Rejeté"));
-        }
 
-        // Setup search criteria combobox
-        if (comboSearchCriteria != null) {
-            comboSearchCriteria.setItems(FXCollections.observableArrayList(
-                "Nom", "Date", "Mode", "Statut", "Lieu"
-            ));
-            comboSearchCriteria.setValue("Nom"); // Default criterion
-        }
-
-        // Setup feedback score live indicator
+        // Score live indicator
         if (txtFeedbackScore != null && lblScoreIndicator != null) {
-            txtFeedbackScore.textProperty().addListener((obs, old, newVal) -> {
+            txtFeedbackScore.textProperty().addListener((obs, o, n) -> {
                 try {
-                    if (!newVal.trim().isEmpty()) {
-                        int score = Integer.parseInt(newVal);
-                        if (score >= 70) {
-                            lblScoreIndicator.setText("✓ ÉLEVÉ");
-                            lblScoreIndicator.setStyle("-fx-text-fill: #28a745; -fx-font-size: 12px; -fx-font-weight: 600;");
-                        } else if (score >= 50) {
-                            lblScoreIndicator.setText("⚠ MOYEN");
-                            lblScoreIndicator.setStyle("-fx-text-fill: #f0ad4e; -fx-font-size: 12px; -fx-font-weight: 600;");
-                        } else {
-                            lblScoreIndicator.setText("✗ FAIBLE");
-                            lblScoreIndicator.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: 600;");
-                        }
-                    } else {
-                        lblScoreIndicator.setText("");
-                    }
+                    if (!n.trim().isEmpty()) {
+                        int s = Integer.parseInt(n);
+                        if (s >= 70) { lblScoreIndicator.setText("✓ ÉLEVÉ");  lblScoreIndicator.setStyle("-fx-text-fill:#28a745;-fx-font-size:12px;-fx-font-weight:600;"); }
+                        else if (s >= 50) { lblScoreIndicator.setText("⚠ MOYEN"); lblScoreIndicator.setStyle("-fx-text-fill:#f0ad4e;-fx-font-size:12px;-fx-font-weight:600;"); }
+                        else { lblScoreIndicator.setText("✗ FAIBLE"); lblScoreIndicator.setStyle("-fx-text-fill:#dc3545;-fx-font-size:12px;-fx-font-weight:600;"); }
+                    } else lblScoreIndicator.setText("");
                 } catch (NumberFormatException e) {
-                    lblScoreIndicator.setText("Invalide");
-                    lblScoreIndicator.setStyle("-fx-text-fill: #dc3545; -fx-font-size: 12px; -fx-font-weight: 600;");
+                    lblScoreIndicator.setText("Invalide"); lblScoreIndicator.setStyle("-fx-text-fill:#dc3545;-fx-font-size:12px;-fx-font-weight:600;");
                 }
             });
         }
 
+        // Search criteria
+        if (comboSearchCriteria != null) {
+            comboSearchCriteria.setItems(FXCollections.observableArrayList("Nom", "Date", "Mode", "Statut", "Lieu"));
+            comboSearchCriteria.setValue("Nom");
+            // Dynamically swap input widget when criteria changes
+            comboSearchCriteria.valueProperty().addListener((obs, o, n) -> updateSearchInputVisibility(n));
+        }
+
+        // Search mode combo
+        if (comboSearchMode != null)
+            comboSearchMode.setItems(FXCollections.observableArrayList("En Ligne", "Sur Site"));
+
+        // Search status combo
+        if (comboSearchStatus != null)
+            comboSearchStatus.setItems(FXCollections.observableArrayList("Planifié", "Terminé", "Annulé"));
+
+        // Sort combos
+        if (comboSortBy != null)
+            comboSortBy.setItems(FXCollections.observableArrayList(
+                "Date (planifiée)", "Durée", "Mode", "Statut", "Nom candidat"));
+        if (comboSortBy != null) comboSortBy.setValue("Date (planifiée)");
+
+        if (comboSortDir != null)
+            comboSortDir.setItems(FXCollections.observableArrayList("Croissant ↑", "Décroissant ↓"));
+        if (comboSortDir != null) comboSortDir.setValue("Croissant ↑");
+
         updateUIForRole();
+    }
+
+    /** Swap the search input widget (TextField / DatePicker / ComboBox) based on criteria */
+    private void updateSearchInputVisibility(String criteria) {
+        boolean showText   = criteria == null || criteria.equals("Nom") || criteria.equals("Lieu");
+        boolean showDate   = "Date".equals(criteria);
+        boolean showMode   = "Mode".equals(criteria);
+        boolean showStatus = "Statut".equals(criteria);
+
+        if (txtSearchInterview  != null) { txtSearchInterview.setVisible(showText);   txtSearchInterview.setManaged(showText); }
+        if (dateSearchPicker    != null) { dateSearchPicker.setVisible(showDate);      dateSearchPicker.setManaged(showDate); }
+        if (comboSearchMode     != null) { comboSearchMode.setVisible(showMode);       comboSearchMode.setManaged(showMode); }
+        if (comboSearchStatus   != null) { comboSearchStatus.setVisible(showStatus);   comboSearchStatus.setManaged(showStatus); }
     }
 
     private void toggleModeFields(String mode) {
         if (mode == null) return;
-
-        // Handle both French ("En Ligne") and database ("ONLINE") values
-        boolean isOnline = "En Ligne".equals(mode) || "ONLINE".equals(mode);
-
-        // Show meeting link for ONLINE, hide location
-        if (txtMeetingLink != null) {
-            txtMeetingLink.setVisible(isOnline);
-            txtMeetingLink.setManaged(isOnline);
-        }
-        if (lblMeetingLink != null) {
-            lblMeetingLink.setVisible(isOnline);
-            lblMeetingLink.setManaged(isOnline);
-        }
-
-        // Show location for ON_SITE, hide meeting link
-        if (txtLocation != null) {
-            txtLocation.setVisible(!isOnline);
-            txtLocation.setManaged(!isOnline);
-        }
-        if (lblLocation != null) {
-            lblLocation.setVisible(!isOnline);
-            lblLocation.setManaged(!isOnline);
-        }
+        boolean online = "En Ligne".equals(mode) || "ONLINE".equals(mode);
+        if (txtMeetingLink != null) { txtMeetingLink.setVisible(online);  txtMeetingLink.setManaged(online); }
+        if (lblMeetingLink != null) { lblMeetingLink.setVisible(online);  lblMeetingLink.setManaged(online); }
+        if (meetingLinkBox != null) { meetingLinkBox.setVisible(online);  meetingLinkBox.setManaged(online); }
+        if (txtLocation    != null) { txtLocation.setVisible(!online);    txtLocation.setManaged(!online); }
+        if (lblLocation    != null) { lblLocation.setVisible(!online);    lblLocation.setManaged(!online); }
     }
 
     private void updateUIForRole() {
         boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
+        boolean isCandidate = Utils.UserContext.getRole() == Utils.UserContext.Role.CANDIDATE;
 
-        if (btnScheduleNew != null) {
-            // New rule: interviewer scheduling happens from Applications, not directly here.
-            btnScheduleNew.setVisible(false);
-            btnScheduleNew.setManaged(false);
-        }
+        if (btnScheduleNew != null) { btnScheduleNew.setVisible(false); btnScheduleNew.setManaged(false); }
 
-        // Show search bar and calendar button for recruiters only
+        // Show search/sort bar for both recruiter and candidate
         if (searchBox != null) {
-            searchBox.setVisible(isRecruiter);
-            searchBox.setManaged(isRecruiter);
-        }
-
-        if (btnCalendar != null) {
-            btnCalendar.setVisible(isRecruiter);
-            btnCalendar.setManaged(isRecruiter);
+            boolean show = isRecruiter || isCandidate;
+            searchBox.setVisible(show); searchBox.setManaged(show);
         }
     }
 
-    @FXML
-    private void handleScheduleNew() {
-        showEditDialog(null);
-    }
+    // =========================================================================
+    // Search
+    // =========================================================================
 
     @FXML
     private void handleSearchInterview() {
-        if (txtSearchInterview == null || txtSearchInterview.getText().trim().isEmpty()) {
-            loadInterviews();
-            return;
-        }
-
-        String keyword = txtSearchInterview.getText().trim().toLowerCase();
         String criteria = comboSearchCriteria != null ? comboSearchCriteria.getValue() : "Nom";
-        List<Interview> allInterviews = InterviewService.getAll();
+        List<Interview> base = getRoleFilteredInterviews(InterviewService.getAll());
+        List<Interview> filtered;
 
-        List<Interview> filtered = allInterviews.stream()
-            .filter(interview -> {
-                switch (criteria) {
-                    case "Nom":
-                        // Search by candidate name (from application)
-                        return searchByName(interview, keyword);
-                    case "Date":
-                        // Search by date
-                        String dateStr = interview.getScheduledAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                        return dateStr.contains(keyword);
-                    case "Mode":
-                        // Search by mode (ONLINE or ON_SITE)
-                        return interview.getMode() != null && interview.getMode().toLowerCase().contains(keyword);
-                    case "Statut":
-                        // Search by status
-                        return interview.getStatus() != null && interview.getStatus().toLowerCase().contains(keyword);
-                    case "Lieu":
-                        // Search by location or meeting link
-                        String location = interview.getLocation() != null ? interview.getLocation().toLowerCase() : "";
-                        String meetingLink = interview.getMeetingLink() != null ? interview.getMeetingLink().toLowerCase() : "";
-                        return location.contains(keyword) || meetingLink.contains(keyword);
-                    default:
-                        // Default: search all fields
-                        String searchText = String.valueOf(interview.getId()) + " " +
-                                          (interview.getMode() != null ? interview.getMode() : "") + " " +
-                                          (interview.getStatus() != null ? interview.getStatus() : "") + " " +
-                                          formatDateTime(interview.getScheduledAt());
-                        return searchText.toLowerCase().contains(keyword);
-                }
-            })
-            .toList();
-
+        switch (criteria) {
+            case "Date" -> {
+                LocalDate chosen = dateSearchPicker != null ? dateSearchPicker.getValue() : null;
+                if (chosen == null) { displayFilteredInterviews(base); return; }
+                filtered = base.stream()
+                    .filter(iv -> iv.getScheduledAt().toLocalDate().equals(chosen))
+                    .toList();
+            }
+            case "Mode" -> {
+                String sel = comboSearchMode != null ? comboSearchMode.getValue() : null;
+                if (sel == null) { displayFilteredInterviews(base); return; }
+                String dbMode = "En Ligne".equals(sel) ? "ONLINE" : "ON_SITE";
+                filtered = base.stream()
+                    .filter(iv -> dbMode.equals(iv.getMode()))
+                    .toList();
+            }
+            case "Statut" -> {
+                String sel = comboSearchStatus != null ? comboSearchStatus.getValue() : null;
+                if (sel == null) { displayFilteredInterviews(base); return; }
+                String dbStatus = switch (sel) {
+                    case "Planifié" -> "SCHEDULED";
+                    case "Terminé"  -> "DONE";
+                    case "Annulé"   -> "CANCELLED";
+                    default -> sel;
+                };
+                filtered = base.stream()
+                    .filter(iv -> dbStatus.equalsIgnoreCase(iv.getStatus()))
+                    .toList();
+            }
+            case "Nom" -> {
+                String kw = txtSearchInterview != null ? txtSearchInterview.getText().trim().toLowerCase() : "";
+                if (kw.isEmpty()) { displayFilteredInterviews(base); return; }
+                filtered = base.stream()
+                    .filter(iv -> getCandidateNameForSearch(iv.getApplicationId()).toLowerCase().contains(kw))
+                    .toList();
+            }
+            case "Lieu" -> {
+                String kw = txtSearchInterview != null ? txtSearchInterview.getText().trim().toLowerCase() : "";
+                if (kw.isEmpty()) { displayFilteredInterviews(base); return; }
+                filtered = base.stream()
+                    .filter(iv -> {
+                        String loc  = iv.getLocation()    != null ? iv.getLocation().toLowerCase()    : "";
+                        String link = iv.getMeetingLink() != null ? iv.getMeetingLink().toLowerCase() : "";
+                        return loc.contains(kw) || link.contains(kw);
+                    })
+                    .toList();
+            }
+            default -> filtered = base;
+        }
+        currentList = new ArrayList<>(filtered);
         displayFilteredInterviews(filtered);
     }
 
     @FXML
     private void handleClearSearch() {
-        if (txtSearchInterview != null) {
-            txtSearchInterview.clear();
-        }
-        if (comboSearchCriteria != null) {
-            comboSearchCriteria.setValue("Nom");
-        }
+        if (txtSearchInterview  != null) txtSearchInterview.clear();
+        if (dateSearchPicker    != null) dateSearchPicker.setValue(null);
+        if (comboSearchMode     != null) comboSearchMode.setValue(null);
+        if (comboSearchStatus   != null) comboSearchStatus.setValue(null);
+        if (comboSearchCriteria != null) { comboSearchCriteria.setValue("Nom"); updateSearchInputVisibility("Nom"); }
+        if (comboSortBy  != null) comboSortBy.setValue("Date (planifiée)");
+        if (comboSortDir != null) comboSortDir.setValue("Croissant ↑");
         loadInterviews();
     }
 
-    private boolean searchByName(Interview interview, String keyword) {
-        // Try to get candidate name from application
-        // This is a simplified version - you may need to enhance based on your data structure
-        try {
-            if (interview.getApplicationId() != null) {
-                // You might need to fetch application details to get candidate name
-                // For now, we'll just return false if not found
-                return false;
-            }
-        } catch (Exception e) {
-            System.err.println("Error searching by name: " + e.getMessage());
-        }
-        return false;
+    // =========================================================================
+    // Sort
+    // =========================================================================
+
+    @FXML
+    private void handleApplySort() {
+        if (currentList.isEmpty()) return;
+        String by  = comboSortBy  != null ? comboSortBy.getValue()  : "Date (planifiée)";
+        String dir = comboSortDir != null ? comboSortDir.getValue() : "Croissant ↑";
+        boolean asc = dir == null || dir.startsWith("C");
+
+        Comparator<Interview> cmp = switch (by != null ? by : "") {
+            case "Durée"        -> Comparator.comparingInt(Interview::getDurationMinutes);
+            case "Mode"         -> Comparator.comparing(iv -> iv.getMode() != null ? iv.getMode() : "");
+            case "Statut"       -> Comparator.comparing(iv -> iv.getStatus() != null ? iv.getStatus() : "");
+            case "Nom candidat" -> Comparator.comparing(iv -> getCandidateNameForSearch(iv.getApplicationId()));
+            default             -> Comparator.comparing(Interview::getScheduledAt);
+        };
+        if (!asc) cmp = cmp.reversed();
+
+        List<Interview> sorted = new ArrayList<>(currentList);
+        sorted.sort(cmp);
+        displayFilteredInterviews(sorted);
+    }
+
+    // ── DB helper: get candidate name from application id ─────────────────────
+    private String getCandidateNameForSearch(Long appId) {
+        if (appId == null) return "";
+        String sql = "SELECT u.first_name, u.last_name FROM job_application ja " +
+                     "JOIN users u ON ja.candidate_id = u.id WHERE ja.id = ?";
+        try (PreparedStatement ps = MyDatabase.getInstance().getConnection().prepareStatement(sql)) {
+            ps.setLong(1, appId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next())
+                return (rs.getString("first_name") + " " + rs.getString("last_name")).trim();
+        } catch (Exception e) { System.err.println("getCandidateNameForSearch: " + e.getMessage()); }
+        return "";
     }
 
     @FXML
-    private void handleShowCalendar() {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Calendrier des Entretiens");
-        dialog.setHeaderText(null);
-
-        VBox content = new VBox(20);
-        content.setStyle("-fx-padding: 25; -fx-background-color: white;");
-
-        // Header
-        Label title = new Label("📅 Calendrier des Entretiens");
-        title.setStyle("-fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
-
-        // Calendar grid
-        GridPane calendar = createCalendarGrid();
-
-        content.getChildren().addAll(title, calendar);
-
-        dialog.getDialogPane().setContent(content);
-        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-        dialog.getDialogPane().setPrefWidth(700);
-        dialog.getDialogPane().setPrefHeight(600);
-
-        dialog.showAndWait();
-    }
-
-    private GridPane createCalendarGrid() {
-        GridPane calendar = new GridPane();
-        calendar.setHgap(5);
-        calendar.setVgap(5);
-        calendar.setStyle("-fx-padding: 10;");
-
-        // Get all interviews and group by date
-        List<Interview> interviews = InterviewService.getAll();
-        Map<LocalDate, List<Interview>> interviewsByDate = interviews.stream()
-            .collect(Collectors.groupingBy(i -> i.getScheduledAt().toLocalDate()));
-
-        // Current month view
-        YearMonth currentMonth = YearMonth.now();
-        LocalDate firstOfMonth = currentMonth.atDay(1);
-        int daysInMonth = currentMonth.lengthOfMonth();
-        int startDayOfWeek = firstOfMonth.getDayOfWeek().getValue() % 7; // 0 = Sunday
-
-        // Month/Year header
-        HBox monthHeader = new HBox(15);
-        monthHeader.setAlignment(Pos.CENTER);
-        monthHeader.setStyle("-fx-padding: 10 0 20 0;");
-
-        Label monthLabel = new Label(currentMonth.getMonth().toString() + " " + currentMonth.getYear());
-        monthLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
-        monthHeader.getChildren().add(monthLabel);
-
-        calendar.add(monthHeader, 0, 0, 7, 1);
-
-        // Day headers (Sun-Sat)
-        String[] dayNames = {"Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"};
-        for (int i = 0; i < 7; i++) {
-            Label dayLabel = new Label(dayNames[i]);
-            dayLabel.setStyle("-fx-font-weight: 700; -fx-text-fill: #6c757d; -fx-font-size: 13px; -fx-alignment: center;");
-            dayLabel.setPrefWidth(90);
-            calendar.add(dayLabel, i, 1);
-        }
-
-        // Fill calendar days
-        int row = 2;
-        int col = startDayOfWeek;
-
-        for (int day = 1; day <= daysInMonth; day++) {
-            LocalDate date = currentMonth.atDay(day);
-            VBox dayCell = new VBox(5);
-            dayCell.setPrefWidth(90);
-            dayCell.setPrefHeight(80);
-            dayCell.setAlignment(Pos.TOP_CENTER);
-            dayCell.setStyle("-fx-background-color: white; -fx-border-color: #e9ecef; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 8;");
-
-            // Day number
-            Label dayNum = new Label(String.valueOf(day));
-            dayNum.setStyle("-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #2c3e50;");
-
-            // Check if there are interviews on this day
-            if (interviewsByDate.containsKey(date)) {
-                List<Interview> dayInterviews = interviewsByDate.get(date);
-                // Highlight day with interview
-                dayCell.setStyle("-fx-background-color: #FFF9E6; -fx-border-color: #FFD700; -fx-border-width: 2; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 8;");
-
-                // Show interview count
-                Label countLabel = new Label(dayInterviews.size() + " entretien" + (dayInterviews.size() > 1 ? "s" : ""));
-                countLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #856404; -fx-font-weight: 600;");
-
-                dayCell.getChildren().addAll(dayNum, countLabel);
-
-                // Add click handler to show interview details
-                dayCell.setOnMouseEntered(e -> dayCell.setStyle("-fx-background-color: #FFE082; -fx-border-color: #FFC107; -fx-border-width: 2; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 8; -fx-cursor: hand;"));
-                dayCell.setOnMouseExited(e -> dayCell.setStyle("-fx-background-color: #FFF9E6; -fx-border-color: #FFD700; -fx-border-width: 2; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 8;"));
-                dayCell.setOnMouseClicked(e -> showDayInterviews(date, dayInterviews));
-            } else {
-                dayCell.getChildren().add(dayNum);
-
-                // Highlight today
-                if (date.equals(LocalDate.now())) {
-                    dayCell.setStyle("-fx-background-color: #E3F2FD; -fx-border-color: #5BA3F5; -fx-border-width: 2; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 8;");
-                }
-            }
-
-            calendar.add(dayCell, col, row);
-
-            col++;
-            if (col > 6) {
-                col = 0;
-                row++;
-            }
-        }
-
-        return calendar;
-    }
-
-    private void showDayInterviews(LocalDate date, List<Interview> interviews) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Entretiens du " + date.format(DateTimeFormatter.ofPattern("dd MMMM yyyy")));
-        alert.setHeaderText(interviews.size() + " entretien(s) planifié(s)");
-
-        VBox content = new VBox(12);
-        content.setStyle("-fx-padding: 15;");
-
-        for (Interview interview : interviews) {
-            VBox interviewCard = new VBox(6);
-            interviewCard.setStyle("-fx-background-color: #F5F6F8; -fx-padding: 12; -fx-background-radius: 8;");
-
-            Label timeLabel = new Label("⏰ " + interview.getScheduledAt().format(DateTimeFormatter.ofPattern("HH:mm")));
-            timeLabel.setStyle("-fx-font-weight: 700; -fx-font-size: 14px; -fx-text-fill: #2c3e50;");
-
-            Label modeLabel = new Label("Mode: " + interview.getMode() + " | Durée: " + interview.getDurationMinutes() + " min");
-            modeLabel.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 12px;");
-
-            Label statusLabel = new Label(interview.getStatus() != null ? interview.getStatus() : "PLANIFIÉ");
-            statusLabel.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-padding: 3 8; -fx-background-radius: 4; -fx-font-size: 11px; -fx-font-weight: 600;");
-
-            interviewCard.getChildren().addAll(timeLabel, modeLabel, statusLabel);
-            content.getChildren().add(interviewCard);
-        }
-
-        alert.getDialogPane().setContent(content);
-        alert.getDialogPane().setPrefWidth(400);
-        alert.showAndWait();
-    }
+    private void handleScheduleNew() { showEditDialog(null); }
 
     private void displayFilteredInterviews(List<Interview> interviews) {
         if (interviewsListContainer == null) return;
-
         interviewsListContainer.getChildren().clear();
-
         if (interviews.isEmpty()) {
-            Label emptyLabel = new Label("Aucun entretien correspondant trouvé");
-            emptyLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 16px; -fx-padding: 50;");
-            interviewsListContainer.getChildren().add(emptyLabel);
+            Label empty = new Label("Aucun entretien correspondant trouvé");
+            empty.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 15px; -fx-padding: 40;");
+            interviewsListContainer.getChildren().add(empty);
             return;
         }
-
-        for (Interview interview : interviews) {
-            VBox card = createModernInterviewCard(interview);
-            interviewsListContainer.getChildren().add(card);
-        }
+        for (Interview iv : interviews)
+            interviewsListContainer.getChildren().add(createModernInterviewCard(iv));
     }
 
     @FXML
@@ -503,53 +389,28 @@ public class InterviewManagementController {
     }
 
     private void loadInterviews() {
-        if (interviewsListContainer == null) {
-            System.err.println("[InterviewController] interviewsListContainer is NULL!");
-            return;
-        }
+        if (interviewsListContainer == null) return;
+        List<Interview> interviews = getRoleFilteredInterviews(InterviewService.getAll());
+        // Default sort: ascending by date
+        interviews = new ArrayList<>(interviews);
+        interviews.sort(Comparator.comparing(Interview::getScheduledAt));
+        currentList = new ArrayList<>(interviews);
+        displayFilteredInterviews(interviews);
+    }
 
-        interviewsListContainer.getChildren().clear();
-        List<Interview> interviews = InterviewService.getAll();
-
+    /** Filter a list by the current user's role */
+    private List<Interview> getRoleFilteredInterviews(List<Interview> all) {
         Utils.UserContext.Role role = Utils.UserContext.getRole();
-        System.out.println("[InterviewController] Role: " + role + ", Total interviews from DB: " + interviews.size());
-
-        // Filter interviews by role
         if (role == Utils.UserContext.Role.RECRUITER) {
-            Long recruiterId = Utils.UserContext.getRecruiterId();
-            System.out.println("[InterviewController] Recruiter ID: " + recruiterId);
-            interviews = interviews.stream()
-                    .filter(i -> i.getRecruiterId() != null && i.getRecruiterId().equals(recruiterId))
-                    .toList();
-            System.out.println("[InterviewController] After recruiter filter: " + interviews.size());
+            Long rid = Utils.UserContext.getRecruiterId();
+            return all.stream().filter(i -> rid != null && rid.equals(i.getRecruiterId())).toList();
         } else if (role == Utils.UserContext.Role.CANDIDATE) {
-            // For candidates, filter by their application IDs
-            Long candidateId = Utils.UserContext.getCandidateId();
-            System.out.println("[InterviewController] Candidate ID: " + candidateId);
-            // Get candidate's application IDs
-            List<Long> candidateAppIds = Services.application.ApplicationService.getByCandidateId(candidateId)
-                    .stream()
-                    .map(app -> app.id())
-                    .toList();
-            System.out.println("[InterviewController] Candidate's application IDs: " + candidateAppIds);
-            interviews = interviews.stream()
-                    .filter(i -> i.getApplicationId() != null && candidateAppIds.contains(i.getApplicationId()))
-                    .toList();
-            System.out.println("[InterviewController] After candidate filter: " + interviews.size());
+            Long cid = Utils.UserContext.getCandidateId();
+            List<Long> appIds = Services.application.ApplicationService.getByCandidateId(cid)
+                    .stream().map(a -> a.id()).toList();
+            return all.stream().filter(i -> i.getApplicationId() != null && appIds.contains(i.getApplicationId())).toList();
         }
-        // ADMIN sees all interviews
-
-        if (interviews.isEmpty()) {
-            Label emptyLabel = new Label("Aucun entretien planifié pour le moment");
-            emptyLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 16px; -fx-padding: 50;");
-            interviewsListContainer.getChildren().add(emptyLabel);
-            return;
-        }
-
-        for (Interview interview : interviews) {
-            VBox card = createModernInterviewCard(interview);
-            interviewsListContainer.getChildren().add(card);
-        }
+        return all; // ADMIN sees all
     }
 
     private VBox createModernInterviewCard(Interview interview) {
