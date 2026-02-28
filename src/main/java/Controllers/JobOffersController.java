@@ -13,6 +13,8 @@ import Services.WarningCorrectionService;
 import Services.OfferSkillService;
 import Services.NominatimMapService;
 import Services.NominatimMapService.GeoLocation;
+import Services.FuzzySearchService;
+import Services.NotificationService;
 import Utils.UserContext;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -1771,30 +1773,83 @@ public class JobOffersController {
         }
 
         String keyword = txtSearch.getText().trim();
-        String criteria = cbSearchCriteria != null ? cbSearchCriteria.getValue() : "Title";
+        String criteria = cbSearchCriteria != null ? cbSearchCriteria.getValue() : "Titre";
+
+        // Notification de recherche
+        NotificationService.showInfo("🔍 Recherche", "Recherche en cours pour : \"" + keyword + "\"");
 
         try {
             List<JobOffer> results;
-            if ("Location".equals(criteria)) {
-                results = jobOfferService.searchJobOffers(keyword, "location");
-            } else if ("Contract Type".equals(criteria)) {
-                results = jobOfferService.searchJobOffers(keyword, "contract_type");
-            } else {
-                results = jobOfferService.searchJobOffers(keyword, "title");
-            }
+            FuzzySearchService fuzzySearch = FuzzySearchService.getInstance();
+            final double FUZZY_THRESHOLD = 0.6;
+
+            // Récupérer toutes les offres du recruteur
+            List<JobOffer> allOffers = jobOfferService.getJobOffersByRecruiter(UserContext.getRecruiterId());
+
+            // Filtrer avec recherche floue
+            results = allOffers.stream()
+                .filter(job -> {
+                    String fieldToSearch = switch (criteria) {
+                        case "Localisation" -> job.getLocation();
+                        case "Type de contrat" -> job.getContractType() != null ? job.getContractType().toString() : "";
+                        default -> job.getTitle();
+                    };
+
+                    if (fieldToSearch == null) return false;
+
+                    // Recherche exacte d'abord
+                    if (fieldToSearch.toLowerCase().contains(keyword.toLowerCase())) {
+                        return true;
+                    }
+
+                    // Recherche floue ensuite
+                    return fuzzySearch.calculateBestScore(fieldToSearch, keyword) >= FUZZY_THRESHOLD;
+                })
+                .sorted((j1, j2) -> {
+                    String f1 = j1.getTitle() != null ? j1.getTitle() : "";
+                    String f2 = j2.getTitle() != null ? j2.getTitle() : "";
+                    double s1 = fuzzySearch.calculateBestScore(f1, keyword);
+                    double s2 = fuzzySearch.calculateBestScore(f2, keyword);
+                    return Double.compare(s2, s1);
+                })
+                .toList();
 
             jobListContainer.getChildren().clear();
             if (results.isEmpty()) {
-                Label empty = new Label("No results found");
+                Label empty = new Label("🔍 Aucun résultat trouvé pour \"" + keyword + "\"");
                 empty.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 14px; -fx-padding: 20;");
                 jobListContainer.getChildren().add(empty);
+
+                // Suggestions
+                List<String> suggestions = fuzzySearch.getSuggestions(keyword,
+                    allOffers.stream().map(JobOffer::getTitle).filter(t -> t != null).toList(), 3);
+                if (!suggestions.isEmpty()) {
+                    VBox suggBox = new VBox(8);
+                    suggBox.setStyle("-fx-padding: 10;");
+                    Label suggLabel = new Label("💡 Suggestions :");
+                    suggLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #6c757d;");
+                    suggBox.getChildren().add(suggLabel);
+
+                    for (String sugg : suggestions) {
+                        Button suggBtn = new Button(sugg);
+                        suggBtn.setStyle("-fx-background-color: #e9ecef; -fx-text-fill: #495057; " +
+                                        "-fx-padding: 5 12; -fx-background-radius: 15; -fx-cursor: hand;");
+                        suggBtn.setOnAction(e -> {
+                            txtSearch.setText(sugg);
+                            handleSearch();
+                        });
+                        suggBox.getChildren().add(suggBtn);
+                    }
+                    jobListContainer.getChildren().add(suggBox);
+                }
             } else {
                 for (JobOffer job : results) {
                     jobListContainer.getChildren().add(createJobCard(job));
                 }
+                NotificationService.showSuccess("Recherche terminée", results.size() + " résultat(s) trouvé(s)");
             }
         } catch (SQLException e) {
-            showAlert("Error", "Search failed: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Erreur", "Échec de la recherche : " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
     }

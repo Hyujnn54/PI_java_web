@@ -9,6 +9,8 @@ import Models.SkillLevel;
 import Services.JobOfferService;
 import Services.OfferSkillService;
 import Services.NominatimMapService;
+import Services.FuzzySearchService;
+import Services.NotificationService;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -33,6 +35,9 @@ public class JobOffersBrowseController {
     private ComboBox<String> cbFilterType;
     private ComboBox<String> cbFilterLocation;
 
+    // Service de recherche floue
+    private FuzzySearchService fuzzySearchService;
+
     private JobOfferService jobOfferService;
     private OfferSkillService offerSkillService;
     private MatchingWidgetController matchingWidget;
@@ -46,6 +51,7 @@ public class JobOffersBrowseController {
     public void initialize() {
         jobOfferService = new JobOfferService();
         offerSkillService = new OfferSkillService();
+        fuzzySearchService = FuzzySearchService.getInstance();
         matchingWidget = new MatchingWidgetController();
         matchingWidget.setOnProfileUpdated(() -> {
             if (selectedJob != null) {
@@ -182,19 +188,59 @@ public class JobOffersBrowseController {
         try {
             List<JobOffer> jobs = jobOfferService.filterJobOffers(selectedLocation, selectedContractType, Status.OPEN);
 
-            String keyword = txtSearch != null ? txtSearch.getText().trim().toLowerCase() : "";
+            String keyword = txtSearch != null ? txtSearch.getText().trim() : "";
             if (!keyword.isEmpty()) {
+                // Utilisation de la recherche floue (tolère les fautes de frappe)
+                final double FUZZY_THRESHOLD = 0.6; // 60% de similarité minimum
+
                 jobs = jobs.stream()
-                    .filter(job -> job.getTitle().toLowerCase().contains(keyword) ||
-                                  (job.getDescription() != null && job.getDescription().toLowerCase().contains(keyword)) ||
-                                  (job.getLocation() != null && job.getLocation().toLowerCase().contains(keyword)))
+                    .filter(job -> {
+                        // Recherche exacte (priorité)
+                        String title = job.getTitle() != null ? job.getTitle().toLowerCase() : "";
+                        String desc = job.getDescription() != null ? job.getDescription().toLowerCase() : "";
+                        String loc = job.getLocation() != null ? job.getLocation().toLowerCase() : "";
+                        String keywordLower = keyword.toLowerCase();
+
+                        // Si correspondance exacte, on garde
+                        if (title.contains(keywordLower) || desc.contains(keywordLower) || loc.contains(keywordLower)) {
+                            return true;
+                        }
+
+                        // Sinon, recherche floue
+                        return fuzzySearchService.matchesAny(keyword, FUZZY_THRESHOLD,
+                            job.getTitle(), job.getDescription(), job.getLocation());
+                    })
+                    .sorted((j1, j2) -> {
+                        // Trier par pertinence de la recherche floue
+                        double score1 = fuzzySearchService.calculateBestScore(
+                            (j1.getTitle() + " " + j1.getDescription()), keyword);
+                        double score2 = fuzzySearchService.calculateBestScore(
+                            (j2.getTitle() + " " + j2.getDescription()), keyword);
+                        return Double.compare(score2, score1); // Tri décroissant
+                    })
                     .toList();
+
+                // Notification si recherche floue a trouvé des résultats
+                if (!jobs.isEmpty() && !keyword.isEmpty()) {
+                    boolean hasExactMatch = jobs.stream().anyMatch(job ->
+                        (job.getTitle() != null && job.getTitle().toLowerCase().contains(keyword.toLowerCase())));
+
+                    if (!hasExactMatch) {
+                        NotificationService.showInfo("Recherche intelligente",
+                            "Résultats approximatifs trouvés pour \"" + keyword + "\"");
+                    }
+                }
             }
 
             updateResultCount(jobs.size());
 
             if (jobs.isEmpty()) {
                 jobListContainer.getChildren().add(createEmptyState());
+
+                // Proposer des suggestions si aucun résultat
+                if (!keyword.isEmpty()) {
+                    showSearchSuggestions(keyword);
+                }
                 return;
             }
 
@@ -209,6 +255,46 @@ public class JobOffersBrowseController {
             }
         } catch (SQLException e) {
             showAlert("Erreur", "Impossible de charger les offres : " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    /**
+     * Affiche des suggestions de recherche si aucun résultat trouvé
+     */
+    private void showSearchSuggestions(String query) {
+        try {
+            List<JobOffer> allJobs = jobOfferService.getAllOpenJobOffers();
+            List<String> titles = allJobs.stream()
+                .map(JobOffer::getTitle)
+                .filter(t -> t != null)
+                .distinct()
+                .toList();
+
+            List<String> suggestions = fuzzySearchService.getSuggestions(query, titles, 3);
+
+            if (!suggestions.isEmpty()) {
+                VBox suggestionBox = new VBox(10);
+                suggestionBox.setStyle("-fx-padding: 20; -fx-alignment: center;");
+
+                Label suggestionLabel = new Label("💡 Vouliez-vous dire :");
+                suggestionLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #6c757d;");
+                suggestionBox.getChildren().add(suggestionLabel);
+
+                for (String suggestion : suggestions) {
+                    Button suggBtn = new Button(suggestion);
+                    suggBtn.setStyle("-fx-background-color: #e9ecef; -fx-text-fill: #495057; " +
+                                    "-fx-padding: 8 16; -fx-background-radius: 20; -fx-cursor: hand;");
+                    suggBtn.setOnAction(e -> {
+                        txtSearch.setText(suggestion);
+                        handleSearch();
+                    });
+                    suggestionBox.getChildren().add(suggBtn);
+                }
+
+                jobListContainer.getChildren().add(suggestionBox);
+            }
+        } catch (SQLException e) {
+            // Ignorer les erreurs de suggestion
         }
     }
 
@@ -649,6 +735,10 @@ public class JobOffersBrowseController {
 
     @FXML
     private void handleSearch() {
+        String query = txtSearch != null ? txtSearch.getText().trim() : "";
+        if (!query.isEmpty()) {
+            NotificationService.showInfo("🔍 Recherche", "Recherche en cours pour : \"" + query + "\"");
+        }
         loadFilteredJobOffers();
     }
 

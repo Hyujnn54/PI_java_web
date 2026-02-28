@@ -21,6 +21,7 @@ public class MainShellController {
     @FXML private Button btnInterviews;
     @FXML private Button btnApplications;
     @FXML private Button btnJobOffers;
+    @FXML private Button btnCalendar;
     @FXML private Button btnStatistics;
     @FXML private Button btnFullscreenToggle;
 
@@ -81,6 +82,12 @@ public class MainShellController {
         activePage = "/AnalyticsDashboard.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnStatistics);
+    }
+
+    @FXML
+    private void handleCalendarNav() {
+        // Ouvrir le calendrier des deadlines dans une nouvelle fenêtre
+        CalendarViewController.show();
     }
 
 
@@ -164,7 +171,7 @@ public class MainShellController {
     }
 
     private void resetButtonStyles() {
-        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers, btnStatistics};
+        Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers, btnCalendar, btnStatistics};
         for (Button btn : navButtons) {
             if (btn != null) {
                 btn.getStyleClass().removeAll("sidebar-button-active");

@@ -87,6 +87,11 @@ public class JobOfferService {
         return jobOffers;
     }
 
+    // READ - Get All Open Job Offers
+    public List<JobOffer> getAllOpenJobOffers() throws SQLException {
+        return getJobOffersByStatus(Status.OPEN);
+    }
+
     // READ - Get by Status
     public List<JobOffer> getJobOffersByStatus(Status status) throws SQLException {
         List<JobOffer> jobOffers = new ArrayList<>();
