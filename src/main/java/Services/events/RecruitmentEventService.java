@@ -24,8 +24,8 @@ public class RecruitmentEventService {
 
     public void add(RecruitmentEvent event) throws SQLException {
         checkConnection();
-        String query = "INSERT INTO recruitment_event (recruiter_id, title, description, event_type, location, event_date, capacity, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement ps = connection.prepareStatement(query);
+        String query = "INSERT INTO recruitment_event (recruiter_id, title, description, event_type, location, event_date, capacity, meet_link, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
         ps.setLong(1, event.getRecruiterId());
         ps.setString(2, event.getTitle());
         ps.setString(3, event.getDescription());
@@ -33,12 +33,16 @@ public class RecruitmentEventService {
         ps.setString(5, event.getLocation());
         ps.setTimestamp(6, Timestamp.valueOf(event.getEventDate()));
         ps.setInt(7, event.getCapacity());
-        ps.setTimestamp(8, Timestamp.valueOf(java.time.LocalDateTime.now()));
+        ps.setString(8, event.getMeetLink());
+        ps.setTimestamp(9, Timestamp.valueOf(java.time.LocalDateTime.now()));
         ps.executeUpdate();
+        ResultSet keys = ps.getGeneratedKeys();
+        if (keys.next()) event.setId(keys.getLong(1));
     }
 
     public void update(RecruitmentEvent event) throws SQLException {
-        String query = "UPDATE recruitment_event SET title=?, description=?, event_type=?, location=?, event_date=?, capacity=? WHERE id=?";
+        checkConnection();
+        String query = "UPDATE recruitment_event SET title=?, description=?, event_type=?, location=?, event_date=?, capacity=?, meet_link=? WHERE id=?";
         PreparedStatement ps = connection.prepareStatement(query);
         ps.setString(1, event.getTitle());
         ps.setString(2, event.getDescription());
@@ -46,7 +50,8 @@ public class RecruitmentEventService {
         ps.setString(4, event.getLocation());
         ps.setTimestamp(5, Timestamp.valueOf(event.getEventDate()));
         ps.setInt(6, event.getCapacity());
-        ps.setLong(7, event.getId());
+        ps.setString(7, event.getMeetLink());
+        ps.setLong(8, event.getId());
         ps.executeUpdate();
     }
 
@@ -72,9 +77,9 @@ public class RecruitmentEventService {
             event.setLocation(rs.getString("location"));
             event.setEventDate(rs.getTimestamp("event_date").toLocalDateTime());
             event.setCapacity(rs.getInt("capacity"));
+            event.setMeetLink(rs.getString("meet_link"));
             event.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
 
-            // Hydrate Recruiter info optional
             Recruiter recruiter = new Recruiter();
             recruiter.setId(rs.getLong("recruiter_id"));
             recruiter.setCompanyName(rs.getString("company_name"));
@@ -102,6 +107,7 @@ public class RecruitmentEventService {
             event.setLocation(rs.getString("location"));
             event.setEventDate(rs.getTimestamp("event_date").toLocalDateTime());
             event.setCapacity(rs.getInt("capacity"));
+            try { event.setMeetLink(rs.getString("meet_link")); } catch (SQLException ignored) {}
             event.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
             events.add(event);
         }

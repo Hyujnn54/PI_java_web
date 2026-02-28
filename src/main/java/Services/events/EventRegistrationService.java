@@ -80,9 +80,8 @@ public class EventRegistrationService {
             reg.setEventId(rs.getLong("event_id"));
             reg.setCandidateId(rs.getLong("candidate_id"));
             reg.setRegisteredAt(rs.getTimestamp("registered_at").toLocalDateTime());
-            reg.setAttendanceStatus(AttendanceStatusEnum.valueOf(rs.getString("attendance_status")));
+            reg.setAttendanceStatus(safeParseStatus(rs.getString("attendance_status")));
 
-            // Optional: Hydrate Event info
             RecruitmentEvent event = new RecruitmentEvent();
             event.setId(rs.getLong("event_id"));
             event.setTitle(rs.getString("title"));
@@ -107,9 +106,8 @@ public class EventRegistrationService {
             reg.setEventId(rs.getLong("event_id"));
             reg.setCandidateId(rs.getLong("candidate_id"));
             reg.setRegisteredAt(rs.getTimestamp("registered_at").toLocalDateTime());
-            reg.setAttendanceStatus(AttendanceStatusEnum.valueOf(rs.getString("attendance_status")));
+            reg.setAttendanceStatus(safeParseStatus(rs.getString("attendance_status")));
 
-            // Hydrate Event info
             RecruitmentEvent event = new RecruitmentEvent();
             event.setId(rs.getLong("event_id"));
             event.setTitle(rs.getString("title"));
@@ -164,31 +162,37 @@ public class EventRegistrationService {
         reg.setEventId(rs.getLong("event_id"));
         reg.setCandidateId(rs.getLong("candidate_id"));
         reg.setRegisteredAt(rs.getTimestamp("registered_at").toLocalDateTime());
-        reg.setAttendanceStatus(AttendanceStatusEnum.valueOf(rs.getString("attendance_status")));
+        reg.setAttendanceStatus(safeParseStatus(rs.getString("attendance_status")));
 
         // Optional columns (from JOINS)
-        try {
-            reg.setFirstName(rs.getString("first_name"));
-            reg.setLastName(rs.getString("last_name"));
-            reg.setEmail(rs.getString("email"));
-            reg.setCandidateName(reg.getFirstName() + " " + reg.getLastName());
-        } catch (SQLException e) {
-            // Columns not in result set (e.g. from a simple SELECT *)
+        try { reg.setFirstName(rs.getString("first_name")); } catch (SQLException ignored) {}
+        try { reg.setLastName(rs.getString("last_name")); } catch (SQLException ignored) {}
+        try { reg.setEmail(rs.getString("email")); } catch (SQLException ignored) {}
+        if (reg.getFirstName() != null || reg.getLastName() != null) {
+            reg.setCandidateName(
+                (reg.getFirstName() != null ? reg.getFirstName() : "") + " " +
+                (reg.getLastName()  != null ? reg.getLastName()  : ""));
         }
-
         try {
             RecruitmentEvent event = new RecruitmentEvent();
             event.setId(reg.getEventId());
             event.setTitle(rs.getString("event_title"));
             reg.setEvent(event);
-        } catch (SQLException e) {
-            // event_title not in result set
-        }
+        } catch (SQLException ignored) {}
 
         Candidate cand = new Candidate();
         cand.setId(rs.getLong("candidate_id"));
         reg.setCandidate(cand);
 
         return reg;
+    }
+
+    private AttendanceStatusEnum safeParseStatus(String value) {
+        if (value == null || value.isBlank()) return AttendanceStatusEnum.PENDING;
+        try {
+            return AttendanceStatusEnum.valueOf(value.toUpperCase().trim());
+        } catch (IllegalArgumentException e) {
+            return AttendanceStatusEnum.PENDING;
+        }
     }
 }

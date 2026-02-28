@@ -15,6 +15,7 @@ import javafx.geometry.Pos;
 import java.net.URL;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ResourceBundle;
 
 public class RecruiterDashboardController implements Initializable {
@@ -41,30 +42,19 @@ public class RecruiterDashboardController implements Initializable {
     @FXML
     private ComboBox<AttendanceStatusEnum> registrationStatusCombo;
 
-    @FXML
-    private TextField titleField;
-    @FXML
-    private TextArea descriptionField;
-    @FXML
-    private ComboBox<String> typeCombo;
-    @FXML
-    private TextField locationField;
-    @FXML
-    private DatePicker dateField;
-    @FXML
-    private TextField capacityField;
-    @FXML
-    private Label titleErrorLabel;
-    @FXML
-    private Label typeErrorLabel;
-    @FXML
-    private Label locationErrorLabel;
-    @FXML
-    private Label dateErrorLabel;
-    @FXML
-    private Label capacityErrorLabel;
-    @FXML
-    private Label descriptionErrorLabel;
+    @FXML private TextField titleField;
+    @FXML private TextArea descriptionField;
+    @FXML private ComboBox<String> typeCombo;
+    @FXML private TextField locationField;
+    @FXML private DatePicker dateField;
+    @FXML private TextField capacityField;
+    @FXML private TextField meetLinkField;
+    @FXML private Label titleErrorLabel;
+    @FXML private Label typeErrorLabel;
+    @FXML private Label locationErrorLabel;
+    @FXML private Label dateErrorLabel;
+    @FXML private Label capacityErrorLabel;
+    @FXML private Label descriptionErrorLabel;
 
     @FXML
     private VBox eventsView;
@@ -95,12 +85,14 @@ public class RecruiterDashboardController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // Garantir que la base de données est à jour
         SchemaFixer.main(null);
 
-        setupTable();
-        setupAttendeesTable();
-        setupComboBoxes();
+        // Ensure only eventsView is shown at startup
+        if (eventsView != null)     { eventsView.setVisible(true);  eventsView.setManaged(true); }
+        if (interviewsView != null) { interviewsView.setVisible(false); interviewsView.setManaged(false); }
+
+        if (typeCombo != null) setupComboBoxes();
+        if (attendeesTable != null) setupAttendeesTable();
         loadRecruiterData();
     }
 
@@ -110,24 +102,26 @@ public class RecruiterDashboardController implements Initializable {
     }
 
     private void setupAttendeesTable() {
-        eventTitleCol.setCellValueFactory(cellData -> {
+        if (eventTitleCol != null) eventTitleCol.setCellValueFactory(cellData -> {
             if (cellData.getValue().getEvent() != null) {
                 return new javafx.beans.property.SimpleStringProperty(cellData.getValue().getEvent().getTitle());
             }
             return new javafx.beans.property.SimpleStringProperty("N/A");
         });
-        candLastNameCol.setCellValueFactory(cellData -> 
+        if (candLastNameCol != null)  candLastNameCol.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(cellData.getValue().getLastName()));
-        candFirstNameCol.setCellValueFactory(cellData -> 
+        if (candFirstNameCol != null) candFirstNameCol.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(cellData.getValue().getFirstName()));
-        candEmailCol.setCellValueFactory(cellData -> 
+        if (candEmailCol != null) candEmailCol.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(cellData.getValue().getEmail()));
-        statusCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(
-                cellData.getValue().getAttendanceStatus().name()));
-        regDateCol.setCellValueFactory(new PropertyValueFactory<>("registeredAt"));
+        if (statusCol != null) statusCol.setCellValueFactory(cellData -> {
+            AttendanceStatusEnum s = cellData.getValue().getAttendanceStatus();
+            return new javafx.beans.property.SimpleStringProperty(s != null ? s.name() : "");
+        });
+        if (regDateCol != null) regDateCol.setCellValueFactory(new PropertyValueFactory<>("registeredAt"));
 
-        attendeesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
+        if (attendeesTable != null) attendeesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && registrationStatusCombo != null) {
                 registrationStatusCombo.setValue(newVal.getAttendanceStatus());
             }
         });
@@ -214,13 +208,15 @@ public class RecruiterDashboardController implements Initializable {
             if (currentRecruiter != null) {
                 refreshTable();
 
-                // Fetch User details for top bar
+                // Fetch User details for top bar (only present in standalone dashboard, not embedded view)
                 try {
                     User user = userService.getById(currentRecruiter.getId());
                     if (user != null) {
-                        userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
-                        userRoleLabel.setText("RECRUTEUR");
-                        userRoleLabel.getStyleClass().add("badge-recruiter");
+                        if (userNameLabel != null) userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
+                        if (userRoleLabel != null) {
+                            userRoleLabel.setText("RECRUTEUR");
+                            userRoleLabel.getStyleClass().add("badge-recruiter");
+                        }
                     }
                 } catch (SQLException e) {
                     System.err.println("Error loading user name: " + e.getMessage());
@@ -403,23 +399,16 @@ public class RecruiterDashboardController implements Initializable {
     }
 
     private void switchView(boolean isEvents) {
-        eventsView.setVisible(isEvents);
-        eventsView.setManaged(isEvents);
-        interviewsView.setVisible(!isEvents);
-        interviewsView.setManaged(!isEvents);
+        if (eventsView != null) { eventsView.setVisible(isEvents); eventsView.setManaged(isEvents); }
+        if (interviewsView != null) { interviewsView.setVisible(!isEvents); interviewsView.setManaged(!isEvents); }
 
-        // Update sidebar button styles
-        eventsBtn.getStyleClass().remove("sidebar-button-active");
-        eventsBtn.getStyleClass().remove("sidebar-button");
-        interviewsBtn.getStyleClass().remove("sidebar-button-active");
-        interviewsBtn.getStyleClass().remove("sidebar-button");
-
-        if (isEvents) {
-            eventsBtn.getStyleClass().add("sidebar-button-active");
-            interviewsBtn.getStyleClass().add("sidebar-button");
-        } else {
-            eventsBtn.getStyleClass().add("sidebar-button");
-            interviewsBtn.getStyleClass().add("sidebar-button-active");
+        if (eventsBtn != null) {
+            eventsBtn.getStyleClass().removeAll("sidebar-button-active", "sidebar-button");
+            eventsBtn.getStyleClass().add(isEvents ? "sidebar-button-active" : "sidebar-button");
+        }
+        if (interviewsBtn != null) {
+            interviewsBtn.getStyleClass().removeAll("sidebar-button-active", "sidebar-button");
+            interviewsBtn.getStyleClass().add(isEvents ? "sidebar-button" : "sidebar-button-active");
         }
     }
 
@@ -437,15 +426,56 @@ public class RecruiterDashboardController implements Initializable {
             selected.setAttendanceStatus(newStatus);
             registrationService.update(selected);
             showAlert("Succès", "Le statut de l'inscription a été mis à jour.");
-            // Refresh the table to show updated status
-            if (selectedEvent != null) {
-                refreshAttendees(selectedEvent.getId());
-            } else {
-                refreshAllAttendees();
+
+            // Send status notification email in background
+            if (selected.getEmail() != null && !selected.getEmail().isBlank()) {
+                String email = selected.getEmail();
+                String name = selected.getCandidateName() != null ? selected.getCandidateName() : "Candidat";
+                String eventTitle = selectedEvent != null ? selectedEvent.getTitle() : "";
+                String eventDate = selectedEvent != null && selectedEvent.getEventDate() != null
+                        ? selectedEvent.getEventDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "";
+                String eventLocation = selectedEvent != null && selectedEvent.getLocation() != null
+                        ? selectedEvent.getLocation() : "";
+                new Thread(() -> Services.EmailService.sendEventStatusNotification(
+                        email, name, eventTitle, eventDate, eventLocation, newStatus.name(), null),
+                        "event-status-email").start();
             }
+
+            if (selectedEvent != null) refreshAttendees(selectedEvent.getId());
+            else refreshAllAttendees();
         } catch (SQLException e) {
             showAlert("Erreur Mise à jour", e.getMessage());
         }
+    }
+
+    @FXML
+    private void handleSendEmail() {
+        EventRegistration selected = attendeesTable != null
+                ? attendeesTable.getSelectionModel().getSelectedItem() : null;
+        if (selected == null) {
+            showAlert("Avertissement", "Sélectionnez un candidat dans la liste.");
+            return;
+        }
+        if (selected.getEmail() == null || selected.getEmail().isBlank()) {
+            showAlert("Erreur", "Aucun email disponible pour ce candidat.");
+            return;
+        }
+        String name = selected.getCandidateName() != null ? selected.getCandidateName() : "Candidat";
+        String eventTitle = selectedEvent != null ? selectedEvent.getTitle() : "";
+        String eventDate = selectedEvent != null && selectedEvent.getEventDate() != null
+                ? selectedEvent.getEventDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "";
+        String eventLocation = selectedEvent != null && selectedEvent.getLocation() != null
+                ? selectedEvent.getLocation() : "";
+        String eventType = selectedEvent != null && selectedEvent.getEventType() != null
+                ? selectedEvent.getEventType() : "";
+        new Thread(() -> {
+            boolean sent = Services.EmailService.sendEventRegistrationConfirmation(
+                    selected.getEmail(), name, eventTitle, eventDate, eventLocation, eventType);
+            javafx.application.Platform.runLater(() ->
+                showAlert(sent ? "Email envoyé" : "Erreur",
+                          sent ? "Email de confirmation envoyé à " + selected.getEmail()
+                               : "Échec de l'envoi de l'email."));
+        }, "event-manual-email").start();
     }
 
     @FXML
@@ -471,6 +501,7 @@ public class RecruiterDashboardController implements Initializable {
         } catch (NumberFormatException e) {
             event.setCapacity(0);
         }
+        if (meetLinkField != null) event.setMeetLink(meetLinkField.getText());
     }
 
     private void populateForm(RecruitmentEvent event) {
@@ -479,9 +510,8 @@ public class RecruiterDashboardController implements Initializable {
         typeCombo.setValue(event.getEventType());
         locationField.setText(event.getLocation());
         capacityField.setText(String.valueOf(event.getCapacity()));
-        if (event.getEventDate() != null) {
-            dateField.setValue(event.getEventDate().toLocalDate());
-        }
+        if (event.getEventDate() != null) dateField.setValue(event.getEventDate().toLocalDate());
+        if (meetLinkField != null) meetLinkField.setText(event.getMeetLink() != null ? event.getMeetLink() : "");
     }
 
     private void clearForm() {
@@ -492,14 +522,13 @@ public class RecruiterDashboardController implements Initializable {
         locationField.clear();
         capacityField.clear();
         dateField.setValue(null);
-
-        // Clear error labels
-        titleErrorLabel.setText("");
-        typeErrorLabel.setText("");
-        locationErrorLabel.setText("");
-        dateErrorLabel.setText("");
-        capacityErrorLabel.setText("");
-        descriptionErrorLabel.setText("");
+        if (meetLinkField != null) meetLinkField.clear();
+        if (titleErrorLabel != null) titleErrorLabel.setText("");
+        if (typeErrorLabel != null) typeErrorLabel.setText("");
+        if (locationErrorLabel != null) locationErrorLabel.setText("");
+        if (dateErrorLabel != null) dateErrorLabel.setText("");
+        if (capacityErrorLabel != null) capacityErrorLabel.setText("");
+        if (descriptionErrorLabel != null) descriptionErrorLabel.setText("");
     }
 
     private boolean validateForm() {

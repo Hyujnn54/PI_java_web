@@ -70,8 +70,12 @@ public class CandidateDashboardController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         SchemaFixer.main(null);
-        setupEventsTable();
-        setupRegistrationsTable();
+
+        // Ensure only eventsView is shown at startup
+        if (eventsView != null)         { eventsView.setVisible(true);  eventsView.setManaged(true); }
+        if (registrationsView != null)  { registrationsView.setVisible(false); registrationsView.setManaged(false); }
+
+        if (myRegistrationsTable != null) setupRegistrationsTable();
         loadCandidateData();
     }
 
@@ -80,14 +84,14 @@ public class CandidateDashboardController implements Initializable {
     }
 
     private void setupRegistrationsTable() {
-        regEventTitleCol.setCellValueFactory(cellData -> {
+        if (regEventTitleCol != null) regEventTitleCol.setCellValueFactory(cellData -> {
             if (cellData.getValue().getEvent() != null) {
                 return new javafx.beans.property.SimpleStringProperty(cellData.getValue().getEvent().getTitle());
             }
             return new javafx.beans.property.SimpleStringProperty("N/A");
         });
-        regDateCol.setCellValueFactory(new PropertyValueFactory<>("registeredAt"));
-        regStatusCol.setCellValueFactory(new PropertyValueFactory<>("attendanceStatus"));
+        if (regDateCol != null) regDateCol.setCellValueFactory(new PropertyValueFactory<>("registeredAt"));
+        if (regStatusCol != null) regStatusCol.setCellValueFactory(new PropertyValueFactory<>("attendanceStatus"));
     }
 
     private void loadCandidateData() {
@@ -137,13 +141,15 @@ public class CandidateDashboardController implements Initializable {
                 refreshEvents();
                 refreshRegistrations();
 
-                // Fetch User details for top bar
+                // Fetch User details for top bar (only present in standalone dashboard, not embedded view)
                 try {
                     User user = userService.getById(currentCandidate.getId());
                     if (user != null) {
-                        userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
-                        userRoleLabel.setText("CANDIDAT");
-                        userRoleLabel.getStyleClass().add("badge-candidate");
+                        if (userNameLabel != null) userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
+                        if (userRoleLabel != null) {
+                            userRoleLabel.setText("CANDIDAT");
+                            userRoleLabel.getStyleClass().add("badge-candidate");
+                        }
                     }
                 } catch (SQLException e) {
                     System.err.println("Error loading user name: " + e.getMessage());

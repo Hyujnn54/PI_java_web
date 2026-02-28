@@ -126,12 +126,11 @@ public class MainShellController {
     @FXML
     private void handleEventsNav() {
         Utils.UserContext.Role role = Utils.UserContext.getRole();
-        if (role == Utils.UserContext.Role.ADMIN) {
-            activePage = "/views/events/AdminEvents.fxml";
-        } else if (role == Utils.UserContext.Role.RECRUITER) {
+        if (role == Utils.UserContext.Role.RECRUITER) {
             activePage = "/views/events/RecruiterEvents.fxml";
         } else {
-            activePage = "/views/events/CandidateEvents.fxml";
+            // Candidate and Admin both use the rich EventsViewController
+            activePage = "/views/events/Events.fxml";
         }
         loadContentView(activePage);
         highlightActiveButton(btnEvents);

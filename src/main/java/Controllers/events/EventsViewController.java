@@ -34,6 +34,8 @@ public class EventsViewController implements Initializable {
     @FXML private Label detailLocation;
     @FXML private Label detailDate;
     @FXML private Label detailCapacity;
+    @FXML private Label detailMeetLink;
+    @FXML private HBox  detailMeetLinkRow;
     @FXML private Label lblRegistrationStatus;
     @FXML private Button btnApply;
     @FXML private Button btnCancel;
@@ -200,6 +202,15 @@ public class EventsViewController implements Initializable {
         detailDate.setText(ev.getEventDate() != null ? ev.getEventDate().format(FMT) : "");
         detailCapacity.setText(ev.getCapacity() + " places disponibles");
 
+        // Meet link
+        if (detailMeetLinkRow != null && detailMeetLink != null) {
+            String link = ev.getMeetLink();
+            boolean hasLink = link != null && !link.isBlank();
+            detailMeetLinkRow.setVisible(hasLink);
+            detailMeetLinkRow.setManaged(hasLink);
+            if (hasLink) detailMeetLink.setText(link);
+        }
+
         // Hide status message
         lblRegistrationStatus.setVisible(false);
         lblRegistrationStatus.setManaged(false);
@@ -291,7 +302,27 @@ public class EventsViewController implements Initializable {
             btnApply.setText("✅  Déjà inscrit");
             btnCancel.setVisible(true); btnCancel.setManaged(true);
 
-        } catch (SQLException e) {
+            // Send confirmation email in background
+            new Thread(() -> {
+                try {
+                    Services.events.UserService.UserInfo info = Services.events.UserService.getUserInfo(currentCandidateId);
+                    if (info != null && info.email() != null && !info.email().isBlank()) {
+                        String name = ((info.firstName() != null ? info.firstName() : "") + " " +
+                                       (info.lastName()  != null ? info.lastName()  : "")).trim();
+                        String date = selectedEvent.getEventDate() != null
+                                ? selectedEvent.getEventDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "";
+                        Services.EmailService.sendEventRegistrationConfirmation(
+                                info.email(), name, selectedEvent.getTitle(),
+                                date,
+                                selectedEvent.getLocation() != null ? selectedEvent.getLocation() : "",
+                                selectedEvent.getEventType() != null ? selectedEvent.getEventType() : "");
+                    }
+                } catch (Exception ex) {
+                    System.err.println("[EventsView] Email error: " + ex.getMessage());
+                }
+            }, "event-email").start();
+
+        } catch (java.sql.SQLException e) {
             lblRegistrationStatus.setText("⚠️  " + e.getMessage());
             lblRegistrationStatus.setStyle("-fx-background-color: #FFF3CD; -fx-text-fill: #856404;" +
                     "-fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");

@@ -626,4 +626,90 @@ public class EmailService {
         System.out.println("Body    :\n" + body);
         System.out.println("=====================================================");
     }
+
+    // =========================================================================
+    // EVENT EMAILS
+    // =========================================================================
+
+    /**
+     * Send a registration confirmation email to a candidate after they register for an event.
+     */
+    public static boolean sendEventRegistrationConfirmation(String toEmail, String candidateName,
+                                                             String eventTitle, String eventDate,
+                                                             String eventLocation, String eventType) {
+        String effective = resolveRecipient(toEmail);
+        String subject = "Confirmation d'inscription — " + eventTitle + " | Talent Bridge";
+        String text = "Bonjour " + candidateName + ",\n\nVotre inscription à l'événement \"" + eventTitle
+                + "\" est confirmée.\n\nDate : " + eventDate + "\nLieu : " + eventLocation
+                + "\nType : " + eventType + "\n\nNous vous souhaitons une excellente expérience.\n\nTalent Bridge";
+        String html = "<div style='font-family:Inter,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)'>"
+                + "<div style='background:linear-gradient(135deg,#1565C0,#1E88E5);padding:32px 36px;'>"
+                + "<h1 style='color:#fff;margin:0;font-size:22px'>🎪 Inscription Confirmée</h1>"
+                + "<p style='color:rgba(255,255,255,.85);margin:6px 0 0'>Talent Bridge — Événements</p></div>"
+                + "<div style='padding:32px 36px'>"
+                + "<p style='font-size:16px;color:#1E293B'>Bonjour <strong>" + escapeHtml(candidateName) + "</strong>,</p>"
+                + "<p style='color:#475569'>Votre inscription à l'événement suivant est bien enregistrée :</p>"
+                + "<div style='background:#F0F7FF;border-left:4px solid #1565C0;border-radius:8px;padding:18px 22px;margin:20px 0'>"
+                + "<h2 style='color:#1565C0;margin:0 0 12px;font-size:18px'>" + escapeHtml(eventTitle) + "</h2>"
+                + "<p style='margin:4px 0;color:#334155'>📅 <strong>Date :</strong> " + escapeHtml(eventDate) + "</p>"
+                + "<p style='margin:4px 0;color:#334155'>📍 <strong>Lieu :</strong> " + escapeHtml(eventLocation) + "</p>"
+                + "<p style='margin:4px 0;color:#334155'>🏷️ <strong>Type :</strong> " + escapeHtml(eventType) + "</p>"
+                + "</div>"
+                + "<p style='color:#64748B;font-size:13px'>Nous avons hâte de vous accueillir. Bonne chance !</p>"
+                + "<p style='color:#94A3B8;font-size:12px;margin-top:24px'>Cet email a été envoyé automatiquement par Talent Bridge.</p>"
+                + "</div></div>";
+        try {
+            sendViaBrevo(effective, candidateName, subject, text, html);
+            System.out.println("[EmailService] Event registration confirmation sent to: " + effective);
+            return true;
+        } catch (Exception e) {
+            System.err.println("[EmailService] Failed to send event registration email: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send a broadcast/notification email from recruiter to a candidate about event status change.
+     */
+    public static boolean sendEventStatusNotification(String toEmail, String candidateName,
+                                                       String eventTitle, String eventDate,
+                                                       String eventLocation, String newStatus,
+                                                       String recruiterMessage) {
+        String effective = resolveRecipient(toEmail);
+        String subject = "Mise à jour de votre inscription — " + eventTitle + " | Talent Bridge";
+        String statusColor = newStatus.equals("CONFIRMED") ? "#16A34A" :
+                             newStatus.equals("CANCELLED") ? "#DC2626" : "#1565C0";
+        String text = "Bonjour " + candidateName + ",\n\nVotre statut pour l'événement \"" + eventTitle
+                + "\" a été mis à jour : " + newStatus
+                + (recruiterMessage != null && !recruiterMessage.isBlank() ? "\n\nMessage du recruteur : " + recruiterMessage : "")
+                + "\n\nTalent Bridge";
+        String html = "<div style='font-family:Inter,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)'>"
+                + "<div style='background:linear-gradient(135deg,#1565C0,#1E88E5);padding:32px 36px;'>"
+                + "<h1 style='color:#fff;margin:0;font-size:22px'>📋 Mise à jour d'inscription</h1>"
+                + "<p style='color:rgba(255,255,255,.85);margin:6px 0 0'>Talent Bridge — Événements</p></div>"
+                + "<div style='padding:32px 36px'>"
+                + "<p style='font-size:16px;color:#1E293B'>Bonjour <strong>" + escapeHtml(candidateName) + "</strong>,</p>"
+                + "<p style='color:#475569'>Votre statut pour l'événement <strong>" + escapeHtml(eventTitle) + "</strong> a été mis à jour :</p>"
+                + "<div style='text-align:center;margin:24px 0'>"
+                + "<span style='background:" + statusColor + ";color:#fff;font-weight:700;font-size:16px;padding:10px 28px;border-radius:24px'>"
+                + escapeHtml(newStatus) + "</span></div>"
+                + "<div style='background:#F8FAFF;border-radius:8px;padding:16px 20px;margin:16px 0'>"
+                + "<p style='margin:4px 0;color:#334155'>📅 " + escapeHtml(eventDate) + "</p>"
+                + "<p style='margin:4px 0;color:#334155'>📍 " + escapeHtml(eventLocation) + "</p>"
+                + "</div>"
+                + (recruiterMessage != null && !recruiterMessage.isBlank()
+                    ? "<div style='background:#FFF7ED;border-left:4px solid #F59E0B;border-radius:8px;padding:14px 18px;margin-top:16px'>"
+                      + "<p style='color:#92400E;margin:0;font-size:13px'><strong>Message du recruteur :</strong> " + escapeHtml(recruiterMessage) + "</p></div>"
+                    : "")
+                + "<p style='color:#94A3B8;font-size:12px;margin-top:24px'>Cet email a été envoyé automatiquement par Talent Bridge.</p>"
+                + "</div></div>";
+        try {
+            sendViaBrevo(effective, candidateName, subject, text, html);
+            System.out.println("[EmailService] Event status notification sent to: " + effective);
+            return true;
+        } catch (Exception e) {
+            System.err.println("[EmailService] Failed to send event status email: " + e.getMessage());
+            return false;
+        }
+    }
 }

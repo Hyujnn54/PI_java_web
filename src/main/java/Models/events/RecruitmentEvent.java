@@ -11,6 +11,7 @@ public class RecruitmentEvent {
     private String location;
     private LocalDateTime eventDate;
     private int capacity;
+    private String meetLink;
     private LocalDateTime createdAt;
     
     // Optional: Recruiter object for display purposes
@@ -106,17 +107,13 @@ public class RecruitmentEvent {
         this.eventDate = eventDate;
     }
 
-    public int getCapacity() {
-        return capacity;
-    }
+    public int getCapacity() { return capacity; }
+    public void setCapacity(int capacity) { this.capacity = capacity; }
 
-    public void setCapacity(int capacity) {
-        this.capacity = capacity;
-    }
+    public String getMeetLink() { return meetLink; }
+    public void setMeetLink(String meetLink) { this.meetLink = meetLink; }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
