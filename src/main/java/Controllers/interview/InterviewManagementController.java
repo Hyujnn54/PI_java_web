@@ -5,6 +5,7 @@ import Models.interview.InterviewFeedback;
 import Services.interview.InterviewFeedbackService;
 import Services.interview.InterviewService;
 import Utils.MyDatabase;
+import javafx.animation.ScaleTransition;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -14,6 +15,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.Region;
+import javafx.util.Duration;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,15 +27,13 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * Interview Management Controller — recruiter + candidate, with search/sort.
- */
 public class InterviewManagementController {
 
     @FXML private VBox  interviewsListContainer;
     @FXML private Button btnScheduleNew;
     @FXML private VBox  editDialog;
     @FXML private HBox  bottomActionButtons;
+    @FXML private VBox  rightPanelPlaceholder;
 
     // Search / sort bar
     @FXML private VBox              searchBox;
@@ -307,13 +307,25 @@ public class InterviewManagementController {
         if (interviewsListContainer == null) return;
         interviewsListContainer.getChildren().clear();
         if (interviews.isEmpty()) {
-            Label empty = new Label("Aucun entretien correspondant trouvé");
-            empty.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 15px; -fx-padding: 40;");
+            Label empty = new Label("Aucun entretien correspondant trouve");
+            empty.setStyle("-fx-text-fill: #8FA3B8; -fx-font-size: 15px; -fx-padding: 40 0;");
             interviewsListContainer.getChildren().add(empty);
             return;
         }
-        for (Interview iv : interviews)
-            interviewsListContainer.getChildren().add(createModernInterviewCard(iv));
+        for (int i = 0; i < interviews.size(); i++) {
+            VBox cardNode = createModernInterviewCard(interviews.get(i));
+            cardNode.setOpacity(0);
+            cardNode.setTranslateY(10);
+            interviewsListContainer.getChildren().add(cardNode);
+            int delay = i * 55;
+            javafx.animation.Timeline tl = new javafx.animation.Timeline(
+                new javafx.animation.KeyFrame(Duration.millis(delay)),
+                new javafx.animation.KeyFrame(Duration.millis(delay + 260),
+                    new javafx.animation.KeyValue(cardNode.opacityProperty(), 1.0),
+                    new javafx.animation.KeyValue(cardNode.translateYProperty(), 0))
+            );
+            tl.play();
+        }
     }
 
     @FXML
@@ -414,90 +426,192 @@ public class InterviewManagementController {
     }
 
     private VBox createModernInterviewCard(Interview interview) {
-        VBox card = new VBox(15);
+        VBox card = new VBox(12);
         card.getStyleClass().add("interview-card");
-        card.setPadding(new Insets(20));
+        card.setPadding(new Insets(18));
+        card.setMaxWidth(Double.MAX_VALUE);
+
+        // Hover animation
+        card.setOnMouseEntered(e -> {
+            ScaleTransition st = new ScaleTransition(Duration.millis(130), card);
+            st.setToX(1.012); st.setToY(1.012); st.play();
+        });
+        card.setOnMouseExited(e -> {
+            ScaleTransition st = new ScaleTransition(Duration.millis(130), card);
+            st.setToX(1.0); st.setToY(1.0); st.play();
+        });
 
         boolean isRecruiter = Utils.UserContext.getRole() == Utils.UserContext.Role.RECRUITER;
+        boolean isPast      = interview.getScheduledAt() != null
+                              && interview.getScheduledAt().isBefore(java.time.LocalDateTime.now());
 
-        // Header with title and status
-        HBox header = new HBox(15);
+        // ── Fetch candidate + offer info ─────────────────────────────────────
+        String[] info = getCandidateAndOfferInfo(interview.getApplicationId());
+        String candidateName  = info[0];
+        String offerTitle     = info[1];
+        String companyOrExtra = info[2]; // extra detail if available
+
+        // ── Header row ───────────────────────────────────────────────────────
+        HBox header = new HBox(12);
         header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
-        Label title = new Label(isRecruiter ? "Entretien #" + interview.getId() : "Votre Prochain Entretien");
-        title.getStyleClass().add("card-title");
+        // Title: recruiter sees candidate name, candidate sees offer title
+        String titleText = isRecruiter
+                ? "👤  " + candidateName
+                : "💼  " + offerTitle;
+        Label title = new Label(titleText);
+        title.setStyle("-fx-font-size:15px; -fx-font-weight:700; -fx-text-fill:#2c3e50;");
+        title.setWrapText(true);
+        HBox.setHgrow(title, Priority.ALWAYS);
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+        // Status badge
+        String statusColor = getStatusBadgeColor(interview.getStatus());
+        Label statusBadge = new Label(formatStatusLabel(interview.getStatus()));
+        statusBadge.setStyle("-fx-background-color:" + statusColor + "22; -fx-text-fill:" + statusColor + ";"
+                + "-fx-font-size:11px; -fx-font-weight:700; -fx-padding:4 11; -fx-background-radius:12;"
+                + "-fx-border-color:" + statusColor + "44; -fx-border-width:1; -fx-border-radius:12;");
 
-        Label statusTag = new Label(interview.getStatus() != null ? interview.getStatus() : "PLANIFIÉ");
-        statusTag.getStyleClass().addAll("status-tag", getStatusClass(interview.getStatus()));
+        header.getChildren().addAll(title, statusBadge);
 
-        header.getChildren().addAll(title, spacer, statusTag);
+        card.getChildren().add(header);
 
-        // Interview Status Box for Candidates (Prominent Display)
-        VBox statusBox = new VBox(10);
-        statusBox.setStyle("-fx-background-color: rgba(91, 163, 245, 0.1); -fx-padding: 15; -fx-background-radius: 8;");
+        // ── Sub-title row ─────────────────────────────────────────────────────
+        if (isRecruiter) {
+            // Recruiter also sees the offer
+            Label offerLbl = new Label("💼  " + offerTitle);
+            offerLbl.setStyle("-fx-font-size:12px; -fx-text-fill:#5BA3F5; -fx-font-weight:600;");
+            offerLbl.setWrapText(true);
+            card.getChildren().add(offerLbl);
+        } else {
+            // Candidate sees company/extra detail
+            if (!companyOrExtra.isBlank()) {
+                Label extra = new Label("🏢  " + companyOrExtra);
+                extra.setStyle("-fx-font-size:12px; -fx-text-fill:#8FA3B8;");
+                card.getChildren().add(extra);
+            }
+        }
 
-        Label statusLabel = new Label("Interview Status");
-        statusLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;");
-
-        Label statusValue = new Label(getStatusDescription(interview.getStatus()));
-        statusValue.setWrapText(true);
-        statusValue.setStyle("-fx-text-fill: #5BA3F5; -fx-font-size: 16px; -fx-font-weight: bold;");
-
-        statusBox.getChildren().addAll(statusLabel, statusValue);
-
-        // Interview details (no raw IDs shown)
-        HBox detailsRow = new HBox(30);
+        // ── Details row ───────────────────────────────────────────────────────
+        HBox detailsRow = new HBox(22);
+        detailsRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        detailsRow.setStyle("-fx-background-color:#F7FAFF; -fx-background-radius:8; -fx-padding:10 14;");
         detailsRow.getChildren().addAll(
-            createInfoBox("📅 Date & Time", formatDateTime(interview.getScheduledAt())),
-            createInfoBox("⏱ Duration", interview.getDurationMinutes() + " min"),
-            createInfoBox("🎯 Mode", interview.getMode())
+            createInfoBox("📅 Date", formatDateTime(interview.getScheduledAt())),
+            createInfoBox("⏱ Durée", interview.getDurationMinutes() + " min"),
+            createInfoBox("🎯 Mode",  formatMode(interview.getMode()))
         );
+        card.getChildren().add(detailsRow);
 
-        // Add meeting link or location info
-        if ("ONLINE".equals(interview.getMode()) && interview.getMeetingLink() != null && !interview.getMeetingLink().trim().isEmpty()) {
+        // ── Meeting link / location ───────────────────────────────────────────
+        if ("ONLINE".equals(interview.getMode()) && interview.getMeetingLink() != null
+                && !interview.getMeetingLink().isBlank()) {
             String link = interview.getMeetingLink().trim();
             HBox linkRow = new HBox(8);
             linkRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-            Label linkIcon = new Label("🔗 Lien de Réunion:");
-            linkIcon.setStyle("-fx-font-size: 12px; -fx-text-fill: #2c3e50; -fx-font-weight: 600;");
-            Hyperlink hyperlink = new Hyperlink(link);
-            hyperlink.setStyle("-fx-text-fill: #5BA3F5; -fx-font-size: 12px; -fx-padding: 0;");
-            hyperlink.setWrapText(true);
-            hyperlink.setOnAction(e -> {
-                try {
-                    java.awt.Desktop.getDesktop().browse(new java.net.URI(link));
-                } catch (Exception ex) {
-                    // If Desktop browse fails, copy to clipboard
-                    javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
-                    content.putString(link);
-                    javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
-                    showAlert("Lien copié", "Le lien a été copié dans le presse-papiers.", Alert.AlertType.INFORMATION);
+            Label linkIcon = new Label("🔗 Lien :");
+            linkIcon.setStyle("-fx-font-size:12px; -fx-text-fill:#5A7080; -fx-font-weight:600;");
+            Hyperlink hl = new Hyperlink(link.length() > 60 ? link.substring(0,57) + "…" : link);
+            hl.setStyle("-fx-text-fill:#5BA3F5; -fx-font-size:12px; -fx-padding:0;");
+            hl.setOnAction(e -> {
+                try { java.awt.Desktop.getDesktop().browse(new java.net.URI(link)); }
+                catch (Exception ex) {
+                    javafx.scene.input.ClipboardContent cc = new javafx.scene.input.ClipboardContent();
+                    cc.putString(link);
+                    javafx.scene.input.Clipboard.getSystemClipboard().setContent(cc);
+                    showAlert("Lien copie", "Le lien a ete copie dans le presse-papiers.", Alert.AlertType.INFORMATION);
                 }
             });
-            linkRow.getChildren().addAll(linkIcon, hyperlink);
+            linkRow.getChildren().addAll(linkIcon, hl);
             card.getChildren().add(linkRow);
-        } else if ("ON_SITE".equals(interview.getMode()) && interview.getLocation() != null && !interview.getLocation().trim().isEmpty()) {
-            Label locLabel = new Label("📍 Lieu: " + interview.getLocation());
-            locLabel.setWrapText(true);
-            locLabel.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 12px; -fx-padding: 5 0;");
-            card.getChildren().add(locLabel);
+        } else if ("ON_SITE".equals(interview.getMode()) && interview.getLocation() != null
+                && !interview.getLocation().isBlank()) {
+            Label locLbl = new Label("📍  " + interview.getLocation());
+            locLbl.setStyle("-fx-font-size:12px; -fx-text-fill:#5A7080;");
+            card.getChildren().add(locLbl);
         }
 
-        // Action buttons based on role
-        HBox actionRow = createActionButtons(interview);
+        // ── PAST INTERVIEW block (candidate view) ─────────────────────────────
+        if (!isRecruiter && isPast) {
+            boolean hasFeedback = checkIfFeedbackExists(interview.getId());
 
-        if (isRecruiter) {
-            card.getChildren().addAll(header, detailsRow, actionRow);
-        } else {
-            // For candidates, show status prominently
-            card.getChildren().addAll(header, statusBox, detailsRow, actionRow);
+            if (hasFeedback) {
+                var feedbacks = Services.interview.InterviewFeedbackService.getByInterviewId(interview.getId());
+                if (!feedbacks.isEmpty()) {
+                    Models.interview.InterviewFeedback fb = feedbacks.get(0);
+                    boolean accepted = "ACCEPTED".equalsIgnoreCase(fb.getDecision());
+
+                    // Result banner
+                    VBox resultBox = new VBox(6);
+                    String resultBg    = accepted ? "#D4EDDA" : "#F8D7DA";
+                    String resultColor = accepted ? "#155724" : "#721C24";
+                    String resultIcon  = accepted ? "✅" : "❌";
+                    String resultTitle = accepted ? "Entretien reussi — Felicitations !" : "Entretien non retenu";
+                    resultBox.setStyle("-fx-background-color:" + resultBg + "; -fx-background-radius:10;"
+                            + "-fx-padding:14; -fx-border-color:" + resultColor + "44;"
+                            + "-fx-border-width:1; -fx-border-radius:10;");
+
+                    HBox resultHeader = new HBox(10);
+                    resultHeader.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                    Label resultIconLbl = new Label(resultIcon);
+                    resultIconLbl.setStyle("-fx-font-size:20px;");
+                    Label resultTitleLbl = new Label(resultTitle);
+                    resultTitleLbl.setStyle("-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:" + resultColor + ";");
+                    resultHeader.getChildren().addAll(resultIconLbl, resultTitleLbl);
+
+                    // Score
+                    if (fb.getOverallScore() != null) {
+                        Label scoreLbl = new Label("Score : " + fb.getOverallScore() + " / 100");
+                        scoreLbl.setStyle("-fx-font-size:12px; -fx-text-fill:" + resultColor + "; -fx-font-weight:600;");
+                        resultBox.getChildren().addAll(resultHeader, scoreLbl);
+                    } else {
+                        resultBox.getChildren().add(resultHeader);
+                    }
+
+                    // Comment snippet
+                    if (fb.getComment() != null && !fb.getComment().isBlank()) {
+                        String comment = fb.getComment().length() > 120
+                                ? fb.getComment().substring(0, 117) + "…"
+                                : fb.getComment();
+                        Label commentLbl = new Label("💬 " + comment);
+                        commentLbl.setStyle("-fx-font-size:11px; -fx-text-fill:" + resultColor
+                                + "; -fx-font-style:italic;");
+                        commentLbl.setWrapText(true);
+                        resultBox.getChildren().add(commentLbl);
+                    }
+
+                    card.getChildren().add(resultBox);
+                }
+            } else {
+                // Past interview, no feedback yet
+                Label pendingLbl = new Label("⏳  Resultats en attente de l'evaluateur");
+                pendingLbl.setStyle("-fx-background-color:#FFF3CD; -fx-text-fill:#7D5A00;"
+                        + "-fx-padding:10 14; -fx-background-radius:8;"
+                        + "-fx-font-size:12px; -fx-font-weight:600;");
+                card.getChildren().add(pendingLbl);
+            }
         }
 
-        // Click to select interview and show bottom action buttons (recruiter only)
+        // ── FUTURE INTERVIEW status hint (candidate view) ─────────────────────
+        if (!isRecruiter && !isPast) {
+            long hoursUntil = java.time.temporal.ChronoUnit.HOURS.between(
+                    java.time.LocalDateTime.now(), interview.getScheduledAt());
+            if (hoursUntil <= 48 && hoursUntil >= 0) {
+                String urgText = hoursUntil < 24
+                        ? "🔥  Dans " + hoursUntil + "h — Preparez-vous !"
+                        : "⚡  Demain — Bonne chance !";
+                Label urgLbl = new Label(urgText);
+                urgLbl.setStyle("-fx-background-color:#FFF3CD; -fx-text-fill:#7D5A00;"
+                        + "-fx-padding:8 12; -fx-background-radius:8;"
+                        + "-fx-font-size:11px; -fx-font-weight:700;");
+                card.getChildren().add(urgLbl);
+            }
+        }
+
+        // ── Action buttons (recruiter) ────────────────────────────────────────
         if (isRecruiter) {
+            HBox actionRow = createActionButtons(interview);
+            card.getChildren().add(actionRow);
+
             card.setOnMouseClicked(e -> {
                 selectedInterview = interview;
                 highlightSelectedCard(card);
@@ -508,15 +622,65 @@ public class InterviewManagementController {
         return card;
     }
 
-    private String getStatusDescription(String status) {
-        if (status == null) return "Pending Confirmation";
+    /** Returns [candidateName, offerTitle, extraDetail] */
+    private String[] getCandidateAndOfferInfo(Long appId) {
+        if (appId == null) return new String[]{"Candidat inconnu", "Offre inconnue", ""};
+        String sql = """
+            SELECT u.first_name, u.last_name, jo.title, jo.location, jo.contract_type
+            FROM job_application ja
+            JOIN users u    ON ja.candidate_id = u.id
+            JOIN job_offer jo ON ja.offer_id   = jo.id
+            WHERE ja.id = ?
+            """;
+        try (java.sql.PreparedStatement ps =
+                Utils.MyDatabase.getInstance().getConnection().prepareStatement(sql)) {
+            ps.setLong(1, appId);
+            java.sql.ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                String name  = (rs.getString("first_name") + " " + rs.getString("last_name")).trim();
+                String title = rs.getString("title");
+                String loc   = rs.getString("location");
+                String ct    = rs.getString("contract_type");
+                String extra = (loc != null && !loc.isBlank() ? loc : "")
+                             + (ct  != null && !ct.isBlank()  ? (loc!=null&&!loc.isBlank()?" · ":"") + ct : "");
+                return new String[]{
+                    name.isEmpty()  ? "Candidat #" + appId : name,
+                    title != null   ? title : "Offre #" + appId,
+                    extra
+                };
+            }
+        } catch (Exception e) { System.err.println("getCandidateAndOfferInfo: " + e.getMessage()); }
+        return new String[]{"Candidat #" + appId, "Candidature #" + appId, ""};
+    }
 
+    private String formatStatusLabel(String status) {
+        if (status == null) return "Planifie";
         return switch (status.toUpperCase()) {
-            case "SCHEDULED" -> "✓ Confirmed - Interview is scheduled and confirmed";
-            case "COMPLETED" -> "✓ Completed - Interview has been conducted";
-            case "CANCELLED" -> "✕ Cancelled - Interview has been cancelled";
-            case "RESCHEDULED" -> "🔄 Rescheduled - New time has been set";
-            default -> "Pending Confirmation";
+            case "SCHEDULED"   -> "Planifie";
+            case "DONE", "COMPLETED" -> "Termine";
+            case "CANCELLED"   -> "Annule";
+            case "RESCHEDULED" -> "Replanifie";
+            default -> status;
+        };
+    }
+
+    private String getStatusBadgeColor(String status) {
+        if (status == null) return "#5BA3F5";
+        return switch (status.toUpperCase()) {
+            case "SCHEDULED"   -> "#5BA3F5";
+            case "DONE", "COMPLETED" -> "#2ECC71";
+            case "CANCELLED"   -> "#E74C3C";
+            case "RESCHEDULED" -> "#F39C12";
+            default -> "#6C757D";
+        };
+    }
+
+    private String formatMode(String mode) {
+        if (mode == null) return "N/A";
+        return switch (mode) {
+            case "ONLINE"  -> "En ligne";
+            case "ON_SITE" -> "Sur site";
+            default -> mode;
         };
     }
 
@@ -646,6 +810,10 @@ public class InterviewManagementController {
             feedbackPanel.setVisible(true);
             feedbackPanel.setManaged(true);
         }
+        if (rightPanelPlaceholder != null) {
+            rightPanelPlaceholder.setVisible(false);
+            rightPanelPlaceholder.setManaged(false);
+        }
     }
 
     private void deleteFeedbackForInterview(Interview interview) {
@@ -731,6 +899,11 @@ public class InterviewManagementController {
 
         feedbackPanel.setVisible(true);
         feedbackPanel.setManaged(true);
+        // Hide placeholder when panel is shown
+        if (rightPanelPlaceholder != null) {
+            rightPanelPlaceholder.setVisible(false);
+            rightPanelPlaceholder.setManaged(false);
+        }
     }
 
     @FXML
@@ -820,12 +993,17 @@ public class InterviewManagementController {
                 System.out.println("Calling InterviewFeedbackService.updateFeedback() with ID: " + fb.getId());
                 InterviewFeedbackService.updateFeedback(fb.getId(), fb);
                 System.out.println("✓ Update completed successfully");
-                showAlert("Succès", "Retour mis à jour avec succès.", Alert.AlertType.INFORMATION);
+                showAlert("Succes", "Retour mis a jour avec succes.", Alert.AlertType.INFORMATION);
             } else {
                 System.out.println("Calling InterviewFeedbackService.addFeedback()");
                 InterviewFeedbackService.addFeedback(fb);
                 System.out.println("✓ Create completed successfully");
-                showAlert("Succès", "Retour créé avec succès.", Alert.AlertType.INFORMATION);
+                showAlert("Succes", "Retour cree avec succes.", Alert.AlertType.INFORMATION);
+            }
+
+            // Send acceptance email if decision is ACCEPTED
+            if ("ACCEPTED".equals(decision)) {
+                sendAcceptanceEmail(selectedInterview);
             }
 
             System.out.println("============ FEEDBACK UPDATE COMPLETED ============\n");
@@ -867,10 +1045,55 @@ public class InterviewManagementController {
         hideFeedbackPanel();
     }
 
+    private void sendAcceptanceEmail(Interview interview) {
+        if (interview == null || interview.getApplicationId() == null) return;
+        new Thread(() -> {
+            try {
+                // Fetch candidate email + name + job offer details
+                String sql = """
+                    SELECT u.email, u.first_name, u.last_name,
+                           jo.title, jo.location, jo.contract_type, jo.description
+                    FROM job_application ja
+                    JOIN users    u  ON ja.candidate_id = u.id
+                    JOIN job_offer jo ON ja.offer_id    = jo.id
+                    WHERE ja.id = ?
+                    """;
+                try (java.sql.PreparedStatement ps =
+                        Utils.MyDatabase.getInstance().getConnection().prepareStatement(sql)) {
+                    ps.setLong(1, interview.getApplicationId());
+                    java.sql.ResultSet rs = ps.executeQuery();
+                    if (rs.next()) {
+                        String email     = rs.getString("email");
+                        String firstName = rs.getString("first_name");
+                        String lastName  = rs.getString("last_name");
+                        String fullName  = (firstName + " " + lastName).trim();
+                        String jobTitle  = rs.getString("title");
+                        String location  = rs.getString("location");
+                        String contract  = rs.getString("contract_type");
+                        String desc      = rs.getString("description");
+                        if (email != null && !email.isBlank()) {
+                            Services.EmailService.sendAcceptanceNotification(
+                                email, fullName, jobTitle, location, contract, desc);
+                            System.out.println("[InterviewController] Acceptance email sent to: " + email);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[InterviewController] Failed to send acceptance email: " + e.getMessage());
+            }
+        }, "AcceptanceEmailThread").start();
+    }
+
     private void hideFeedbackPanel() {
         if (feedbackPanel != null) {
             feedbackPanel.setVisible(false);
             feedbackPanel.setManaged(false);
+        }
+        // Show placeholder if edit dialog is also hidden
+        if (rightPanelPlaceholder != null
+                && (editDialog == null || !editDialog.isVisible())) {
+            rightPanelPlaceholder.setVisible(true);
+            rightPanelPlaceholder.setManaged(true);
         }
     }
 
@@ -920,9 +1143,14 @@ public class InterviewManagementController {
                 System.out.println("Edit dialog opened for new interview");
             }
 
-            editDialog.setVisible(true);
-            editDialog.setManaged(true);
+        editDialog.setVisible(true);
+        editDialog.setManaged(true);
+        // Hide placeholder
+        if (rightPanelPlaceholder != null) {
+            rightPanelPlaceholder.setVisible(false);
+            rightPanelPlaceholder.setManaged(false);
         }
+    }
     }
 
     private void hideEditDialog() {
@@ -930,8 +1158,12 @@ public class InterviewManagementController {
             editDialog.setVisible(false);
             editDialog.setManaged(false);
             isEditMode = false;
-            // DON'T clear selectedInterview here - it's needed for feedback operations
-            // selectedInterview will be cleared when appropriate (e.g., after saving)
+        }
+        // Show placeholder if feedback panel is also hidden
+        if (rightPanelPlaceholder != null
+                && (feedbackPanel == null || !feedbackPanel.isVisible())) {
+            rightPanelPlaceholder.setVisible(true);
+            rightPanelPlaceholder.setManaged(true);
         }
     }
 

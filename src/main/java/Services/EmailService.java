@@ -97,6 +97,165 @@ public class EmailService {
     }
 
     // =========================================================================
+    // PUBLIC API — Interview Acceptance Notification
+    // =========================================================================
+
+    /**
+     * Send a congratulatory acceptance email with job details via Brevo.
+     */
+    public static void sendAcceptanceNotification(String toEmail, String candidateName,
+                                                   String jobTitle, String jobLocation,
+                                                   String contractType, String jobDescription) {
+        String effectiveEmail = resolveRecipient(toEmail);
+        String effectiveName  = candidateName;
+        if (!effectiveEmail.equals(toEmail)) {
+            System.out.println("[EmailService] DEV REDIRECT acceptance: " + toEmail + " → " + effectiveEmail);
+            effectiveName = candidateName + " (redirect from " + toEmail + ")";
+        }
+        try {
+            String subject  = "Felicitations ! Vous etes retenu(e) — " + jobTitle + " | Talent Bridge";
+            String textBody = buildAcceptanceTextBody(candidateName, jobTitle, jobLocation, contractType);
+            String htmlBody = buildAcceptanceHtmlBody(candidateName, jobTitle, jobLocation, contractType, jobDescription);
+            sendViaBrevo(effectiveEmail, effectiveName, subject, textBody, htmlBody);
+            System.out.println("[EmailService] Acceptance notification sent to: " + effectiveEmail);
+        } catch (Exception e) {
+            System.err.println("[EmailService] Acceptance email failed: " + e.getMessage());
+        }
+    }
+
+    private static String buildAcceptanceTextBody(String name, String jobTitle,
+                                                    String location, String contract) {
+        return "Bonjour " + name + ",\n\n"
+            + "Toute l'equipe Talent Bridge est ravie de vous informer que votre candidature "
+            + "pour le poste de « " + jobTitle + " » a ete retenue !\n\n"
+            + "Details du poste :\n"
+            + "-----------------------------------\n"
+            + "Poste    : " + jobTitle + "\n"
+            + (location != null && !location.isBlank() ? "Lieu     : " + location + "\n" : "")
+            + (contract != null && !contract.isBlank() ? "Contrat  : " + contract + "\n" : "")
+            + "-----------------------------------\n\n"
+            + "Notre equipe prendra contact avec vous tres prochainement pour vous communiquer "
+            + "les prochaines etapes et les details pratiques.\n\n"
+            + "Encore une fois, toutes nos felicitations !\n\n"
+            + "Cordialement,\nL'equipe Talent Bridge";
+    }
+
+    private static String buildAcceptanceHtmlBody(String candidateName, String jobTitle,
+                                                    String jobLocation, String contractType,
+                                                    String jobDescription) {
+        String name     = escapeHtml(candidateName  != null ? candidateName  : "Candidat");
+        String title    = escapeHtml(jobTitle        != null ? jobTitle        : "");
+        String loc      = escapeHtml(jobLocation     != null ? jobLocation     : "");
+        String contract = escapeHtml(contractType    != null ? contractType    : "");
+        String descSnip = jobDescription != null && !jobDescription.isBlank()
+                ? escapeHtml(jobDescription.length() > 300
+                        ? jobDescription.substring(0, 297) + "…" : jobDescription)
+                : "";
+
+        StringBuilder h = new StringBuilder();
+        h.append("<!DOCTYPE html><html><head><meta charset='UTF-8'>"
+                + "<meta name='viewport' content='width=device-width,initial-scale=1'></head>");
+        h.append("<body style='margin:0;padding:0;background:#EBF0F8;"
+                + "font-family:\"Segoe UI\",Helvetica,Arial,sans-serif;'>");
+
+        // Outer wrapper
+        h.append("<table width='100%' cellpadding='0' cellspacing='0' "
+                + "style='background:#EBF0F8;padding:36px 0;'><tr><td align='center'>");
+        h.append("<table width='600' cellpadding='0' cellspacing='0' "
+                + "style='max-width:600px;width:100%;'>");
+
+        // ── Header banner ──────────────────────────────────────────────────────
+        h.append("<tr><td style='"
+                + "background:linear-gradient(135deg,#1565C0 0%,#5BA3F5 60%,#2ECC71 100%);"
+                + "border-radius:16px 16px 0 0;padding:42px 40px 36px;text-align:center;'>");
+        h.append("<div style='font-size:48px;'>🎉</div>");
+        h.append("<div style='font-size:13px;color:rgba(255,255,255,.75);"
+                + "letter-spacing:2px;margin-bottom:8px;'>TALENT BRIDGE</div>");
+        h.append("<div style='font-size:28px;font-weight:800;color:#fff;"
+                + "line-height:1.2;'>Felicitations !</div>");
+        h.append("<div style='font-size:15px;color:rgba(255,255,255,.88);"
+                + "margin-top:8px;'>Votre candidature a ete retenue</div>");
+        h.append("</td></tr>");
+
+        // ── Body ───────────────────────────────────────────────────────────────
+        h.append("<tr><td style='background:#ffffff;padding:40px;'>");
+
+        // Greeting
+        h.append("<p style='font-size:16px;color:#1E293B;margin:0 0 18px;'>"
+                + "Bonjour <strong>").append(name).append("</strong>,</p>");
+        h.append("<p style='font-size:15px;color:#475569;line-height:1.7;margin:0 0 24px;'>"
+                + "Nous avons le grand plaisir de vous informer que votre candidature pour le poste de "
+                + "<strong style='color:#1565C0;'>").append(title).append("</strong>"
+                + " a ete <strong style='color:#2ECC71;'>retenue</strong> ! "
+                + "Toute l'equipe vous adresse ses plus chaleureuses felicitations.</p>");
+
+        // Job details card
+        h.append("<table width='100%' cellpadding='0' cellspacing='0' style='"
+                + "background:#F7FAFF;border:1px solid #DCEEFB;"
+                + "border-radius:12px;margin-bottom:28px;overflow:hidden;'>");
+        h.append("<tr><td colspan='2' style='"
+                + "background:linear-gradient(to right,#1565C0,#5BA3F5);"
+                + "padding:12px 20px;'>"
+                + "<span style='color:white;font-size:13px;font-weight:700;"
+                + "letter-spacing:1px;'>DETAILS DU POSTE</span></td></tr>");
+
+        acceptanceInfoRow(h, "💼", "Poste",   title);
+        if (!loc.isBlank())      acceptanceInfoRow(h, "📍", "Lieu",     loc);
+        if (!contract.isBlank()) acceptanceInfoRow(h, "📄", "Contrat",  contract);
+
+        h.append("</table>");
+
+        // Description snippet
+        if (!descSnip.isBlank()) {
+            h.append("<div style='background:#F0F9FF;border-left:4px solid #5BA3F5;"
+                    + "padding:16px 20px;border-radius:0 8px 8px 0;margin-bottom:28px;'>");
+            h.append("<div style='font-size:12px;font-weight:700;color:#1565C0;"
+                    + "margin-bottom:8px;'>DESCRIPTION DU POSTE</div>");
+            h.append("<p style='font-size:13px;color:#475569;line-height:1.7;margin:0;'>")
+             .append(descSnip).append("</p>");
+            h.append("</div>");
+        }
+
+        // Next steps
+        h.append("<div style='background:#F0FFF4;border:1px solid #A7F3D0;"
+                + "border-radius:12px;padding:20px;margin-bottom:28px;'>");
+        h.append("<div style='font-size:13px;font-weight:700;color:#065F46;"
+                + "margin-bottom:10px;'>PROCHAINES ETAPES</div>");
+        h.append("<ul style='margin:0;padding-left:20px;color:#065F46;font-size:13px;line-height:1.9;'>");
+        h.append("<li>Notre equipe vous contactera tres prochainement</li>");
+        h.append("<li>Vous recevrez les details pratiques par email ou telephone</li>");
+        h.append("<li>Preparez vos documents (piece d'identite, diplomes, etc.)</li>");
+        h.append("</ul></div>");
+
+        // Sign-off
+        h.append("<p style='font-size:15px;color:#475569;line-height:1.7;margin:0 0 6px;'>"
+                + "Encore toutes nos felicitations, et bienvenue dans votre nouvelle aventure !</p>");
+        h.append("<p style='font-size:14px;color:#1565C0;font-weight:600;margin:0;'>"
+                + "L'equipe Talent Bridge</p>");
+
+        h.append("</td></tr>");
+
+        // ── Footer ─────────────────────────────────────────────────────────────
+        h.append("<tr><td style='background:#F7FAFF;border-radius:0 0 16px 16px;"
+                + "padding:20px 40px;text-align:center;'>");
+        h.append("<p style='font-size:11px;color:#94A3B8;margin:0;'>"
+                + "Cet email a ete envoye automatiquement par Talent Bridge. "
+                + "Merci de ne pas y repondre directement.</p>");
+        h.append("</td></tr></table></td></tr></table></body></html>");
+
+        return h.toString();
+    }
+
+    private static void acceptanceInfoRow(StringBuilder h, String icon, String label, String value) {
+        h.append("<tr><td style='padding:12px 20px;font-size:18px;width:42px;'>")
+         .append(icon).append("</td>");
+        h.append("<td style='padding:12px 0;font-size:12px;font-weight:700;color:#64748B;"
+                + "width:120px;'>").append(escapeHtml(label)).append("</td>");
+        h.append("<td style='padding:12px 20px 12px 0;font-size:14px;color:#1E293B;font-weight:600;'>")
+         .append(value).append("</td></tr>");
+    }
+
+    // =========================================================================
     // PUBLIC API — Interview Reminders (Brevo)
     // =========================================================================
 

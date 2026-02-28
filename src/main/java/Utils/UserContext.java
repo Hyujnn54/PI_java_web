@@ -164,22 +164,17 @@ public class UserContext {
     public static Long getRecruiterId() {
         UserContext ctx = getInstance();
         if (ctx.currentRole == Role.RECRUITER && ctx.userId != null) {
-            // Verify user actually exists in recruiter table
+            // recruiter.id == users.id (same PK, no separate user_id column)
             Long rid = queryFirstId("SELECT id FROM recruiter WHERE id = " + ctx.userId, null);
             if (rid != null) return rid;
-            // Fallback: look up by user_id foreign key if schema differs
-            rid = queryFirstId("SELECT id FROM recruiter WHERE user_id = " + ctx.userId + " LIMIT 1", null);
-            if (rid != null) return rid;
-            // Last resort: first recruiter in DB
-            rid = queryFirstId("SELECT id FROM recruiter LIMIT 1", null);
-            if (rid != null) return rid;
+            // userId is valid but no recruiter row yet — return userId directly
             return ctx.userId;
         }
         if (ctx.cachedRecruiterId == null) {
-            ctx.cachedRecruiterId = queryFirstId("SELECT id FROM users WHERE UPPER(role) = 'RECRUITER' LIMIT 1", null);
-            if (ctx.cachedRecruiterId == null) {
+            ctx.cachedRecruiterId = queryFirstId(
+                "SELECT id FROM users WHERE UPPER(role) = 'RECRUITER' LIMIT 1", null);
+            if (ctx.cachedRecruiterId == null)
                 ctx.cachedRecruiterId = queryFirstId("SELECT id FROM recruiter LIMIT 1", 1L);
-            }
         }
         return ctx.cachedRecruiterId;
     }
@@ -187,22 +182,17 @@ public class UserContext {
     public static Long getCandidateId() {
         UserContext ctx = getInstance();
         if (ctx.currentRole == Role.CANDIDATE && ctx.userId != null) {
-            // Verify user actually exists in candidate table
+            // candidate.id == users.id (same PK, no separate user_id column)
             Long cid = queryFirstId("SELECT id FROM candidate WHERE id = " + ctx.userId, null);
             if (cid != null) return cid;
-            // Fallback: look up by user_id foreign key if schema differs
-            cid = queryFirstId("SELECT id FROM candidate WHERE user_id = " + ctx.userId + " LIMIT 1", null);
-            if (cid != null) return cid;
-            // Last resort: first candidate in DB
-            cid = queryFirstId("SELECT id FROM candidate LIMIT 1", null);
-            if (cid != null) return cid;
+            // userId is valid but no candidate row yet — return userId directly
             return ctx.userId;
         }
         if (ctx.cachedCandidateId == null) {
-            ctx.cachedCandidateId = queryFirstId("SELECT id FROM users WHERE UPPER(role) = 'CANDIDATE' LIMIT 1", null);
-            if (ctx.cachedCandidateId == null) {
+            ctx.cachedCandidateId = queryFirstId(
+                "SELECT id FROM users WHERE UPPER(role) = 'CANDIDATE' LIMIT 1", null);
+            if (ctx.cachedCandidateId == null)
                 ctx.cachedCandidateId = queryFirstId("SELECT id FROM candidate LIMIT 1", 1L);
-            }
         }
         return ctx.cachedCandidateId;
     }

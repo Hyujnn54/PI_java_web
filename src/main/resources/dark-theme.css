@@ -1,0 +1,340 @@
+/* ============================================================
+   TalentBridge — Dark Theme Override
+   Activated by adding CSS class "dark" to root BorderPane
+   All sub-pages loaded inside the center StackPane are
+   covered by descendant selectors below.
+   ============================================================ */
+
+/* ── Root + content wrappers ──────────────────────────────── */
+.dark, .dark .root {
+    -fx-background-color: #0F1923;
+}
+.dark .content-area,
+.dark .page,
+.dark VBox.page,
+.dark StackPane {
+    -fx-background-color: #0F1923;
+}
+
+/* ── Top bar ──────────────────────────────────────────────── */
+.dark .top-bar {
+    -fx-background-color: #1A2535;
+    -fx-border-color: transparent transparent #243044 transparent;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.40), 12, 0, 0, 3);
+}
+.dark .logo-text   { -fx-text-fill: #7EC8FF; }
+.dark .user-name   { -fx-text-fill: #E8EEF5; }
+.dark .user-role   { -fx-text-fill: #5A7090; }
+.dark .disconnect-button {
+    -fx-background-color: #2A1A1A; -fx-text-fill: #FF6B6B; -fx-border-color: #4A2020;
+}
+.dark .disconnect-button:hover {
+    -fx-background-color: #E53935; -fx-text-fill: white; -fx-border-color: #E53935;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+.dark .sidebar {
+    -fx-background-color: #1A2535;
+    -fx-border-color: transparent #243044 transparent transparent;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.50), 18, 0, 3, 0);
+}
+.dark .sidebar-section-label { -fx-text-fill: #3D5270; }
+.dark .sidebar-nav-btn { -fx-text-fill: #7A90A8; -fx-background-color: transparent; }
+.dark .sidebar-nav-btn:hover {
+    -fx-background-color: #1F3048; -fx-text-fill: #7EC8FF;
+    -fx-effect: dropshadow(gaussian, rgba(126,200,255,0.10), 6, 0, 0, 1);
+}
+.dark .sidebar-nav-btn:pressed { -fx-background-color: #162436; }
+.dark .sidebar-nav-btn-active {
+    -fx-background-color: linear-gradient(to right, #1B6CB0, #155FA0);
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(27,108,176,0.55), 12, 0, 0, 3);
+}
+.dark .sidebar-nav-btn-active:hover { -fx-background-color: linear-gradient(to right,#2279C2,#1B6CB0); }
+.dark .sidebar-separator { -fx-background-color: #243044; }
+
+/* ── Cards & panels ───────────────────────────────────────── */
+.dark .card,
+.dark .section-card,
+.dark .detail-section-card,
+.dark .form-section-card,
+.dark .action-buttons-container,
+.dark .form-action-buttons,
+.dark .interview-card,
+.dark .candidate-card,
+.dark .job-offer-card,
+.dark .search-bar-container,
+.dark .detail-header-card,
+.dark .info-card {
+    -fx-background-color: #1A2535;
+    -fx-border-color: #243044;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 12, 0, 0, 3);
+}
+.dark .card:hover,
+.dark .interview-card:hover,
+.dark .candidate-card:hover,
+.dark .job-offer-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(126,200,255,0.20), 18, 0, 0, 5);
+    -fx-border-color: #2C5080;
+}
+
+/* Inline styles are patched by MainShellController.patchNodeDark()
+   CSS class selectors below handle stylesheet-based styling */
+
+/* ── All labels / text ────────────────────────────────────── */
+.dark .label { -fx-text-fill: #C8D8E8; }
+.dark .page-title, .dark .card-title,
+.dark .section-title, .dark .detail-section-title, .dark .form-section-title,
+.dark .info-value, .dark .label-header,
+.dark .candidate-name, .dark .job-title,
+.dark .detail-candidate-name { -fx-text-fill: #E8EEF5; }
+.dark .page-subtitle, .dark .label-small,
+.dark .info-label, .dark .detail-label,
+.dark .candidate-position, .dark .candidate-info,
+.dark .job-meta, .dark .job-info, .dark .job-date, .dark .date-label { -fx-text-fill: #5A7090; }
+.dark .label-title, .dark .detail-candidate-position,
+.dark .applicant-count { -fx-text-fill: #7EC8FF; }
+
+/* ── Form inputs ──────────────────────────────────────────── */
+.dark .text-field, .dark .text-area, .dark .combo-box,
+.dark .modern-text-field, .dark .modern-text-area,
+.dark .modern-search-field, .dark .dialog-input, .dark .modern-combo {
+    -fx-background-color: #0F1923;
+    -fx-border-color: #243044;
+    -fx-text-fill: #C8D8E8;
+}
+.dark .text-field:focused, .dark .text-area:focused,
+.dark .modern-text-field:focused, .dark .modern-search-field:focused {
+    -fx-border-color: #2279C2;
+    -fx-effect: dropshadow(gaussian, rgba(34,121,194,0.25), 8, 0, 0, 0);
+}
+.dark .text-area .content { -fx-background-color: #0F1923; }
+.dark .combo-box-popup .list-view { -fx-background-color: #1A2535; -fx-border-color: #243044; }
+.dark .combo-box-popup .list-cell { -fx-text-fill: #C8D8E8; -fx-background-color: transparent; }
+.dark .combo-box-popup .list-cell:filled:hover { -fx-background-color: #1F3048; -fx-text-fill: #7EC8FF; }
+.dark .combo-box-popup .list-cell:filled:selected { -fx-background-color: #1B6CB0; -fx-text-fill: white; }
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.dark .btn-secondary {
+    -fx-background-color: #1F3048; -fx-text-fill: #7A90A8; -fx-border-color: #243044;
+}
+.dark .btn-secondary:hover { -fx-background-color: #253850; -fx-text-fill: #7EC8FF; }
+
+/* ── Table ────────────────────────────────────────────────── */
+.dark .table-view { -fx-background-color: #1A2535; -fx-border-color: #243044; }
+.dark .table-view .column-header { -fx-background-color: #151F2E; -fx-text-fill: #5A7090; }
+.dark .table-view .table-row-cell {
+    -fx-background-color: #1A2535;
+    -fx-border-color: transparent transparent #1F2D40 transparent;
+}
+.dark .table-view .table-row-cell:odd { -fx-background-color: #172030; }
+.dark .table-view .table-row-cell:hover { -fx-background-color: #1F3048; }
+.dark .table-view .table-row-cell:selected { -fx-background-color: #1B3C60; -fx-text-fill: #7EC8FF; }
+
+/* ── Scrollbars ───────────────────────────────────────────── */
+.dark .scroll-bar .thumb { -fx-background-color: #243044; }
+.dark .scroll-bar .thumb:hover { -fx-background-color: #2279C2; }
+
+/* ── Tooltip ──────────────────────────────────────────────── */
+.dark .tooltip {
+    -fx-background-color: #0F1923; -fx-text-fill: #C8D8E8;
+    -fx-border-color: #243044; -fx-border-width: 1;
+}
+
+/* ── Charts ───────────────────────────────────────────────── */
+.dark .chart-plot-background { -fx-background-color: transparent; }
+.dark .chart-vertical-grid-lines   { -fx-stroke: #1F2D40; }
+.dark .chart-horizontal-grid-lines { -fx-stroke: #1F2D40; }
+.dark .axis { -fx-tick-label-fill: #3D5270; }
+.dark .axis-label { -fx-text-fill: #3D5270; }
+.dark .chart-legend { -fx-background-color: transparent; }
+.dark .chart-legend-item { -fx-text-fill: #5A7090; }
+
+/* ── Bottom actions, separators ───────────────────────────── */
+.dark .bottom-actions {
+    -fx-background-color: rgba(26,37,53,0.97);
+    -fx-border-color: #243044 transparent transparent transparent;
+}
+.dark .separator .line { -fx-border-color: #243044; }
+
+/* ── SplitPane ────────────────────────────────────────────── */
+.dark .split-pane { -fx-background-color: transparent; }
+.dark .split-pane > .split-pane-divider { -fx-background-color: #243044; }
+.dark .split-pane > .split-pane-divider:hover { -fx-background-color: #2279C2; }
+
+/* ── Section background panels ────────────────────────────── */
+.dark .section-bg {
+    -fx-background-color: #151F2E;
+    -fx-border-color: #1F2D40;
+}
+
+
+/* Top bar */
+.dark .top-bar {
+    -fx-background-color: #1A2535;
+    -fx-border-color: transparent transparent #243044 transparent;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.40), 12, 0, 0, 3);
+}
+.dark .logo-text   { -fx-text-fill: #7EC8FF; }
+.dark .user-name   { -fx-text-fill: #E8EEF5; }
+.dark .user-role   { -fx-text-fill: #5A7090; }
+
+.dark .disconnect-button {
+    -fx-background-color: #2A1A1A;
+    -fx-text-fill: #FF6B6B;
+    -fx-border-color: #4A2020;
+}
+.dark .disconnect-button:hover {
+    -fx-background-color: #E53935;
+    -fx-text-fill: white;
+    -fx-border-color: #E53935;
+}
+
+/* Sidebar */
+.dark .sidebar {
+    -fx-background-color: #1A2535;
+    -fx-border-color: transparent #243044 transparent transparent;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.50), 18, 0, 3, 0);
+}
+.dark .sidebar-section-label { -fx-text-fill: #3D5270; }
+
+.dark .sidebar-nav-btn {
+    -fx-text-fill: #7A90A8;
+    -fx-background-color: transparent;
+}
+.dark .sidebar-nav-btn:hover {
+    -fx-background-color: #1F3048;
+    -fx-text-fill: #7EC8FF;
+    -fx-effect: dropshadow(gaussian, rgba(126,200,255,0.10), 6, 0, 0, 1);
+}
+.dark .sidebar-nav-btn:pressed { -fx-background-color: #162436; }
+
+.dark .sidebar-nav-btn-active {
+    -fx-background-color: linear-gradient(to right, #1B6CB0, #155FA0);
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(27,108,176,0.55), 12, 0, 0, 3);
+}
+.dark .sidebar-nav-btn-active:hover {
+    -fx-background-color: linear-gradient(to right, #2279C2, #1B6CB0);
+}
+
+.dark .sidebar-separator { -fx-background-color: #243044; }
+
+/* Content area + pages */
+.dark .content-area,
+.dark .page,
+.dark .root {
+    -fx-background-color: #0F1923;
+}
+
+/* Cards */
+.dark .card, .dark .section-card,
+.dark .detail-section-card, .dark .form-section-card,
+.dark .action-buttons-container, .dark .form-action-buttons,
+.dark .interview-card, .dark .candidate-card, .dark .job-offer-card,
+.dark .search-bar-container, .dark .detail-header-card, .dark .info-card {
+    -fx-background-color: #1A2535;
+    -fx-border-color: #243044;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 12, 0, 0, 3);
+}
+.dark .card:hover, .dark .interview-card:hover,
+.dark .candidate-card:hover, .dark .job-offer-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(126,200,255,0.20), 18, 0, 0, 5);
+    -fx-border-color: #2C5080;
+}
+
+/* Typography */
+.dark .label, .dark * {
+    -fx-text-fill: #C8D8E8;
+}
+.dark .page-title, .dark .card-title,
+.dark .section-title, .dark .detail-section-title, .dark .form-section-title,
+.dark .info-value, .dark .label-header,
+.dark .candidate-name, .dark .job-title,
+.dark .detail-candidate-name {
+    -fx-text-fill: #E8EEF5;
+}
+.dark .page-subtitle, .dark .label-small,
+.dark .info-label, .dark .detail-label,
+.dark .candidate-position, .dark .candidate-info,
+.dark .job-meta, .dark .job-info, .dark .job-date, .dark .date-label {
+    -fx-text-fill: #5A7090;
+}
+.dark .label-title, .dark .detail-candidate-position,
+.dark .applicant-count {
+    -fx-text-fill: #7EC8FF;
+}
+
+/* Form inputs */
+.dark .text-field, .dark .text-area, .dark .combo-box,
+.dark .modern-text-field, .dark .modern-text-area,
+.dark .modern-search-field, .dark .dialog-input {
+    -fx-background-color: #0F1923;
+    -fx-border-color: #243044;
+    -fx-text-fill: #C8D8E8;
+    -fx-prompt-text-fill: #3D5270;
+}
+.dark .text-field:focused, .dark .text-area:focused,
+.dark .modern-text-field:focused, .dark .modern-search-field:focused {
+    -fx-border-color: #2279C2;
+    -fx-effect: dropshadow(gaussian, rgba(34,121,194,0.25), 8, 0, 0, 0);
+}
+.dark .text-area .content { -fx-background-color: #0F1923; }
+.dark .combo-box-popup .list-view {
+    -fx-background-color: #1A2535;
+    -fx-border-color: #243044;
+}
+.dark .combo-box-popup .list-cell { -fx-text-fill: #C8D8E8; -fx-background-color: transparent; }
+.dark .combo-box-popup .list-cell:filled:hover { -fx-background-color: #1F3048; -fx-text-fill: #7EC8FF; }
+.dark .combo-box-popup .list-cell:filled:selected { -fx-background-color: #1B6CB0; -fx-text-fill: white; }
+
+/* Buttons — keep primary/success/danger colors but darken bg */
+.dark .btn-secondary {
+    -fx-background-color: #1F3048;
+    -fx-text-fill: #7A90A8;
+    -fx-border-color: #243044;
+}
+.dark .btn-secondary:hover { -fx-background-color: #253850; -fx-text-fill: #7EC8FF; }
+
+/* Table */
+.dark .table-view {
+    -fx-background-color: #1A2535;
+    -fx-border-color: #243044;
+}
+.dark .table-view .column-header { -fx-background-color: #151F2E; -fx-text-fill: #5A7090; }
+.dark .table-view .table-row-cell { -fx-background-color: #1A2535; -fx-border-color: transparent transparent #1F2D40 transparent; }
+.dark .table-view .table-row-cell:odd { -fx-background-color: #172030; }
+.dark .table-view .table-row-cell:hover { -fx-background-color: #1F3048; }
+.dark .table-view .table-row-cell:selected { -fx-background-color: #1B3C60; -fx-text-fill: #7EC8FF; }
+
+/* Scrollbar */
+.dark .scroll-bar .thumb { -fx-background-color: #243044; }
+.dark .scroll-bar .thumb:hover { -fx-background-color: #2279C2; }
+
+/* Tooltip */
+.dark .tooltip {
+    -fx-background-color: #0F1923;
+    -fx-text-fill: #C8D8E8;
+    -fx-border-color: #243044;
+    -fx-border-width: 1;
+}
+
+/* Charts */
+.dark .chart-plot-background { -fx-background-color: transparent; }
+.dark .chart-vertical-grid-lines   { -fx-stroke: #1F2D40; }
+.dark .chart-horizontal-grid-lines { -fx-stroke: #1F2D40; }
+.dark .axis { -fx-tick-label-fill: #3D5270; }
+.dark .axis-label { -fx-text-fill: #3D5270; }
+.dark .chart-legend { -fx-background-color: transparent; }
+.dark .chart-legend-item { -fx-text-fill: #5A7090; }
+
+/* Bottom actions */
+.dark .bottom-actions {
+    -fx-background-color: rgba(26,37,53,0.97);
+    -fx-border-color: #243044 transparent transparent transparent;
+}
+
+/* Separator */
+.dark .separator .line { -fx-border-color: #243044; }
+
+

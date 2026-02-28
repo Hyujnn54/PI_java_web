@@ -58,15 +58,20 @@ public class CalendarViewController {
         stage.setMinWidth(1100); stage.setMinHeight(720);
 
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #F5F6F8;");
+        root.setStyle("-fx-background-color: #EBF0F8;");
         root.setTop(buildHeader());
         root.setCenter(buildContent());
         root.setBottom(buildLegend());
 
+        // Apply app stylesheet
+        try {
+            String css = getClass().getResource("/styles.css").toExternalForm();
+            root.getStylesheets().add(css);
+        } catch (Exception ignored) {}
+
         loadData();
         refreshCalendar();
         updateEventsList(selectedDate);
-        // No upcoming panel
 
         stage.setScene(new Scene(root, 1100, 720));
         stage.show();
@@ -78,7 +83,7 @@ public class CalendarViewController {
 
     private VBox buildHeader() {
         VBox header = new VBox(12);
-        header.setStyle("-fx-background-color: linear-gradient(to right,#2c3e50,#3d5a80); -fx-padding: 20 25;");
+        header.setStyle("-fx-background-color: linear-gradient(to right,#1565C0,#5BA3F5); -fx-padding: 20 25;");
 
         // Title row
         HBox titleRow = new HBox(15);
@@ -88,10 +93,10 @@ public class CalendarViewController {
         iconLbl.setStyle("-fx-font-size: 28px;");
 
         VBox titleBox = new VBox(2);
-        Label title = new Label("Calendrier Unifié");
+        Label title = new Label("Calendrier Unifie");
         title.setStyle("-fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: white;");
-        Label sub = new Label("Deadlines des offres d'emploi  ·  Entretiens planifiés");
-        sub.setStyle("-fx-font-size: 13px; -fx-text-fill: rgba(255,255,255,0.75);");
+        Label sub = new Label("Deadlines des offres d'emploi  ·  Entretiens planifies");
+        sub.setStyle("-fx-font-size: 13px; -fx-text-fill: rgba(255,255,255,0.78);");
         titleBox.getChildren().addAll(title, sub);
 
         Region sp1 = new Region(); HBox.setHgrow(sp1, Priority.ALWAYS);
@@ -160,7 +165,7 @@ public class CalendarViewController {
 
     private HBox buildContent() {
         HBox content = new HBox(16);
-        content.setStyle("-fx-padding: 16;");
+        content.setStyle("-fx-padding: 16; -fx-background-color: #EBF0F8;");
         VBox.setVgrow(content, Priority.ALWAYS);
 
         VBox calSection = buildCalendarSection();
@@ -178,7 +183,8 @@ public class CalendarViewController {
     private VBox buildCalendarSection() {
         VBox sec = new VBox(14);
         sec.setStyle("-fx-background-color: white; -fx-background-radius: 14; -fx-padding: 20; " +
-                "-fx-effect: dropshadow(gaussian,rgba(0,0,0,0.08),12,0,0,3);");
+                "-fx-effect: dropshadow(gaussian,rgba(91,163,245,0.10),14,0,0,3);" +
+                "-fx-border-color:#E8EEF8; -fx-border-width:1; -fx-border-radius:14;");
         VBox.setVgrow(sec, Priority.ALWAYS);
 
         // Navigation
@@ -213,8 +219,16 @@ public class CalendarViewController {
 
     private Button navBtn(String t) {
         Button b = new Button(t);
-        b.setStyle("-fx-background-color: #f0f4ff; -fx-text-fill: #2c3e50; -fx-font-size: 15px; " +
-                "-fx-padding: 7 16; -fx-background-radius: 8; -fx-cursor: hand;");
+        b.setStyle("-fx-background-color: #EBF0F8; -fx-text-fill: #5BA3F5; -fx-font-size: 15px; " +
+                "-fx-padding: 8 18; -fx-background-radius: 9; -fx-cursor: hand;" +
+                "-fx-border-color:#D4DCE8; -fx-border-width:1; -fx-border-radius:9;" +
+                "-fx-font-weight:700;");
+        b.setOnMouseEntered(e -> b.setStyle("-fx-background-color:#5BA3F5; -fx-text-fill:white;" +
+                "-fx-font-size:15px; -fx-padding:8 18; -fx-background-radius:9; -fx-cursor:hand;" +
+                "-fx-font-weight:700;"));
+        b.setOnMouseExited(e -> b.setStyle("-fx-background-color:#EBF0F8; -fx-text-fill:#5BA3F5;" +
+                "-fx-font-size:15px; -fx-padding:8 18; -fx-background-radius:9; -fx-cursor:hand;" +
+                "-fx-border-color:#D4DCE8; -fx-border-width:1; -fx-border-radius:9; -fx-font-weight:700;"));
         return b;
     }
 
@@ -223,7 +237,8 @@ public class CalendarViewController {
     private VBox buildEventListSection() {
         VBox sec = new VBox(10);
         sec.setStyle("-fx-background-color: white; -fx-background-radius: 14; -fx-padding: 18; " +
-                "-fx-effect: dropshadow(gaussian,rgba(0,0,0,0.08),12,0,0,3);");
+                "-fx-effect: dropshadow(gaussian,rgba(91,163,245,0.10),14,0,0,3);" +
+                "-fx-border-color:#E8EEF8; -fx-border-width:1; -fx-border-radius:14;");
         VBox.setVgrow(sec, Priority.ALWAYS);
 
         Label title = new Label("📋 Événements du jour sélectionné");
@@ -247,26 +262,27 @@ public class CalendarViewController {
     // ── Legend ────────────────────────────────────────────────────────────────
 
     private HBox buildLegend() {
-        HBox leg = new HBox(24);
-        leg.setStyle("-fx-background-color: white; -fx-padding: 12 22; " +
-                "-fx-border-color: #e9ecef; -fx-border-width: 1 0 0 0;");
+        HBox leg = new HBox(22);
+        leg.setStyle("-fx-background-color: white; -fx-padding: 13 24; " +
+                "-fx-border-color: #E4EBF5 transparent transparent transparent; -fx-border-width: 1 0 0 0;" +
+                "-fx-effect: dropshadow(gaussian,rgba(91,163,245,0.06),8,0,-2,0);");
         leg.setAlignment(Pos.CENTER);
         leg.getChildren().addAll(
-            legItem("#dc3545", "Entretien planifié"),
-            legItem("#28a745", "Entretien urgent (< 3j)"),
+            legItem("#E74C3C", "Entretien planifie"),
+            legItem("#2ECC71", "Entretien urgent (< 3j)"),
             legItem("#17a2b8", "Entretien cette semaine"),
-            legItem("#ffc107", "Deadline offre proche"),
+            legItem("#F39C12", "Deadline offre proche"),
             legItem("#5BA3F5", "Deadline offre ce mois"),
-            legItem("#6c757d", "Date passée")
+            legItem("#8FA3B8", "Date passee")
         );
         return leg;
     }
 
     private HBox legItem(String color, String text) {
-        HBox item = new HBox(6); item.setAlignment(Pos.CENTER_LEFT);
-        Circle dot = new Circle(6); dot.setFill(Color.web(color));
+        HBox item = new HBox(7); item.setAlignment(Pos.CENTER_LEFT);
+        Circle dot = new Circle(5); dot.setFill(Color.web(color));
         Label lbl = new Label(text);
-        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #495057;");
+        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #5A7080; -fx-font-weight:600;");
         item.getChildren().addAll(dot, lbl);
         return item;
     }
@@ -368,9 +384,9 @@ public class CalendarViewController {
         boolean hasInterviews = !interviews.isEmpty();
 
         String bg, border, bw;
-        if (isSelected)    { bg = "#3d5a80"; border = "#2c3e50"; bw = "2"; }
-        else if (isToday)  { bg = "#e8f4fd"; border = "#5BA3F5"; bw = "2"; }
-        else               { bg = "white";   border = "#e9ecef"; bw = "1"; }
+        if (isSelected)    { bg = "#5BA3F5"; border = "#4A90E2"; bw = "2"; }
+        else if (isToday)  { bg = "#EBF4FF"; border = "#5BA3F5"; bw = "2"; }
+        else               { bg = "white";   border = "#E4EBF5"; bw = "1"; }
 
         cell.setStyle("-fx-background-color: " + bg + "; -fx-background-radius: 10; " +
                 "-fx-border-color: " + border + "; -fx-border-radius: 10; " +
@@ -381,7 +397,7 @@ public class CalendarViewController {
         inner.setPadding(new Insets(6, 4, 4, 4));
 
         // Day number
-        String numColor = isSelected ? "white" : isToday ? "#1976d2" : "#2c3e50";
+        String numColor = isSelected ? "white" : isToday ? "#1565C0" : "#2c3e50";
         Label numLbl = new Label(String.valueOf(date.getDayOfMonth()));
         numLbl.setStyle("-fx-font-size: 14px; -fx-font-weight: " + (isToday ? "700" : "500") +
                 "; -fx-text-fill: " + numColor + ";");
@@ -442,13 +458,13 @@ public class CalendarViewController {
 
         // Hover
         cell.setOnMouseEntered(e -> {
-            if (!isSelected) cell.setStyle("-fx-background-color: #eef5ff; -fx-background-radius: 10; " +
+            if (!isSelected) cell.setStyle("-fx-background-color: #DCEEFB; -fx-background-radius: 10; " +
                     "-fx-border-color: #5BA3F5; -fx-border-radius: 10; -fx-border-width: 2; -fx-cursor: hand;");
         });
         cell.setOnMouseExited(e -> {
-            if (!isSelected) cell.setStyle("-fx-background-color: " + (isToday?"#e8f4fd":"white") +
-                    "; -fx-background-radius: 10; -fx-border-color: " + (isToday?"#5BA3F5":"#e9ecef") +
-                    "; -fx-border-radius: 10; -fx-border-width: " + (isToday?"2":"1") + "; -fx-cursor: hand;");
+            if (!isSelected) cell.setStyle("-fx-background-color: " + (isToday ? "#EBF4FF" : "white") +
+                    "; -fx-background-radius: 10; -fx-border-color: " + (isToday ? "#5BA3F5" : "#E4EBF5") +
+                    "; -fx-border-radius: 10; -fx-border-width: " + (isToday ? "2" : "1") + "; -fx-cursor: hand;");
         });
 
         cell.setOnMouseClicked(e -> {
