@@ -206,30 +206,46 @@ public class ApplicationsController {
     }
 
     private void loadApplications() {
-        if (candidateListContainer == null) return;
+        if (candidateListContainer == null) {
+            System.err.println("[ApplicationsController] candidateListContainer is NULL!");
+            return;
+        }
         candidateListContainer.getChildren().clear();
         selectedApplicationIds.clear();
 
         List<ApplicationService.ApplicationRow> applications = ApplicationService.getAll();
         UserContext.Role role = UserContext.getRole();
 
+        System.out.println("[ApplicationsController] Role: " + role + ", Total applications from DB: " + applications.size());
+
         // Filter by role
         if (role == UserContext.Role.CANDIDATE) {
             Long candidateId = UserContext.getCandidateId();
+            System.out.println("[ApplicationsController] Candidate ID: " + candidateId);
             if (candidateId != null) {
                 applications = applications.stream()
                         .filter(app -> app.candidateId().equals(candidateId))
                         .toList();
             }
+            System.out.println("[ApplicationsController] After candidate filter: " + applications.size());
         } else if (role == UserContext.Role.RECRUITER) {
             Long recruiterId = UserContext.getRecruiterId();
+            System.out.println("[ApplicationsController] Recruiter ID: " + recruiterId);
             List<Models.joboffers.JobOffer> recruiterOffers = JobOfferService.getByRecruiterId(recruiterId);
-            List<Long> offerIds = recruiterOffers.stream()
-                    .map(Models.joboffers.JobOffer::getId)
-                    .toList();
-            applications = applications.stream()
-                    .filter(app -> offerIds.contains(app.offerId()))
-                    .toList();
+            System.out.println("[ApplicationsController] Recruiter job offers: " + recruiterOffers.size());
+
+            // If recruiter has job offers, filter by those. Otherwise show all (for demo/testing)
+            if (!recruiterOffers.isEmpty()) {
+                List<Long> offerIds = recruiterOffers.stream()
+                        .map(Models.joboffers.JobOffer::getId)
+                        .toList();
+                applications = applications.stream()
+                        .filter(app -> offerIds.contains(app.offerId()))
+                        .toList();
+                System.out.println("[ApplicationsController] After recruiter filter: " + applications.size());
+            } else {
+                System.out.println("[ApplicationsController] Recruiter has no job offers, showing all applications");
+            }
         }
 
         // Hide archived applications for non-admins
@@ -1782,7 +1798,10 @@ public class ApplicationsController {
                 ApplicationService.updateStatus(app.id(), "INTERVIEW", UserContext.getRecruiterId(),
                         "Entretien planifié pour le " + scheduledAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
 
-                showAlert("Succès", "Entretien planifié avec succès !\nUn rappel email/SMS sera envoyé 24h avant.", Alert.AlertType.INFORMATION);
+                // Send immediate interview-scheduled confirmation email to candidate
+                sendInterviewScheduledEmail(app, interview);
+
+                showAlert("Succès", "Entretien planifié avec succès !\nUn email de confirmation a été envoyé au candidat.", Alert.AlertType.INFORMATION);
                 loadApplications();
             } catch (Exception e) {
                 showAlert("Erreur", e.getMessage(), Alert.AlertType.ERROR);
@@ -1850,5 +1869,38 @@ public class ApplicationsController {
         if (field instanceof ComboBox<?> cb) cb.setPrefWidth(350);
         box.getChildren().addAll(lbl, field);
         return box;
+    }
+
+    /**
+     * Sends an immediate interview-scheduled confirmation email to the candidate.
+     * Runs in a background thread so it never blocks the UI.
+     */
+    private void sendInterviewScheduledEmail(ApplicationService.ApplicationRow app,
+                                             Models.interview.Interview interview) {
+        new Thread(() -> {
+            try {
+                // Look up candidate contact info
+                Services.UserService.UserInfo info = Services.UserService.getUserInfo(app.candidateId());
+                if (info == null || info.email() == null || info.email().isBlank()) {
+                    System.err.println("[AppController] No email for candidate " + app.candidateId() + " — skipping interview confirmation.");
+                    return;
+                }
+
+                String candidateName = ((info.firstName() != null ? info.firstName() : "") + " "
+                        + (info.lastName() != null ? info.lastName() : "")).trim();
+                if (candidateName.isEmpty()) candidateName = "Candidat";
+
+                System.out.println("[AppController] Sending interview confirmation to: " + info.email());
+                boolean sent = Services.application.EmailServiceApplication.sendInterviewScheduledConfirmation(
+                        info.email(),
+                        candidateName,
+                        app.jobTitle() != null ? app.jobTitle() : "Offre d'emploi",
+                        interview
+                );
+                System.out.println("[AppController] Interview confirmation email " + (sent ? "sent ✓" : "FAILED ✗"));
+            } catch (Exception e) {
+                System.err.println("[AppController] Failed to send interview confirmation: " + e.getMessage());
+            }
+        }, "InterviewConfirmEmail").start();
     }
 }

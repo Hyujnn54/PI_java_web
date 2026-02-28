@@ -139,6 +139,7 @@ public class MainShellController {
     @FXML
     private void handleUserProfile() {
         Utils.UserContext.toggleRole();
+        if (lblUserName != null) lblUserName.setText(Utils.UserContext.getUserName() != null ? Utils.UserContext.getUserName() : "Utilisateur");
         if (lblUserRole != null) lblUserRole.setText(Utils.UserContext.getRoleLabel());
         applyRoleToShell();
         if (Utils.UserContext.getRole() == Utils.UserContext.Role.ADMIN) {

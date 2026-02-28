@@ -503,10 +503,41 @@ public class InterviewManagementController {
     }
 
     private void loadInterviews() {
-        if (interviewsListContainer == null) return;
+        if (interviewsListContainer == null) {
+            System.err.println("[InterviewController] interviewsListContainer is NULL!");
+            return;
+        }
 
         interviewsListContainer.getChildren().clear();
         List<Interview> interviews = InterviewService.getAll();
+
+        Utils.UserContext.Role role = Utils.UserContext.getRole();
+        System.out.println("[InterviewController] Role: " + role + ", Total interviews from DB: " + interviews.size());
+
+        // Filter interviews by role
+        if (role == Utils.UserContext.Role.RECRUITER) {
+            Long recruiterId = Utils.UserContext.getRecruiterId();
+            System.out.println("[InterviewController] Recruiter ID: " + recruiterId);
+            interviews = interviews.stream()
+                    .filter(i -> i.getRecruiterId() != null && i.getRecruiterId().equals(recruiterId))
+                    .toList();
+            System.out.println("[InterviewController] After recruiter filter: " + interviews.size());
+        } else if (role == Utils.UserContext.Role.CANDIDATE) {
+            // For candidates, filter by their application IDs
+            Long candidateId = Utils.UserContext.getCandidateId();
+            System.out.println("[InterviewController] Candidate ID: " + candidateId);
+            // Get candidate's application IDs
+            List<Long> candidateAppIds = Services.application.ApplicationService.getByCandidateId(candidateId)
+                    .stream()
+                    .map(app -> app.id())
+                    .toList();
+            System.out.println("[InterviewController] Candidate's application IDs: " + candidateAppIds);
+            interviews = interviews.stream()
+                    .filter(i -> i.getApplicationId() != null && candidateAppIds.contains(i.getApplicationId()))
+                    .toList();
+            System.out.println("[InterviewController] After candidate filter: " + interviews.size());
+        }
+        // ADMIN sees all interviews
 
         if (interviews.isEmpty()) {
             Label emptyLabel = new Label("Aucun entretien planifié pour le moment");

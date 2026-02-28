@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="mainContainer"
-      xmlns:fx="http://javafx.com/fxml/1"
+<VBox fx:id="mainContainer" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="Controllers.joboffers.AnalyticsDashboardController"
-      prefHeight="600.0"
-      prefWidth="900.0"
-      style="-fx-background-color: #f5f6f8;">
+      spacing="20" styleClass="page"
+      stylesheets="@/styles.css" style="-fx-background-color: #f8f9fa;"
+      VBox.vgrow="ALWAYS">
+
+    <padding>
+        <Insets top="25" left="25" right="25" bottom="25"/>
+    </padding>
+
+    <Label text="Tableau de Bord Analytique" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+    <!-- Content will be added dynamically by controller -->
+    <VBox fx:id="chartsContainer" spacing="20" VBox.vgrow="ALWAYS"/>
+
 </VBox>
 

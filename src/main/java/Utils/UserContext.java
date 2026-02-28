@@ -89,14 +89,61 @@ public class UserContext {
 
     public static void toggleRole() {
         UserContext ctx = getInstance();
-        ctx.currentRole = switch (ctx.currentRole) {
+        Role newRole = switch (ctx.currentRole) {
             case RECRUITER -> Role.CANDIDATE;
             case CANDIDATE -> Role.ADMIN;
             case ADMIN     -> Role.RECRUITER;
         };
+        ctx.currentRole = newRole;
         ctx.cachedRecruiterId = null;
         ctx.cachedCandidateId = null;
         ctx.cachedAdminId     = null;
+
+        // Switch to a real DB user matching the new role
+        switchToRoleUser(ctx, newRole);
+    }
+
+    /**
+     * Looks up the first user for the given role in the DB and updates userId/userName/userEmail.
+     * Falls back to role-specific tables if no match found in users table.
+     */
+    private static void switchToRoleUser(UserContext ctx, Role newRole) {
+        String roleStr = newRole.name(); // "RECRUITER", "CANDIDATE", "ADMIN"
+        Long foundId = queryFirstId(
+            "SELECT id FROM users WHERE UPPER(role) = '" + roleStr + "' LIMIT 1", null);
+        if (foundId != null) {
+            ctx.userId = foundId;
+            ctx.userName = queryFirstString(
+                "SELECT CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')) FROM users WHERE id = " + foundId,
+                newRole.getLabel());
+            ctx.userEmail = queryFirstString(
+                "SELECT email FROM users WHERE id = " + foundId, "");
+        } else {
+            // Fallback: try role-specific table
+            String table = switch (newRole) {
+                case RECRUITER -> "recruiter";
+                case CANDIDATE -> "candidate";
+                case ADMIN     -> "admin";
+            };
+            Long tableId = queryFirstId("SELECT id FROM " + table + " LIMIT 1", null);
+            if (tableId != null) {
+                ctx.userId = tableId;
+            }
+        }
+    }
+
+    private static String queryFirstString(String sql, String fallback) {
+        try (Connection conn = MyDatabase.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs   = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                String val = rs.getString(1);
+                return (val != null && !val.isBlank()) ? val.trim() : fallback;
+            }
+        } catch (SQLException e) {
+            System.err.println("UserContext DB error: " + e.getMessage());
+        }
+        return fallback;
     }
 
     // -------------------------------------------------------------------------
@@ -116,15 +163,47 @@ public class UserContext {
 
     public static Long getRecruiterId() {
         UserContext ctx = getInstance();
-        if (ctx.currentRole == Role.RECRUITER && ctx.userId != null) return ctx.userId;
-        if (ctx.cachedRecruiterId == null) ctx.cachedRecruiterId = queryFirstId("SELECT id FROM recruiter LIMIT 1", 1L);
+        if (ctx.currentRole == Role.RECRUITER && ctx.userId != null) {
+            // Verify user actually exists in recruiter table
+            Long rid = queryFirstId("SELECT id FROM recruiter WHERE id = " + ctx.userId, null);
+            if (rid != null) return rid;
+            // Fallback: look up by user_id foreign key if schema differs
+            rid = queryFirstId("SELECT id FROM recruiter WHERE user_id = " + ctx.userId + " LIMIT 1", null);
+            if (rid != null) return rid;
+            // Last resort: first recruiter in DB
+            rid = queryFirstId("SELECT id FROM recruiter LIMIT 1", null);
+            if (rid != null) return rid;
+            return ctx.userId;
+        }
+        if (ctx.cachedRecruiterId == null) {
+            ctx.cachedRecruiterId = queryFirstId("SELECT id FROM users WHERE UPPER(role) = 'RECRUITER' LIMIT 1", null);
+            if (ctx.cachedRecruiterId == null) {
+                ctx.cachedRecruiterId = queryFirstId("SELECT id FROM recruiter LIMIT 1", 1L);
+            }
+        }
         return ctx.cachedRecruiterId;
     }
 
     public static Long getCandidateId() {
         UserContext ctx = getInstance();
-        if (ctx.currentRole == Role.CANDIDATE && ctx.userId != null) return ctx.userId;
-        if (ctx.cachedCandidateId == null) ctx.cachedCandidateId = queryFirstId("SELECT id FROM candidate LIMIT 1", 1L);
+        if (ctx.currentRole == Role.CANDIDATE && ctx.userId != null) {
+            // Verify user actually exists in candidate table
+            Long cid = queryFirstId("SELECT id FROM candidate WHERE id = " + ctx.userId, null);
+            if (cid != null) return cid;
+            // Fallback: look up by user_id foreign key if schema differs
+            cid = queryFirstId("SELECT id FROM candidate WHERE user_id = " + ctx.userId + " LIMIT 1", null);
+            if (cid != null) return cid;
+            // Last resort: first candidate in DB
+            cid = queryFirstId("SELECT id FROM candidate LIMIT 1", null);
+            if (cid != null) return cid;
+            return ctx.userId;
+        }
+        if (ctx.cachedCandidateId == null) {
+            ctx.cachedCandidateId = queryFirstId("SELECT id FROM users WHERE UPPER(role) = 'CANDIDATE' LIMIT 1", null);
+            if (ctx.cachedCandidateId == null) {
+                ctx.cachedCandidateId = queryFirstId("SELECT id FROM candidate LIMIT 1", 1L);
+            }
+        }
         return ctx.cachedCandidateId;
     }
 
@@ -132,9 +211,10 @@ public class UserContext {
         UserContext ctx = getInstance();
         if (ctx.currentRole == Role.ADMIN && ctx.userId != null) return ctx.userId;
         if (ctx.cachedAdminId == null) {
-            ctx.cachedAdminId = queryFirstId("SELECT id FROM admin LIMIT 1", null);
-            if (ctx.cachedAdminId == null)
-                ctx.cachedAdminId = queryFirstId("SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1", 1L);
+            ctx.cachedAdminId = queryFirstId("SELECT id FROM users WHERE UPPER(role) = 'ADMIN' LIMIT 1", null);
+            if (ctx.cachedAdminId == null) {
+                ctx.cachedAdminId = queryFirstId("SELECT id FROM admin LIMIT 1", 1L);
+            }
         }
         return ctx.cachedAdminId;
     }

@@ -42,11 +42,18 @@ public class EmailService {
 
     private static final Properties emailConfig = loadEmailConfiguration();
 
-    private static final String BREVO_API_KEY  = emailConfig.getProperty("brevo.api.key", "");
-    private static final String SENDER_EMAIL   = emailConfig.getProperty("email.sender.email", "");
-    private static final String SENDER_NAME    = emailConfig.getProperty("email.sender.name", "Talent Bridge");
-    private static final String REPLY_TO_EMAIL = SENDER_EMAIL;
-    private static final String BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
+    private static final String BREVO_API_KEY   = emailConfig.getProperty("brevo.api.key", "");
+    private static final String SENDER_EMAIL    = emailConfig.getProperty("email.sender.email", "");
+    private static final String SENDER_NAME     = emailConfig.getProperty("email.sender.name", "Talent Bridge");
+    private static final String REPLY_TO_EMAIL  = SENDER_EMAIL;
+    private static final String BREVO_ENDPOINT  = "https://api.brevo.com/v3/smtp/email";
+
+    /**
+     * When set, ALL outgoing emails are redirected to this address (dev/demo mode).
+     * Loaded from email.properties → email.test.recipient
+     * Set to blank ("") to send to the real recipient.
+     */
+    private static final String TEST_RECIPIENT  = emailConfig.getProperty("email.test.recipient", "");
 
     // -------------------------------------------------------------------------
     // SMTP config (application confirmations — teammate's feature)
@@ -97,15 +104,40 @@ public class EmailService {
      * Send a 24h interview reminder to a candidate via Brevo REST API.
      */
     public static void sendInterviewReminder(Interview interview, String recipientEmail, String candidateName) {
+        // In dev/demo mode, redirect to the configured test recipient
+        String effectiveEmail = resolveRecipient(recipientEmail);
+        String effectiveName  = candidateName;
+        if (!effectiveEmail.equals(recipientEmail)) {
+            System.out.println("[EmailService] DEV REDIRECT: " + recipientEmail + " → " + effectiveEmail);
+            effectiveName = candidateName + " (redirect from " + recipientEmail + ")";
+        }
         try {
             String subject  = "Rappel : Votre entretien est prevu demain - Talent Bridge";
             String textBody = buildTextBody(interview, candidateName);
             String htmlBody = buildHtmlBody(interview, candidateName);
-            sendViaBrevo(recipientEmail, candidateName, subject, textBody, htmlBody);
-            System.out.println("[EmailService] Reminder sent to: " + recipientEmail);
+            sendViaBrevo(effectiveEmail, effectiveName, subject, textBody, htmlBody);
+            System.out.println("[EmailService] Reminder sent via Brevo to: " + effectiveEmail);
         } catch (Exception e) {
-            System.err.println("[EmailService] Failed to send reminder: " + e.getMessage());
+            System.err.println("[EmailService] Brevo failed (" + e.getMessage() + "), falling back to Gmail SMTP...");
+            try {
+                boolean sent = Services.application.EmailServiceApplication
+                        .sendReminderEmail(effectiveEmail, candidateName, interview);
+                System.out.println("[EmailService] Fallback Gmail SMTP reminder " + (sent ? "sent ✓" : "FAILED ✗") + " to: " + effectiveEmail);
+            } catch (Exception ex) {
+                System.err.println("[EmailService] Fallback also failed: " + ex.getMessage());
+            }
         }
+    }
+
+    /**
+     * Returns TEST_RECIPIENT if configured, otherwise returns the original email.
+     * This ensures dev/demo emails always reach a real inbox.
+     */
+    private static String resolveRecipient(String originalEmail) {
+        if (TEST_RECIPIENT != null && !TEST_RECIPIENT.isBlank()) {
+            return TEST_RECIPIENT;
+        }
+        return originalEmail;
     }
 
     /** Overload without name. */

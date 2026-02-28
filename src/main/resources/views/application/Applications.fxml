@@ -18,7 +18,7 @@
     <HBox alignment="CENTER_LEFT" spacing="20">
         <VBox spacing="5" HBox.hgrow="ALWAYS">
             <Label text="Candidatures" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-            <Label fx:id="lblSubtitle" text="Examiner et gérer les candidatures"
+            <Label fx:id="lblSubtitle" text="Examiner et gerer les candidatures"
                    style="-fx-font-size: 14px; -fx-text-fill: #7f8c8d;"/>
         </VBox>
     </HBox>
@@ -32,9 +32,9 @@
         <TextField fx:id="txtSearch" promptText="Rechercher..."
                    HBox.hgrow="ALWAYS"
                    style="-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-padding: 10 14; -fx-border-color: #e9ecef; -fx-border-radius: 8;"/>
-        <Button fx:id="btnSearch" text="🔍 Rechercher"
+        <Button fx:id="btnSearch" text="Rechercher"
                 style="-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-weight: 600; -fx-padding: 10 18; -fx-background-radius: 8; -fx-cursor: hand;"/>
-        <Button fx:id="btnClear" text="✕ Effacer"
+        <Button fx:id="btnClear" text="Effacer"
                 style="-fx-background-color: #e9ecef; -fx-text-fill: #6c757d; -fx-font-weight: 600; -fx-padding: 10 14; -fx-background-radius: 8; -fx-cursor: hand;"/>
     </HBox>
 
@@ -59,7 +59,6 @@
                         style="-fx-background: transparent; -fx-background-color: transparent;">
                 <VBox fx:id="mainContainer" spacing="20" style="-fx-padding: 10 5 10 0;"/>
             </ScrollPane>
-
         </VBox>
 
     </HBox>
