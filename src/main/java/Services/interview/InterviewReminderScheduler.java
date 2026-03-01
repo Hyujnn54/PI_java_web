@@ -1,7 +1,6 @@
 package Services.interview;
 
 import Models.interview.Interview;
-import Services.user.EmailService;
 import Services.user.SMSService;
 import Utils.MyDatabase;
 
@@ -194,21 +193,36 @@ public class InterviewReminderScheduler {
         System.out.println("[Scheduler]    Phone     : " + contact.phone() + " (from users.phone)");
         boolean dispatched = false;
 
-        // --- Email ---
+        // --- Email to CANDIDATE ---
         if (contact.email() != null && !contact.email().isBlank()) {
-            try {
-                System.out.println("[Scheduler]    Sending EMAIL to " + contact.email() + " ...");
-                EmailService.sendInterviewReminder(interview, contact.email(), contact.fullName());
-                System.out.println("[Scheduler]    EMAIL dispatched OK.");
+            System.out.println("[Scheduler]    Sending EMAIL (candidate) to " + contact.email() + " ...");
+            boolean emailOk = InterviewEmailService.sendReminder(
+                    interview, contact.email(), contact.fullName());
+            if (emailOk) {
+                System.out.println("[Scheduler]    EMAIL (candidate) dispatched OK.");
                 dispatched = true;
-            } catch (Exception e) {
-                System.err.println("[Scheduler]    EMAIL FAILED: " + e.getMessage());
+            } else {
+                System.err.println("[Scheduler]    EMAIL (candidate) failed (Brevo returned error).");
             }
         } else {
-            System.out.println("[Scheduler]    No email address — skipping email.");
+            System.out.println("[Scheduler]    No candidate email address — skipping candidate email.");
         }
 
-        // --- SMS (uses users.phone, not job_application.phone) ---
+        // --- Email to RECRUITER ---
+        RecruiterContact recruiter = getRecruiterContact(interview.getRecruiterId());
+        if (recruiter != null && recruiter.email() != null && !recruiter.email().isBlank()) {
+            System.out.println("[Scheduler]    Sending EMAIL (recruiter) to " + recruiter.email() + " ...");
+            boolean recOk = InterviewEmailService.sendReminderToRecruiter(
+                    interview, recruiter.email(), recruiter.fullName(), contact.fullName());
+            if (recOk) {
+                System.out.println("[Scheduler]    EMAIL (recruiter) dispatched OK.");
+                dispatched = true;
+            } else {
+                System.err.println("[Scheduler]    EMAIL (recruiter) failed (Brevo returned error).");
+            }
+        }
+
+        // --- SMS to CANDIDATE (uses users.phone) ---
         String rawPhone = contact.phone();
         String normalizedPhone = rawPhone != null ? SMSService.normalizePhone(rawPhone) : "";
 
@@ -288,7 +302,38 @@ public class InterviewReminderScheduler {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[Scheduler]    DB error fetching contact: " + e.getMessage());
+            System.err.println("[Scheduler]    DB error fetching candidate contact: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private record RecruiterContact(String email, String firstName, String lastName) {
+        String fullName() {
+            String fn = (firstName != null ? firstName.trim() : "");
+            String ln = (lastName  != null ? lastName.trim()  : "");
+            String full = (fn + " " + ln).trim();
+            return full.isEmpty() ? "Recruteur" : full;
+        }
+    }
+
+    /** Fetch recruiter email from users via recruiter.user_id. */
+    private static RecruiterContact getRecruiterContact(Long recruiterId) {
+        if (recruiterId == null) return null;
+        String sql = "SELECT u.email, u.first_name, u.last_name " +
+                     "FROM recruiter r JOIN users u ON r.user_id = u.id " +
+                     "WHERE r.id = ?";
+        try {
+            Connection conn = MyDatabase.getInstance().getConnection();
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setLong(1, recruiterId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next())
+                        return new RecruiterContact(rs.getString("email"),
+                                rs.getString("first_name"), rs.getString("last_name"));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[Scheduler]    DB error fetching recruiter contact: " + e.getMessage());
         }
         return null;
     }

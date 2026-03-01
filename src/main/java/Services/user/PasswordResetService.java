@@ -9,8 +9,15 @@ import java.util.Random;
 
 public class PasswordResetService {
 
-    private Connection cnx() {
-        return MyDatabase.getInstance().getConnection();
+    /** Always get a fresh, valid connection with autoCommit=true. */
+    private Connection cnx() throws SQLException {
+        Connection c = MyDatabase.getInstance().getConnection();
+        // Ensure autoCommit is on — guard against leftover state from other services
+        if (!c.getAutoCommit()) {
+            try { c.rollback(); } catch (Exception ignored) {}
+            c.setAutoCommit(true);
+        }
+        return c;
     }
 
     public String generateCode() {
@@ -19,21 +26,19 @@ public class PasswordResetService {
     }
 
     public boolean requestReset(String email) throws Exception {
-        Long userId = getUserIdByEmail(email);
-        if (userId == null) return false;
-
         String code = generateCode();
         LocalDateTime expires = LocalDateTime.now().plusMinutes(10);
 
-        String sql = "UPDATE users SET forget_code=?, forget_code_expires=? WHERE id=?";
+        String sql = "UPDATE users SET forget_code=?, forget_code_expires=? WHERE email=?";
         try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setString(1, code);
             ps.setTimestamp(2, Timestamp.valueOf(expires));
-            ps.setLong(3, userId);
-            ps.executeUpdate();
+            ps.setString(3, email);
+            int rows = ps.executeUpdate();
+            if (rows == 0) return false; // email not found
         }
 
-        new EmailService().sendResetCode(email, code); // javax.mail
+        new EmailService().sendResetCode(email, code);
         return true;
     }
 
@@ -46,32 +51,32 @@ public class PasswordResetService {
                 String dbCode = rs.getString("forget_code");
                 Timestamp exp = rs.getTimestamp("forget_code_expires");
                 if (dbCode == null || exp == null) return false;
-                if (!dbCode.equals(code)) return false;
+                if (!dbCode.trim().equals(code.trim())) return false;
                 return exp.toLocalDateTime().isAfter(LocalDateTime.now());
             }
         }
     }
 
     public boolean resetPassword(String email, String code, String newPasswordPlain) throws SQLException {
-        if (!verifyCode(email, code)) return false;
+        // 1) verify code on a fresh read
+        if (!verifyCode(email, code)) {
+            System.err.println("[PasswordResetService] resetPassword: invalid or expired code for " + email);
+            return false;
+        }
 
+        // 2) hash the new password
         String newHash = PasswordUtil.hash(newPasswordPlain);
+        System.out.println("[PasswordResetService] Saving new bcrypt hash for: " + email);
 
+        // 3) update — use explicit connection with autoCommit=true
+        Connection c = cnx();
         String sql = "UPDATE users SET password=?, forget_code=NULL, forget_code_expires=NULL WHERE email=?";
-        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, newHash);
             ps.setString(2, email);
-            return ps.executeUpdate() > 0;
-        }
-    }
-
-    private Long getUserIdByEmail(String email) throws SQLException {
-        try (PreparedStatement ps = cnx().prepareStatement("SELECT id FROM users WHERE email=?")) {
-            ps.setString(1, email);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) return null;
-                return rs.getLong("id");
-            }
+            int rows = ps.executeUpdate();
+            System.out.println("[PasswordResetService] Rows updated: " + rows + " for email: " + email);
+            return rows > 0;
         }
     }
 }

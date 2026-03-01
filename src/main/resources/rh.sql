@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 01, 2026 at 02:05 PM
+-- Generation Time: Mar 01, 2026 at 10:28 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -37,7 +37,8 @@ CREATE TABLE `admin` (
 --
 
 INSERT INTO `admin` (`id`, `assigned_area`) VALUES
-(1, 'Global Management');
+(1, 'Global Management'),
+(10, 'SUPER ADMIN');
 
 -- --------------------------------------------------------
 
@@ -82,7 +83,11 @@ INSERT INTO `application_status_history` (`id`, `application_id`, `status`, `cha
 (35, 9, 'SUBMITTED', '2026-02-28 13:53:36', 4, 'Application submitted'),
 (38, 1, 'INTERVIEW', '2026-02-28 17:11:01', 2, 'Entretien planifié pour le 01/03/2026 14:00'),
 (39, 2, 'SHORTLISTED', '2026-02-28 17:50:11', 1, 'Le candidat a été présélectionné'),
-(40, 9, 'SHORTLISTED', '2026-02-28 17:50:11', 1, 'Le candidat a été présélectionné');
+(40, 9, 'SHORTLISTED', '2026-02-28 17:50:11', 1, 'Le candidat a été présélectionné'),
+(41, 11, 'SUBMITTED', '2026-03-01 19:22:25', 8, 'Application submitted'),
+(42, 11, 'SHORTLISTED', '2026-03-01 19:23:28', 7, 'Le candidat a été présélectionné'),
+(43, 11, 'INTERVIEW', '2026-03-01 19:23:41', 7, 'Entretien planifié pour le 02/03/2026 14:00'),
+(44, 12, 'SUBMITTED', '2026-03-01 19:27:11', 8, 'Application submitted');
 
 -- --------------------------------------------------------
 
@@ -106,7 +111,8 @@ CREATE TABLE `candidate` (
 INSERT INTO `candidate` (`id`, `user_id`, `location`, `education_level`, `experience_years`, `cv_path`) VALUES
 (4, 4, 'Tunis', 'Bachelor', 2, 'cv/ahmed.pdf'),
 (5, 5, 'Sousse', 'Master', 4, 'cv/sara.pdf'),
-(6, 6, 'Sfax', 'Engineer', 1, 'cv/youssef.pdf');
+(6, 6, 'Sfax', 'Engineer', 1, 'cv/youssef.pdf'),
+(8, 8, '', '', NULL, '');
 
 -- --------------------------------------------------------
 
@@ -131,7 +137,10 @@ INSERT INTO `candidate_skill` (`id`, `candidate_id`, `skill_name`, `level`) VALU
 (3, 5, 'Python', 'ADVANCED'),
 (4, 5, 'Machine Learning', 'INTERMEDIATE'),
 (5, 6, 'C++', 'INTERMEDIATE'),
-(6, 6, 'Networking', 'BEGINNER');
+(6, 6, 'Networking', 'BEGINNER'),
+(21, 8, 'AWS', 'INTERMEDIATE'),
+(22, 8, 'Git', 'INTERMEDIATE'),
+(23, 8, 'JavaScript Style Sheets', 'BEGINNER');
 
 -- --------------------------------------------------------
 
@@ -156,7 +165,16 @@ INSERT INTO `event_registration` (`id`, `event_id`, `candidate_id`, `registered_
 (3, 2, 6, '2026-02-12 08:32:41', 'REGISTERED'),
 (16, 2, 4, '2026-02-19 13:03:30', 'PENDING'),
 (17, 1, 4, '2026-02-19 13:15:23', 'CONFIRMED'),
-(18, 4, 4, '2026-03-01 14:01:54', 'CONFIRMED');
+(18, 4, 4, '2026-03-01 14:01:54', 'CONFIRMED'),
+(19, 1, 8, '2026-03-01 18:22:35', 'PENDING'),
+(20, 2, 8, '2026-03-01 18:22:40', 'PENDING'),
+(21, 4, 8, '2026-03-01 18:22:41', 'PENDING'),
+(22, 7, 8, '2026-03-01 18:25:39', 'PENDING'),
+(23, 9, 8, '2026-03-01 18:25:42', 'PENDING'),
+(24, 11, 8, '2026-03-01 18:25:43', 'REJECTED'),
+(25, 6, 8, '2026-03-01 18:25:44', 'PENDING'),
+(26, 8, 8, '2026-03-01 18:25:45', 'PENDING'),
+(27, 10, 8, '2026-03-01 18:25:46', 'PENDING');
 
 -- --------------------------------------------------------
 
@@ -172,6 +190,13 @@ CREATE TABLE `event_review` (
   `comment` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `event_review`
+--
+
+INSERT INTO `event_review` (`id`, `event_id`, `candidate_id`, `rating`, `comment`, `created_at`) VALUES
+(2, 11, 8, 5, 'hello world', '2026-03-01 17:51:00');
 
 -- --------------------------------------------------------
 
@@ -210,7 +235,8 @@ INSERT INTO `interview` (`id`, `application_id`, `recruiter_id`, `scheduled_at`,
 (23, 3, 2, '2026-02-28 10:00:00', 60, 'ONLINE', 'https://meet.jit.si/TalentBridge-Interview-3-oqmQKBqTTtRM379e280', NULL, 'SCHEDULED', '', '2026-02-27 10:11:21'),
 (24, 1, 2, '2026-02-28 16:00:00', 60, 'ONLINE', 'https://meet.jit.si/TalentBridge-Interview-1-rwhfP1vj52Hh4559c80', NULL, 'SCHEDULED', '', '2026-02-27 16:06:47'),
 (26, 3, 2, '2026-03-01 14:00:00', 60, 'ONLINE', 'https://meet.jit.si/TalentBridge-Interview-3-LxaccXVhgDT097bf880', NULL, 'SCHEDULED', '', '2026-02-28 13:48:37'),
-(28, 1, 2, '2026-03-01 14:00:00', 60, 'ONLINE', 'https://meet.jit.si/TalentBridge-Interview-1-P7erMRCrWyCw97bf880', NULL, 'SCHEDULED', '', '2026-02-28 17:11:01');
+(28, 1, 2, '2026-03-01 14:00:00', 60, 'ONLINE', 'https://meet.jit.si/TalentBridge-Interview-1-P7erMRCrWyCw97bf880', NULL, 'SCHEDULED', '', '2026-02-28 17:11:01'),
+(29, 11, 7, '2026-03-02 13:00:00', 50, 'ONLINE', 'https://meet.jit.si/TalentBridge-Interview-11-JJwqL9KdvMRfea25480', NULL, 'SCHEDULED', '', '2026-03-01 19:23:41');
 
 -- --------------------------------------------------------
 
@@ -233,7 +259,8 @@ CREATE TABLE `interview_feedback` (
 --
 
 INSERT INTO `interview_feedback` (`id`, `interview_id`, `recruiter_id`, `overall_score`, `decision`, `comment`, `created_at`) VALUES
-(15, 13, 2, 87, 'ACCEPTED', 'knbvc', '2026-02-28 17:31:12');
+(15, 13, 2, 87, 'ACCEPTED', 'knbvc', '2026-02-28 17:31:12'),
+(16, 29, 7, 80, 'ACCEPTED', 'lkhjgfd', '2026-03-01 19:24:12');
 
 -- --------------------------------------------------------
 
@@ -263,7 +290,9 @@ INSERT INTO `job_application` (`id`, `offer_id`, `candidate_id`, `phone`, `cover
 (3, 1, 6, '93346608', 'Motivated junior developer', 'cv/youssef.pdf', '2026-02-12 08:31:56', 'INTERVIEW', 0),
 (5, 2, 4, '93346608', 'Ahmed Ben Ali\n93346608\nshaco54lol@gmail.com\n\nHiring Manager\nInnovateX\n\n[Date]\n\nDear Hiring Manager,\n\nI am writing to express my enthusiastic interest in the Data Analyst position at InnovateX, as advertised on [Platform where you saw the advertisement - e.g., LinkedIn, company website]. With two years of hands-on experience in data analysis and a strong command of SQL, I am confident that my skills and dedication align perfectly with the requirements of this role and the innovative spirit of your company.\n\nDuring my tenure at [Previous Company Name - if applicable, otherwise omit], I honed my ability to extract, clean, and analyze complex datasets to derive actionable insights. My advanced proficiency in SQL has enabled me to efficiently query and manipulate large volumes of data, forming the foundation for robust reporting and trend identification. I am also adept at utilizing Java to develop custom scripts and automate data processing tasks, further enhancing efficiency and accuracy. My Bachelor\'s degree has provided me with a solid theoretical understanding of analytical principles, which I have successfully applied in practical scenarios.\n\nI am particularly drawn to InnovateX\'s reputation for [Mention something specific about InnovateX that appeals to you - e.g., its groundbreaking work in X industry, its commitment to Y]. I am eager to contribute my analytical capabilities to a forward-thinking organization like yours and to collaborate with a team that is passionate about leveraging data to drive innovation.\n\nThank you for considering my application. I have attached my resume for your review and welcome the opportunity to discuss how my skills and experience can benefit InnovateX.\n\nSincerely,\nAhmed Ben Ali', '', '2026-02-27 14:54:55', 'SUBMITTED', 1),
 (7, 2, 4, '53757969', 'Dear Hiring Manager at InnovateX,\n\nI am excited to apply for the Data Analyst position at InnovateX, where I can utilize my analytical skills and technical expertise to drive business growth and informed decision-making. With a strong foundation in data analysis and a passion for working with data, I am confident that I would be a valuable addition to your team.\n\nAs a detail-oriented and organized individual with a Bachelor\'s degree and 2 years of experience in data analysis, I possess a unique blend of technical and business acumen. My advanced skills in SQL have enabled me to efficiently manage and analyze large datasets, while my intermediate proficiency in Java has allowed me to develop robust data processing applications. I am eager to leverage these skills to help InnovateX gain insights and make data-driven decisions.\n\nThroughout my career, I have demonstrated a strong ability to work with stakeholders to identify business needs and develop data-driven solutions. My experience has taught me the importance of attention to detail, effective communication, and collaboration in a fast-paced environment. I am excited about the prospect of joining a team that shares my passion for innovation and data-driven decision-making.\n\nI am particularly drawn to InnovateX\'s commitment to using data to drive innovation and growth. I am impressed by the company\'s forward-thinking approach and believe that my skills and experience would be a great fit. I would welcome the opportunity to discuss my application and how I can contribute to the success of InnovateX.\n\nThank you for considering my application. I look forward to the opportunity to discuss this position further.\n\nSincerely,\nAhmed Ben Ali', '', '2026-02-27 16:23:48', 'SUBMITTED', 0),
-(9, 3, 4, '93346608', 'Dear Hiring Manager at TechCorp,\n\nI am excited to apply for the IT position at TechCorp, where I can utilize my technical skills and experience to contribute to the company\'s success. With a strong foundation in computer science and a passion for innovative technologies, I am confident that I would be a valuable addition to your team.\n\nAs a highly motivated and dedicated professional with 2 years of experience in the field, I possess a unique combination of technical and analytical skills. My expertise in SQL is advanced, allowing me to efficiently manage and analyze complex databases. Additionally, my intermediate proficiency in Java enables me to develop and implement effective software solutions. I am eager to apply my skills and knowledge to drive business growth and improvement at TechCorp.\n\nThroughout my career, I have demonstrated my ability to work collaboratively in a team environment, think critically, and adapt to new technologies and challenges. My strong work ethic and attention to detail have earned me a reputation as a reliable and results-driven professional. I am excited about the opportunity to bring my skills and experience to TechCorp and contribute to the company\'s mission to deliver innovative and effective IT solutions.\n\nI am particularly drawn to TechCorp\'s commitment to excellence and innovation, and I am impressed by the company\'s cutting-edge approach to technology. I am confident that my passion for IT, combined with my technical expertise and experience, make me an ideal candidate for this role. I would welcome the opportunity to discuss my application and how I can contribute to the success of TechCorp.\n\nThank you for considering my application. I look forward to the opportunity to discuss this further.\n\nSincerely,\nAhmed Ben Ali', '', '2026-02-28 13:53:36', 'SHORTLISTED', 0);
+(9, 3, 4, '93346608', 'Dear Hiring Manager at TechCorp,\n\nI am excited to apply for the IT position at TechCorp, where I can utilize my technical skills and experience to contribute to the company\'s success. With a strong foundation in computer science and a passion for innovative technologies, I am confident that I would be a valuable addition to your team.\n\nAs a highly motivated and dedicated professional with 2 years of experience in the field, I possess a unique combination of technical and analytical skills. My expertise in SQL is advanced, allowing me to efficiently manage and analyze complex databases. Additionally, my intermediate proficiency in Java enables me to develop and implement effective software solutions. I am eager to apply my skills and knowledge to drive business growth and improvement at TechCorp.\n\nThroughout my career, I have demonstrated my ability to work collaboratively in a team environment, think critically, and adapt to new technologies and challenges. My strong work ethic and attention to detail have earned me a reputation as a reliable and results-driven professional. I am excited about the opportunity to bring my skills and experience to TechCorp and contribute to the company\'s mission to deliver innovative and effective IT solutions.\n\nI am particularly drawn to TechCorp\'s commitment to excellence and innovation, and I am impressed by the company\'s cutting-edge approach to technology. I am confident that my passion for IT, combined with my technical expertise and experience, make me an ideal candidate for this role. I would welcome the opportunity to discuss my application and how I can contribute to the success of TechCorp.\n\nThank you for considering my application. I look forward to the opportunity to discuss this further.\n\nSincerely,\nAhmed Ben Ali', '', '2026-02-28 13:53:36', 'SHORTLISTED', 0),
+(11, 8, 8, '53757969', 'Dear Hiring Manager at ACTIA,\n\nI am excited to apply for the DevOps position at ACTIA, where I can utilize my technical expertise and passion for innovation to drive success. With a solid educational foundation in college and 3 years of experience in the field, I am confident in my ability to make a significant impact at your esteemed organization.\n\nAs a highly motivated and dedicated professional, I have developed a strong background in DevOps practices, with a focus on bridging the gap between development and operations teams. My experience has equipped me with a unique understanding of the importance of collaboration, automation, and continuous improvement. I am well-versed in a range of tools and technologies, and I am eager to leverage my skills to optimize your company\'s systems and processes.\n\nI am particularly drawn to ACTIA\'s commitment to innovation and customer satisfaction. I am impressed by the company\'s forward-thinking approach and its dedication to staying at the forefront of the industry. I am excited about the prospect of joining a team that shares my values and is passionate about delivering high-quality solutions.\n\nIn addition to my technical expertise, I possess excellent communication and interpersonal skills, which have been essential in my previous roles. I have a proven track record of working effectively with cross-functional teams, stakeholders, and customers to deliver results-driven solutions.\n\nThank you for considering my application. I would welcome the opportunity to discuss my qualifications further and explore how I can contribute to ACTIA\'s success. Please do not hesitate to contact me at Hamadi@gmail.com or 53757969.\n\nSincerely,\nHamadi Hamadi', '', '2026-03-01 19:22:25', 'INTERVIEW', 0),
+(12, 7, 8, '53757969', 'Dear Hiring Manager at TechCorp,\n\nI am excited to apply for the Mobile Developer position at TechCorp, where I can utilize my skills and experience to contribute to the development of innovative mobile solutions. With a strong educational foundation in computer science from college and three years of hands-on experience in mobile development, I am confident in my ability to make a valuable impact at your esteemed organization.\n\nThroughout my career, I have gained a solid understanding of mobile development principles, including design patterns, programming languages, and software development methodologies. My experience has equipped me with the skills to design, develop, and deploy mobile applications that are both functional and user-friendly. I am well-versed in a range of programming languages, including Java, Swift, and Kotlin, and have a strong proficiency in developing applications for both iOS and Android platforms.\n\nAs a dedicated and passionate mobile developer, I am committed to staying up-to-date with the latest trends and technologies in the field. I am excited about the prospect of joining TechCorp\'s team of talented professionals and contributing my expertise to the development of cutting-edge mobile applications. My strong work ethic, attention to detail, and excellent problem-solving skills make me an ideal candidate for this role.\n\nI would welcome the opportunity to discuss my application and how my skills and experience align with the requirements of the Mobile Developer position. Please do not hesitate to contact me at Hamadi@gmail.com or 53757969 to arrange a convenient time for a conversation. I have attached my resume, which provides further details about my qualifications and experience. Thank you for considering my application. I look forward to the opportunity to contribute to TechCorp\'s success.', '', '2026-03-01 19:27:11', 'SUBMITTED', 0);
 
 -- --------------------------------------------------------
 
@@ -299,7 +328,8 @@ INSERT INTO `job_offer` (`id`, `recruiter_id`, `title`, `description`, `location
 (3, 2, 'IT', 'kjhgv', 'tunis', NULL, NULL, 'FREELANCE', '2026-02-27 08:18:27', '2026-03-06 23:59:00', 'CLOSED', NULL, NULL, 0, NULL),
 (5, 2, 'cloud security', 'Nous recherchons un(e) cloud security motive(e) pour rejoindre notre equipe. Vous contribuerez au developpement et aux projets strategiques de l\'entreprise.', 'sfax', NULL, NULL, 'INTERNSHIP', '2026-02-28 14:55:26', NULL, 'OPEN', NULL, NULL, 0, NULL),
 (6, 2, 'web dev', 'Nous recherchons un developpeur web pour concevoir et developper des applications web modernes et responsives. Vous serez responsable du developpement front-end de nos plateformes en utilisant les dernieres technologies web. Vous travaillerez en collaboration etroite avec les equipes design et produit pour créer des experiences utilisateur exceptionnelles. Vous participerez aux revues de code et aux choix d\'architecture technique pour assurer la qualité et la performance de nos applications. Vous developerez également des solutions pour améliorer l\'accessibilité et la sécurité de nos sites web.', 'Tunis', NULL, NULL, 'FULL_TIME', '2026-02-28 15:32:26', '2026-03-06 23:59:00', 'OPEN', NULL, NULL, 0, NULL),
-(7, 2, 'mobile dev', 'un idiotun idiotun idiotun idiotun idiotun idiot un idiot', 'tunis', NULL, NULL, 'FREELANCE', '2026-02-28 22:12:52', '2026-03-13 23:59:00', 'OPEN', NULL, NULL, 0, NULL);
+(7, 2, 'mobile dev', 'un idiotun idiotun idiotun idiotun idiotun idiot un idiot', 'tunis', NULL, NULL, 'FREELANCE', '2026-02-28 22:12:52', '2026-03-13 23:59:00', 'OPEN', NULL, NULL, 0, NULL),
+(8, 7, 'devopss', 'Nous recherchons un expert DevOps pour optimiser et automatiser nos processus de developpement et de deployment. Vous serez responsable de la mise en place et de la gestion de nos outils de continuous integration et continuous deployment. Vous travaillerez en collaboration avec les equipes de developpement pour identifier les besoins et mettre en place des solutions pour améliorer la qualité et la rapidité de nos deliveries. Vous participerez également à la supervision et à l\'optimisation de nos infrastructures cloud. Vous serez chargé de garantir la sécurité et la conformité de nos environnements de production.', 'tunis', NULL, NULL, 'FREELANCE', '2026-03-01 18:07:38', '2026-03-05 23:59:00', 'OPEN', NULL, NULL, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -377,7 +407,15 @@ INSERT INTO `offer_skill` (`id`, `offer_id`, `skill_name`, `level_required`) VAL
 (43, 7, 'Android SDK', 'INTERMEDIATE'),
 (44, 7, 'iOS SDK', 'INTERMEDIATE'),
 (45, 7, 'Flutter', 'INTERMEDIATE'),
-(46, 7, 'Git', 'INTERMEDIATE');
+(46, 7, 'Git', 'INTERMEDIATE'),
+(55, 8, 'Jenkins', 'INTERMEDIATE'),
+(56, 8, 'Docker', 'INTERMEDIATE'),
+(57, 8, 'Kubernetes', 'INTERMEDIATE'),
+(58, 8, 'Ansible', 'INTERMEDIATE'),
+(59, 8, 'AWS', 'INTERMEDIATE'),
+(60, 8, 'Terraform', 'INTERMEDIATE'),
+(61, 8, 'Prometheus', 'INTERMEDIATE'),
+(62, 8, 'Git', 'INTERMEDIATE');
 
 -- --------------------------------------------------------
 
@@ -399,7 +437,9 @@ CREATE TABLE `recruiter` (
 
 INSERT INTO `recruiter` (`id`, `user_id`, `company_name`, `company_location`, `company_description`) VALUES
 (2, 2, 'TechCorp', 'Tunis', NULL),
-(3, 3, 'InnovateX', 'Sfax', NULL);
+(3, 3, 'InnovateX', 'Sfax', NULL),
+(7, 7, 'ACTIA', 'Ghazela centre, نهج الأنصار, المدينة الفاضلة, معتمدية رواد, ولاية أريانة, 2083, تونس', NULL),
+(9, NULL, 'actia', 'Ghazela centre, نهج الأنصار, المدينة الفاضلة, معتمدية رواد, ولاية أريانة, 2083, تونس', NULL);
 
 -- --------------------------------------------------------
 
@@ -432,7 +472,8 @@ INSERT INTO `recruitment_event` (`id`, `recruiter_id`, `title`, `description`, `
 (7, 2, 'knkjbhvgcfxds', 'Rejoignez-nous pour une journée de découverte et d\'échange exceptionnelle, où vous pourrez rencontrer nos équipes et découvrir les opportunités de carrière les plus excitantes. Vous aurez l\'occasion de vous informer sur nos valeurs, notre culture d\'entreprise et nos projets innovants, tout en bénéficiant de conseils personnalisés pour réussir votre parcours professionnel. Nous vous offrons une chance unique de vous connecter avec des professionnels passionnés et de faire partie d\'une communauté dynamique et en constante évolution. Notre équipe est impatiente de vous accueillir et de partager avec vous les défis et les réussites de notre entreprise.', 'Job_Faire', 'بوعاتي محمود, الجزائر', '2026-03-24 00:00:00', 345, '', '2026-03-01 12:57:36'),
 (8, 2, 'LJHUIYGTF', 'Rejoignez-nous à San Michele di Ganzaria, en Italie, pour une expérience unique et enrichissante qui vous permettra de découvrir de nouvelles opportunités de carrière et de rencontrer des professionnels passionnés. Vous aurez l\'occasion de présenter vos compétences et vos expériences, et de discuter avec nos équipes pour trouver le poste qui vous convient le mieux. Nous vous offrons un environnement accueillant et dynamique où vous pourrez vous exprimer et vous développer, avec des possibilités de croissance et d\'évolution de carrière exceptionnelles. Cette rencontre est l\'occasion idéale de faire partie d\'une équipe innovante et de contribuer à la réussite de notre entreprise.', 'Interview day', 'San Michele di Ganzaria, إيطاليا', '2026-03-18 00:00:00', 12, '', '2026-03-01 12:57:59'),
 (9, 2, 'cloud job fair', 'Rejoignez-nous pour une journée de découverte et d\'opportunités professionnelles dans le domaine du cloud computing à Gèsigu/Gesico, en Italie. Vous aurez l\'occasion de rencontrer des entreprises leaders dans leur domaine et de discuter des postes vacants qui correspondent à vos compétences et à vos aspirations. Les professionnels du secteur seront également présents pour partager leurs expériences et offrir des conseils précieux pour une carrière réussie dans le cloud. Cette foire de l\'emploi est l\'endroit idéal pour établir des connections, apprendre les dernières tendances et trouver le poste de vos rêves.', 'Job_Faire', 'Gèsigu/Gesico, إيطاليا', '2026-03-12 00:00:00', 12, '', '2026-03-01 12:59:01'),
-(10, 2, 'QSDQDQD', 'Rejoignez-nous pour une expérience unique et enrichissante à Saint-Amand-Montrond, en France, où vous découvrirez des opportunités de carrière exceptionnelles et rencontrerez des professionnels passionnés. Ce webinaire est l\'occasion idéale de vous informer sur les dernières tendances et innovations dans le domaine, tout en établissant des connections précieuses avec des experts et des futurs collègues. Vous aurez l\'opportunité de présenter vos compétences, vos passions et vos aspirations, et de découvrir comment vous pouvez contribuer à notre équipe dynamique et motivée. Nous vous offrons un espace de dialogue ouvert et convivial pour explorer vos objectifs de carrière et trouver le poste qui vous correspond parfaitement.', 'WEBINAIRE', 'Saint-Amand-Montrond, فرنسا', '2026-03-05 00:00:00', 123, 'youtube.com', '2026-03-01 12:59:40');
+(10, 2, 'QSDQDQD', 'Rejoignez-nous pour une expérience unique et enrichissante à Saint-Amand-Montrond, en France, où vous découvrirez des opportunités de carrière exceptionnelles et rencontrerez des professionnels passionnés. Ce webinaire est l\'occasion idéale de vous informer sur les dernières tendances et innovations dans le domaine, tout en établissant des connections précieuses avec des experts et des futurs collègues. Vous aurez l\'opportunité de présenter vos compétences, vos passions et vos aspirations, et de découvrir comment vous pouvez contribuer à notre équipe dynamique et motivée. Nous vous offrons un espace de dialogue ouvert et convivial pour explorer vos objectifs de carrière et trouver le poste qui vous correspond parfaitement.', 'WEBINAIRE', 'Saint-Amand-Montrond, فرنسا', '2026-03-05 00:00:00', 123, 'youtube.com', '2026-03-01 12:59:40'),
+(11, 7, 'qsqsd', 'Rejoignez-nous à Tunis pour un événement incontournable de recrutement où vous pourrez découvrir des opportunités de carrière variées et rencontrer des employeurs de premier plan. Vous aurez l\'occasion de présenter votre candidature, de discuter avec des professionnels du secteur et de vous informer sur les dernières tendances du marché du travail. Les visiteurs pourront également participer à des ateliers de développement de carrière et des séances de conseil en recherche d\'emploi pour améliorer leurs compétences et augmenter leurs chances de réussite. C\'est l\'endroit idéal pour établir des contacts, apprendre et grandir professionnellement.', 'Job_Faire', 'tunis', '2026-02-27 00:00:00', 12, '', '2026-03-01 18:59:30');
 
 -- --------------------------------------------------------
 
@@ -444,25 +485,32 @@ CREATE TABLE `users` (
   `id` bigint(20) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `role` enum('CANDIDATE','RECRUITER','ADMIN') NOT NULL,
   `first_name` varchar(100) DEFAULT NULL,
   `last_name` varchar(100) DEFAULT NULL,
   `phone` varchar(30) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1,
-  `created_at` datetime DEFAULT current_timestamp()
+  `created_at` datetime DEFAULT current_timestamp(),
+  `forget_code` varchar(10) DEFAULT NULL,
+  `forget_code_expires` datetime DEFAULT NULL,
+  `face_person_id` varchar(128) DEFAULT NULL,
+  `face_enabled` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `email`, `password`, `role`, `first_name`, `last_name`, `phone`, `is_active`, `created_at`) VALUES
-(1, 'admin@gmail.com', 'admin123', 'ADMIN', 'Super', 'Admin', '93346608', 1, '2026-02-12 08:30:10'),
-(2, 'recruiter1@company.com', 'rec123', 'RECRUITER', 'Alice', 'Martin', '93346608', 1, '2026-02-12 08:30:10'),
-(3, 'recruiter2@company.com', 'rec123', 'RECRUITER', 'Bob', 'Durand', '93346608', 1, '2026-02-12 08:30:10'),
-(4, 'shaco54lol@gmail.com', 'cand123', 'CANDIDATE', 'Ahmed', 'Ben Ali', '93346608', 1, '2026-02-12 08:30:10'),
-(5, 'zex54lol@gmail.com', 'cand123', 'CANDIDATE', 'Sara', 'Trabelsi', '93346608', 1, '2026-02-12 08:30:10'),
-(6, 'candidate3@gmail.com', 'cand123', 'CANDIDATE', 'Youssef', 'Haddad', '93346608', 1, '2026-02-12 08:30:10');
+INSERT INTO `users` (`id`, `email`, `password`, `first_name`, `last_name`, `phone`, `is_active`, `created_at`, `forget_code`, `forget_code_expires`, `face_person_id`, `face_enabled`) VALUES
+(1, 'admin@gmail.com', 'admin123', 'Super', 'Admin', '93346608', 1, '2026-02-12 08:30:10', NULL, NULL, NULL, 0),
+(2, 'recruiter1@company.com', 'rec123', 'Alice', 'Martin', '93346608', 1, '2026-02-12 08:30:10', NULL, NULL, NULL, 0),
+(3, 'recruiter2@company.com', 'rec123', 'Bob', 'Durand', '93346608', 1, '2026-02-12 08:30:10', NULL, NULL, NULL, 0),
+(4, 'mlkjhgf@gmail.com', 'cand123', 'Ahmed', 'Ben Ali', '93346608', 1, '2026-02-12 08:30:10', NULL, NULL, NULL, 0),
+(5, 'zex54lol@gmail.com', 'cand123', 'Sara', 'Trabelsi', '93346608', 1, '2026-02-12 08:30:10', NULL, NULL, NULL, 0),
+(6, 'candidate3@gmail.com', 'cand123', 'Youssef', 'Haddad', '93346608', 1, '2026-02-12 08:30:10', NULL, NULL, NULL, 0),
+(7, 'faresmanai05@gmail.com', '$2a$12$ZMggIVVde2KpURkYtLV/8.ehHWUJf11pouYWLt1VHqzQlSMvyDhFW', 'hyujnn', 'hyujnn', '53757969', 1, '2026-03-01 16:57:17', NULL, NULL, NULL, 0),
+(8, 'Hamadi@gmail.com', '$2a$12$wKGaGTbfzZ5YYgHnA2kmqO/jDALHJBkQLx2x8aV2.vp6uLuvZ/LIm', 'Hamadi', 'Hamadi', '53757969', 1, '2026-03-01 18:10:25', NULL, NULL, NULL, 0),
+(9, 'shaco54lol@gmail.com', '$2a$12$nInDLm0e4mLukCUs9T18OeYIFbb.eHt/v0o5931jsB2zsRWLvHeZG', 'mohamed', 'ben moussa', '53757969', 1, '2026-03-01 22:04:37', '445292', '2026-03-01 21:18:05', NULL, 0),
+(10, 'superadmin@rh.com', '$2a$12$wlTJMvbbsiwyoquTSeumfugPrzNGvezC90kl0NDItmeT4cMfsZkUK', 'Super', 'Admin', '00000000', 1, '2026-03-01 22:26:29', NULL, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -625,49 +673,49 @@ ALTER TABLE `warning_correction`
 -- AUTO_INCREMENT for table `application_status_history`
 --
 ALTER TABLE `application_status_history`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
 -- AUTO_INCREMENT for table `candidate_skill`
 --
 ALTER TABLE `candidate_skill`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `event_registration`
 --
 ALTER TABLE `event_registration`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `event_review`
 --
 ALTER TABLE `event_review`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `interview`
 --
 ALTER TABLE `interview`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `interview_feedback`
 --
 ALTER TABLE `interview_feedback`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `job_application`
 --
 ALTER TABLE `job_application`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `job_offer`
 --
 ALTER TABLE `job_offer`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `job_offer_warning`
@@ -679,19 +727,19 @@ ALTER TABLE `job_offer_warning`
 -- AUTO_INCREMENT for table `offer_skill`
 --
 ALTER TABLE `offer_skill`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
 
 --
 -- AUTO_INCREMENT for table `recruitment_event`
 --
 ALTER TABLE `recruitment_event`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `warning_correction`

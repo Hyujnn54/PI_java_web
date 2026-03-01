@@ -19,7 +19,7 @@
             <!-- Logo -->
             <HBox alignment="CENTER_LEFT" spacing="10">
                 <ImageView fitHeight="34" fitWidth="34" preserveRatio="true">
-                    <image><Image url="@images/logo.jpg"/></image>
+                    <image><Image url="@images/logo.png"/></image>
                 </ImageView>
                 <Label text="Talent Bridge" styleClass="logo-text"/>
             </HBox>

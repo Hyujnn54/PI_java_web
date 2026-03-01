@@ -47,6 +47,7 @@ public class MyDatabase {
     private void connect() {
         try {
             connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+            connection.setAutoCommit(true); // always start with autoCommit=true
             System.out.println("Connected to database successfully");
         } catch (SQLException e) {
             System.out.println("Failed to connect to database: " + e.getMessage());

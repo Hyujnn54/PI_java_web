@@ -1,240 +1,228 @@
 package Services.user;
 
-import Models.interview.Interview;
-import javax.mail.*;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
+import jakarta.mail.*;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
 
 import java.time.LocalDateTime;
 import java.util.Properties;
 
+/**
+ * User/Auth + Event email service — uses SMTP (Gmail).
+ *
+ * Handles:
+ *   - Welcome email on signup
+ *   - Password reset code
+ *   - Login success alert
+ *   - Event registration status notifications
+ *
+ * INTERVIEW emails → InterviewEmailService (Brevo API) — do NOT add interview logic here.
+ * APPLICATION emails → EmailServiceApplication (SMTP) — do NOT add application logic here.
+ */
 public class EmailService {
 
-    // ✅ Gmail account
-    private static final String FROM_EMAIL = "talentbridge.app@gmail.com";
-
-    // ✅ Google App Password (16 chars)
+    private static final String FROM_EMAIL   = "talentbridge.app@gmail.com";
     private static final String APP_PASSWORD = "bkeqrffipwtgykdr";
+
+    // ── SMTP session ─────────────────────────────────────────────────────────
 
     private Session buildSession() {
         Properties props = new Properties();
-        props.put("mail.smtp.host", "smtp.gmail.com");
-        props.put("mail.smtp.port", "587");
-        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.host",            "smtp.gmail.com");
+        props.put("mail.smtp.port",            "587");
+        props.put("mail.smtp.auth",            "true");
         props.put("mail.smtp.starttls.enable", "true");
-
-        // optional debug
-        // props.put("mail.debug", "true");
-
+        props.put("mail.smtp.ssl.trust",       "smtp.gmail.com");
         return Session.getInstance(props, new Authenticator() {
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
+            @Override protected PasswordAuthentication getPasswordAuthentication() {
                 return new PasswordAuthentication(FROM_EMAIL, APP_PASSWORD);
             }
         });
     }
 
-    // ✅ the missing method (your error is here)
-    void sendEmail(String toEmail, String subject, String body) throws Exception {
-        Message msg = new MimeMessage(buildSession());
-
-        msg.setFrom(new InternetAddress(FROM_EMAIL, "TalentBridge"));
+    void sendEmail(String toEmail, String subject, String htmlBody) throws Exception {
+        MimeMessage msg = new MimeMessage(buildSession());
+        msg.setFrom(new InternetAddress(FROM_EMAIL, "Talent Bridge"));
         msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
-        msg.setSubject(subject);
-        msg.setText(body);
+        msg.setSubject(subject, "UTF-8");
+
+        MimeBodyPart htmlPart = new MimeBodyPart();
+        htmlPart.setContent(htmlBody, "text/html; charset=UTF-8");
+
+        MimeMultipart multipart = new MimeMultipart("mixed");
+        multipart.addBodyPart(htmlPart);
+        msg.setContent(multipart);
+        msg.saveChanges();
 
         Transport.send(msg);
-        System.out.println("✅ Email sent to " + toEmail);
+        System.out.println("[EmailService] Email sent to " + toEmail);
     }
 
-    public void sendResetCode(String toEmail, String code) throws Exception {
-        String subject = "TalentBridge - Password Reset Code";
-        String body = "Your password reset code is: " + code + "\n\n"
-                + "This code expires in 10 minutes.\n"
-                + "If you didn’t request this, ignore this email.";
-
-        sendEmail(toEmail, subject, body);
-    }
-
-    public void sendLoginSuccess(String toEmail, String firstName) throws Exception {
-        String subject = "✅ Login Successful - TalentBridge";
-        String name = (firstName == null || firstName.isBlank()) ? "User" : firstName;
-
-        String body = """
-                Hello %s,
-
-                You have successfully logged in to TalentBridge.
-                Time: %s
-
-                If this wasn't you, please change your password immediately.
-
-                - TalentBridge
-                """.formatted(name, LocalDateTime.now());
-
-        sendEmail(toEmail, subject, body);
-    }
-
-    public static void sendAcceptanceNotification(
-            String toEmail, String fullName, String jobTitle,
-            String location, String contractType, String description) throws Exception {
-        String subject = "🎉 Congratulations! Your application has been accepted - TalentBridge";
-        String name = (fullName == null || fullName.isBlank()) ? "Candidate" : fullName;
-        String body = """
-                Dear %s,
-
-                We are pleased to inform you that your application for the following position has been ACCEPTED:
-
-                Position  : %s
-                Location  : %s
-                Contract  : %s
-                Details   : %s
-
-                Our team will be in touch shortly with next steps.
-
-                Best regards,
-                TalentBridge Team
-                """.formatted(
-                name,
-                jobTitle   != null ? jobTitle   : "N/A",
-                location   != null ? location   : "N/A",
-                contractType != null ? contractType : "N/A",
-                description != null ? description.substring(0, Math.min(200, description.length())) : "N/A"
-        );
-        new EmailService().sendEmail(toEmail, subject, body);
-    }
+    // ── User / Auth emails ────────────────────────────────────────────────────
 
     /**
-     * Sends a 24-hour interview reminder to the candidate.
-     * Called statically by InterviewReminderScheduler.
+     * Welcome email sent once when a new user registers.
+     * Triggered by SignUpController after successful account creation.
      */
-    public static void sendInterviewReminder(
-            Interview interview, String toEmail, String candidateName) throws Exception {
-
-        String name = (candidateName == null || candidateName.isBlank()) ? "Candidat" : candidateName;
-        java.time.format.DateTimeFormatter fmt =
-                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm");
-        String when = interview.getScheduledAt() != null
-                ? interview.getScheduledAt().format(fmt) : "N/A";
-        String mode = interview.getMode() != null ? interview.getMode() : "N/A";
-        String link = interview.getMeetingLink();
-        String location = interview.getLocation();
-
-        String subject = "⏰ Rappel : Entretien demain — TalentBridge";
-        String body = """
-                Bonjour %s,
-
-                Ceci est un rappel : vous avez un entretien prévu demain.
-
-                📅 Date/Heure : %s
-                💼 Mode       : %s
-                %s
-
-                Préparez-vous bien et bonne chance !
-
-                — TalentBridge
-                """.formatted(
-                name,
-                when,
-                mode,
-                (link != null && !link.isBlank())
-                        ? "🔗 Lien       : " + link
-                        : (location != null && !location.isBlank()
-                                ? "📍 Lieu       : " + location
-                                : "")
+    public void sendWelcome(String toEmail, String firstName) throws Exception {
+        String name    = safe(firstName, "there");
+        String subject = "Welcome to Talent Bridge!";
+        String body = buildHtml(
+            "Welcome to Talent Bridge! \uD83C\uDF89",
+            "Hello " + name + ",",
+            "<p style='color:#374151;font-size:15px'>Your account has been created successfully. " +
+            "You can now explore job offers, apply for positions, and manage your career all in one place.</p>" +
+            "<table style='width:100%;border-collapse:collapse;margin:20px 0'>" +
+            row("Role", "Candidate / Recruiter") +
+            row("Email", toEmail) +
+            row("Date", LocalDateTime.now().toString().substring(0, 16).replace("T", " ")) +
+            "</table>" +
+            "<div style='text-align:center;margin:24px 0'>" +
+            "<div style='display:inline-block;background:linear-gradient(135deg,#5BA3F5,#4A90E2);" +
+            "color:white;font-size:15px;font-weight:700;padding:14px 44px;border-radius:50px'>" +
+            "Start Exploring</div></div>" +
+            "<p style='color:#64748B;font-size:13px'>If you did not create this account, please contact us immediately.</p>"
         );
-
-        new EmailService().sendEmail(toEmail, subject, body);
+        sendEmail(toEmail, subject, body);
     }
 
     /**
-     * Sends an event registration status change notification to the candidate.
-     * status = "CONFIRMED", "REJECTED", "CANCELED", etc.
-     * extraNote may be null.
+     * Password reset — sends a 6-digit code.
+     * Code expires in 10 minutes (enforced in PasswordResetService).
+     */
+    public void sendResetCode(String toEmail, String code) throws Exception {
+        String subject = "Talent Bridge — Password Reset Code";
+        String body = buildHtml(
+            "Password Reset",
+            "Reset your password",
+            "<p style='color:#374151'>We received a request to reset the password for your Talent Bridge account.</p>" +
+            "<p style='color:#374151'>Use the code below. It expires in <strong>10 minutes</strong>.</p>" +
+            "<div style='text-align:center;margin:28px 0'>" +
+            "<div style='display:inline-block;background:#F0F7FF;border:2px dashed #5BA3F5;" +
+            "border-radius:12px;padding:16px 40px'>" +
+            "<div style='font-size:36px;font-weight:800;color:#5BA3F5;letter-spacing:10px'>" + code + "</div>" +
+            "</div></div>" +
+            "<p style='color:#64748B;font-size:13px'>If you did not request a password reset, you can safely ignore this email.</p>"
+        );
+        sendEmail(toEmail, subject, body);
+    }
+
+    /**
+     * Login alert — sent after every successful login.
+     */
+    public void sendLoginSuccess(String toEmail, String firstName) throws Exception {
+        String name    = safe(firstName, "User");
+        String subject = "Login Detected — Talent Bridge";
+        String body = buildHtml(
+            "Login Successful",
+            "Hello " + name + ",",
+            "<p style='color:#374151'>A login was detected on your Talent Bridge account.</p>" +
+            "<table style='width:100%;border-collapse:collapse;margin:16px 0'>" +
+            row("Time", LocalDateTime.now().toString().substring(0, 16).replace("T", " ")) +
+            "</table>" +
+            "<p style='color:#64748B;font-size:13px'>If this was not you, please reset your password immediately.</p>"
+        );
+        sendEmail(toEmail, subject, body);
+    }
+
+    // ── Event emails ──────────────────────────────────────────────────────────
+
+    /**
+     * Sent when a recruiter changes a candidate's registration status (CONFIRMED / REJECTED / CANCELED).
      */
     public static void sendEventStatusNotification(
             String toEmail, String fullName, String eventTitle,
             String eventDate, String eventLocation, String status,
             String extraNote, String eventType, String meetLink) throws Exception {
 
-        String name = (fullName == null || fullName.isBlank()) ? "Candidat" : fullName;
-
-        String statusLine;
-        String emoji;
+        String name = safe(fullName, "Candidat");
+        String emoji; String statusLine;
         switch (status != null ? status.toUpperCase() : "") {
-            case "CONFIRMED" -> { emoji = "✅"; statusLine = "CONFIRMÉE"; }
-            case "REJECTED"  -> { emoji = "❌"; statusLine = "REFUSÉE";   }
-            case "CANCELED"  -> { emoji = "🚫"; statusLine = "ANNULÉE";   }
-            default          -> { emoji = "ℹ️";  statusLine = status != null ? status : "MISE À JOUR"; }
+            case "CONFIRMED" -> { emoji = "\u2705"; statusLine = "CONFIRMED"; }
+            case "REJECTED"  -> { emoji = "\u274C"; statusLine = "REJECTED";  }
+            case "CANCELED"  -> { emoji = "\uD83D\uDEAB"; statusLine = "CANCELED"; }
+            default          -> { emoji = "\u2139\uFE0F"; statusLine = status != null ? status : "UPDATED"; }
         }
-
-        String subject = emoji + " Inscription " + statusLine + " — "
-                + (eventTitle != null ? eventTitle : "Événement") + " | TalentBridge";
-
         String locationOrLink = (meetLink != null && !meetLink.isBlank())
-                ? "🔗 Lien : " + meetLink
-                : (eventLocation != null && !eventLocation.isBlank()
-                        ? "📍 Lieu : " + eventLocation
-                        : "");
+                ? "<a href='" + esc(meetLink) + "' style='color:#5BA3F5'>Join Meeting</a>"
+                : (eventLocation != null ? esc(eventLocation) : "");
 
-        String extra = (extraNote != null && !extraNote.isBlank())
-                ? "\nRemarque : " + extraNote : "";
-
-        String body = """
-                Bonjour %s,
-
-                Le statut de votre inscription à l'événement suivant a été mis à jour :
-
-                📌 Événement  : %s
-                🗂️  Type        : %s
-                📅 Date/Heure : %s
-                %s
-                🔔 Statut      : %s %s
-                %s
-                Pour toute question, contactez l'équipe TalentBridge.
-
-                — TalentBridge
-                """.formatted(
-                name,
-                eventTitle   != null ? eventTitle   : "N/A",
-                eventType    != null ? eventType     : "N/A",
-                eventDate    != null ? eventDate     : "N/A",
-                locationOrLink,
-                emoji, statusLine,
-                extra
+        String subject = emoji + " Event Registration " + statusLine + " — " + safe(eventTitle, "Event") + " | Talent Bridge";
+        String body = buildHtml(
+            "Registration " + statusLine + " " + emoji,
+            "Hello " + esc(name) + ",",
+            "<p style='color:#374151'>Your registration status has been updated:</p>" +
+            "<table style='width:100%;border-collapse:collapse;margin:16px 0'>" +
+            row("Event",    eventTitle)  + row("Type",     eventType) +
+            row("Date",     eventDate)   + row("Location", locationOrLink) +
+            row("Status",   "<strong>" + emoji + " " + statusLine + "</strong>") +
+            "</table>" +
+            (extraNote != null && !extraNote.isBlank()
+                ? "<p style='color:#64748B;font-size:13px'>Note: " + esc(extraNote) + "</p>" : "")
         );
-
         new EmailService().sendEmail(toEmail, subject, body);
     }
 
+    /**
+     * Sent immediately when a candidate registers for an event (status = PENDING / awaiting confirmation).
+     */
     public static void sendEventRegistrationConfirmation(
             String toEmail, String fullName, String eventTitle,
             String eventDate, String location, String eventType) throws Exception {
 
-        String name = (fullName == null || fullName.isBlank()) ? "Candidat" : fullName;
-        String subject = "✅ Inscription enregistrée — "
-                + (eventTitle != null ? eventTitle : "Événement") + " | TalentBridge";
-        String body = """
-                Bonjour %s,
-
-                Votre inscription à l'événement suivant a bien été enregistrée et est en attente de confirmation :
-
-                📌 Événement  : %s
-                🗂️  Type        : %s
-                📅 Date/Heure : %s
-                📍 Lieu        : %s
-
-                Vous recevrez une confirmation dès que le recruteur aura validé votre inscription.
-
-                Merci de votre intérêt et bonne chance !
-
-                — TalentBridge
-                """.formatted(
-                name,
-                eventTitle != null ? eventTitle : "N/A",
-                eventType  != null ? eventType  : "N/A",
-                eventDate  != null ? eventDate  : "N/A",
-                location   != null && !location.isBlank() ? location : "En ligne / À définir"
+        String name    = safe(fullName, "Candidat");
+        String subject = "\u2705 Registration Received — " + safe(eventTitle, "Event") + " | Talent Bridge";
+        String body = buildHtml(
+            "Registration Received \u2705",
+            "Hello " + esc(name) + ",",
+            "<p style='color:#374151'>Your registration has been received and is <strong>pending confirmation</strong>.</p>" +
+            "<table style='width:100%;border-collapse:collapse;margin:16px 0'>" +
+            row("Event",    eventTitle) + row("Type",     eventType) +
+            row("Date",     eventDate)  + row("Location", location) +
+            "</table>" +
+            "<p style='color:#64748B;font-size:13px'>You will be notified once the recruiter confirms your registration.</p>"
         );
         new EmailService().sendEmail(toEmail, subject, body);
     }
+
+    // ── HTML helpers ──────────────────────────────────────────────────────────
+
+    private static String buildHtml(String title, String greeting, String content) {
+        return "<!DOCTYPE html><html><head><meta charset='UTF-8'></head>" +
+               "<body style='margin:0;padding:0;background:#EBF0F8;font-family:Arial,sans-serif'>" +
+               "<table width='100%' cellpadding='0' cellspacing='0' style='background:#EBF0F8;padding:30px 0'><tr><td align='center'>" +
+               "<table width='560' cellpadding='0' cellspacing='0' style='max-width:560px;width:100%;background:white;" +
+               "border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(91,163,245,0.15)'>" +
+               "<tr><td style='background:linear-gradient(135deg,#1E293B,#334155);padding:28px 32px;text-align:center'>" +
+               "<span style='font-size:22px;font-weight:800;color:white'>\uD83C\uDF09 Talent Bridge</span>" +
+               "</td></tr>" +
+               "<tr><td style='padding:32px'>" +
+               "<h2 style='color:#1E293B;margin:0 0 4px 0;font-size:20px'>" + title + "</h2>" +
+               "<p style='color:#5BA3F5;font-weight:600;margin:0 0 20px 0;font-size:14px'>" + greeting + "</p>" +
+               content +
+               "<hr style='border:none;border-top:1px solid #E4EBF5;margin:24px 0'/>" +
+               "<p style='color:#94A3B8;font-size:12px;text-align:center;margin:0'>" +
+               "This is an automated message — please do not reply directly.<br>" +
+               "\u00A9 2026 Talent Bridge. All rights reserved.</p>" +
+               "</td></tr></table></td></tr></table></body></html>";
+    }
+
+    private static String row(String label, String value) {
+        return "<tr style='border-bottom:1px solid #F1F5F9'>" +
+               "<td style='padding:9px 12px;font-weight:700;color:#64748B;font-size:13px;width:120px'>" + esc(label) + "</td>" +
+               "<td style='padding:9px 12px;color:#1E293B;font-size:13px'>" + (value != null ? value : "\u2014") + "</td></tr>";
+    }
+
+    private static String safe(String s, String fallback) {
+        return (s != null && !s.isBlank()) ? s : fallback;
+    }
+
+    private static String esc(String v) {
+        if (v == null) return "";
+        return v.replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace("\"", "&quot;");
+    }
 }
+

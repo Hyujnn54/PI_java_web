@@ -125,19 +125,38 @@ public class UserService {
         }
     }
     public void enableFaceLogin(long userId, String uuid) throws SQLException {
-        String sql = "UPDATE users SET face_person_id=? WHERE id=?";
-        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
-            ps.setString(1, uuid);
-            ps.setLong(2, userId);
-            ps.executeUpdate();
+        // Try with face_enabled column first, fall back if column doesn't exist
+        try {
+            String sql = "UPDATE users SET face_person_id=?, face_enabled=1 WHERE id=?";
+            try (PreparedStatement ps = cnx().prepareStatement(sql)) {
+                ps.setString(1, uuid);
+                ps.setLong(2, userId);
+                ps.executeUpdate();
+            }
+        } catch (SQLException e) {
+            // face_enabled column may not exist — just update face_person_id
+            String sql = "UPDATE users SET face_person_id=? WHERE id=?";
+            try (PreparedStatement ps = cnx().prepareStatement(sql)) {
+                ps.setString(1, uuid);
+                ps.setLong(2, userId);
+                ps.executeUpdate();
+            }
         }
     }
 
     public void disableFaceLogin(long userId) throws SQLException {
-        String sql = "UPDATE users SET face_person_id=NULL WHERE id=?";
-        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
-            ps.setLong(1, userId);
-            ps.executeUpdate();
+        try {
+            String sql = "UPDATE users SET face_person_id=NULL, face_enabled=0 WHERE id=?";
+            try (PreparedStatement ps = cnx().prepareStatement(sql)) {
+                ps.setLong(1, userId);
+                ps.executeUpdate();
+            }
+        } catch (SQLException e) {
+            String sql = "UPDATE users SET face_person_id=NULL WHERE id=?";
+            try (PreparedStatement ps = cnx().prepareStatement(sql)) {
+                ps.setLong(1, userId);
+                ps.executeUpdate();
+            }
         }
     }
 

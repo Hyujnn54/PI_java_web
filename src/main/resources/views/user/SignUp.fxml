@@ -20,7 +20,7 @@
             <Circle radius="50" style="-fx-fill: rgba(91,163,245,0.18);"/>
             <Circle radius="38" style="-fx-fill: rgba(91,163,245,0.28);"/>
             <ImageView fitHeight="56" fitWidth="56" preserveRatio="true">
-                <image><Image url="@../../images/logo.jpg"/></image>
+                <image><Image url="@../../images/logo.png"/></image>
             </ImageView>
         </StackPane>
 

@@ -37,10 +37,15 @@ public class InterviewFeedbackService {
             ps.setString(4, f.getDecision());
             ps.setString(5, f.getComment());
             ps.executeUpdate();
-            System.out.println("Feedback added");
+            System.out.println("[FeedbackService] Feedback added");
         } catch (SQLException e) {
             System.err.println("Error adding feedback: " + e.getMessage());
             throw new RuntimeException("Failed to add feedback: " + e.getMessage(), e);
+        }
+
+        // Send acceptance email via Brevo if candidate is accepted
+        if ("ACCEPTED".equals(f.getDecision())) {
+            sendAcceptanceEmailAsync(f.getInterviewId());
         }
     }
 
@@ -84,7 +89,65 @@ public class InterviewFeedbackService {
             System.err.println("  [SERVICE] ✗ SQL Error updating feedback: " + e.getMessage());
             throw new RuntimeException("Failed to update feedback: " + e.getMessage(), e);
         }
+
+        // Send acceptance email via Brevo if candidate is now accepted
+        if ("ACCEPTED".equals(f.getDecision())) {
+            sendAcceptanceEmailAsync(f.getInterviewId());
+        }
     }
+
+    // ── Acceptance email (Brevo via InterviewEmailService) ───────────────────
+
+    /**
+     * Looks up the candidate's contact + job offer details from DB,
+     * then sends the acceptance notification via Brevo on a background thread.
+     *
+     * DB path:
+     *   interview.id → interview.application_id
+     *   → job_application.candidate_id → users (email, first_name, last_name)
+     *   → job_application.offer_id     → job_offer (title, location, contract_type, description)
+     */
+    private static void sendAcceptanceEmailAsync(Long interviewId) {
+        new Thread(() -> {
+            try {
+                String q = "SELECT u.email, u.first_name, u.last_name, " +
+                           "jo.title, jo.location, jo.contract_type, jo.description " +
+                           "FROM interview i " +
+                           "JOIN job_application ja ON i.application_id = ja.id " +
+                           "JOIN users u ON ja.candidate_id = u.id " +
+                           "JOIN job_offer jo ON ja.offer_id = jo.id " +
+                           "WHERE i.id = ?";
+                try (PreparedStatement ps = getConnection().prepareStatement(q)) {
+                    ps.setLong(1, interviewId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            System.err.println("[FeedbackService] Acceptance email: no data for interview #" + interviewId);
+                            return;
+                        }
+                        String email       = rs.getString("email");
+                        String firstName   = rs.getString("first_name");
+                        String lastName    = rs.getString("last_name");
+                        String fullName    = (firstName + " " + lastName).trim();
+                        String jobTitle    = rs.getString("title");
+                        String location    = rs.getString("location");
+                        String contract    = rs.getString("contract_type");
+                        String description = rs.getString("description");
+
+                        boolean sent = InterviewEmailService.sendAcceptanceNotification(
+                                email, fullName, jobTitle, location, contract, description);
+                        if (sent)
+                            System.out.println("[FeedbackService] Acceptance email sent to " + email);
+                        else
+                            System.err.println("[FeedbackService] Acceptance email failed for " + email);
+                    }
+                }
+            } catch (Exception ex) {
+                System.err.println("[FeedbackService] Acceptance email exception: " + ex.getMessage());
+            }
+        }, "acceptance-email").start();
+    }
+
+    // ── CRUD ─────────────────────────────────────────────────────────────────
 
     public static void deleteFeedback(Long id) {
         String sql = "DELETE FROM interview_feedback WHERE id=?";

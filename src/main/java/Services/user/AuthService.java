@@ -104,10 +104,10 @@ public class AuthService {
         String sql = """
                 SELECT id, email, password, first_name, last_name, phone
                 FROM users
-                WHERE face_enabled=1 AND face_person_id=? AND is_active=1
+                WHERE face_person_id=? AND is_active=1
             """;
         try (PreparedStatement ps = cnx().prepareStatement(sql)) {
-            ps.setString(1, personId);
+            ps.setString(1, personId.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
                 long   id         = rs.getLong("id");

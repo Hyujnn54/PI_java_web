@@ -21,7 +21,7 @@
             <Circle radius="54" style="-fx-fill: rgba(91,163,245,0.18);"/>
             <Circle radius="42" style="-fx-fill: rgba(91,163,245,0.28);"/>
             <ImageView fitHeight="64" fitWidth="64" preserveRatio="true">
-                <image><Image url="@../../images/logo.jpg"/></image>
+                <image><Image url="@../../images/logo.png"/></image>
             </ImageView>
         </StackPane>
 
@@ -112,10 +112,20 @@
                                    style="-fx-text-fill:#5BA3F5; -fx-font-size:12px; -fx-font-weight:600;
                                           -fx-border-color:transparent;"/>
                     </HBox>
-                    <PasswordField fx:id="txtPassword" promptText="••••••••"
-                                   style="-fx-font-size:13px; -fx-padding:11 14; -fx-background-radius:10;
+                    <StackPane>
+                        <PasswordField fx:id="txtPassword" promptText="••••••••"
+                                       style="-fx-font-size:13px; -fx-padding:11 40 11 14; -fx-background-radius:10;
+                                              -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                              -fx-background-color:#FAFBFE;"/>
+                        <TextField fx:id="txtPasswordVisible" promptText="••••••••" visible="false" managed="false"
+                                   style="-fx-font-size:13px; -fx-padding:11 40 11 14; -fx-background-radius:10;
                                           -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
                                           -fx-background-color:#FAFBFE;"/>
+                        <Button fx:id="btnTogglePassword" text="👁" onAction="#handleTogglePassword"
+                                StackPane.alignment="CENTER_RIGHT"
+                                style="-fx-background-color:transparent; -fx-border-color:transparent;
+                                       -fx-cursor:hand; -fx-font-size:15px; -fx-padding:0 10 0 0;"/>
+                    </StackPane>
                 </VBox>
 
                 <!-- Remember Me -->
@@ -139,21 +149,12 @@
                     <Separator HBox.hgrow="ALWAYS"/>
                 </HBox>
 
-                <!-- Face / Camera Login -->
-                <HBox spacing="10">
-                    <Button text="🪪  Face Login" onAction="#handleLoginWithFace" HBox.hgrow="ALWAYS"
-                            maxWidth="Infinity"
-                            style="-fx-background-color:#F0FDF4; -fx-text-fill:#166534; -fx-font-weight:700;
-                                   -fx-font-size:12px; -fx-padding:11; -fx-background-radius:10;
-                                   -fx-border-color:#BBF7D0; -fx-border-width:1.5; -fx-border-radius:10;
-                                   -fx-cursor:hand;"/>
-                    <Button text="📷  Camera" onAction="#handleLoginWithCamera" HBox.hgrow="ALWAYS"
-                            maxWidth="Infinity"
-                            style="-fx-background-color:#EFF6FF; -fx-text-fill:#1D4ED8; -fx-font-weight:700;
-                                   -fx-font-size:12px; -fx-padding:11; -fx-background-radius:10;
-                                   -fx-border-color:#BFDBFE; -fx-border-width:1.5; -fx-border-radius:10;
-                                   -fx-cursor:hand;"/>
-                </HBox>
+                <!-- Face Login via camera -->
+                <Button text="📷  Login with Face" onAction="#handleLoginWithFace" maxWidth="Infinity"
+                        style="-fx-background-color:#EFF6FF; -fx-text-fill:#1D4ED8; -fx-font-weight:700;
+                               -fx-font-size:12px; -fx-padding:11; -fx-background-radius:10;
+                               -fx-border-color:#BFDBFE; -fx-border-width:1.5; -fx-border-radius:10;
+                               -fx-cursor:hand;"/>
             </VBox>
 
             <!-- Sign up link -->

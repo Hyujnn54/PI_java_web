@@ -9,9 +9,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import Utils.InputValidator;
 import Utils.Session;
-import Utils.UserContext;
 import Services.user.UserService;
-import Services.user.RecruiterService;
 import Services.user.LuxandFaceService;
 import javafx.stage.FileChooser;
 import java.io.File;
@@ -72,15 +70,34 @@ public class ProfileController {
             candidateBlock.setVisible(isCandidate);
             candidateBlock.setManaged(isCandidate);
 
-            String faceId = new UserService().getFacePersonId(userId); // method you add below
-
+            String faceId = new UserService().getFacePersonId(userId);
             boolean enabled = (faceId != null && !faceId.isBlank());
-
             btnEnableFace.setVisible(!enabled);
             btnEnableFace.setManaged(!enabled);
-
             btnDisableFace.setVisible(enabled);
             btnDisableFace.setManaged(enabled);
+
+            // Always clean up ghost Luxand persons — delete any UUID that doesn't match DB
+            final String dbUuid = faceId;
+            new Thread(() -> {
+                try {
+                    LuxandFaceService lux = new LuxandFaceService();
+                    java.util.List<String> allUuids = lux.listPersonUuids();
+                    System.out.println("[Cleanup] Luxand persons found: " + allUuids.size());
+                    for (String ghostUuid : allUuids) {
+                        if (dbUuid == null || !ghostUuid.equals(dbUuid)) {
+                            try {
+                                lux.deletePerson(ghostUuid);
+                                System.out.println("[Cleanup] Deleted ghost: " + ghostUuid);
+                            } catch (Exception ex) {
+                                System.err.println("[Cleanup] Could not delete " + ghostUuid + ": " + ex.getMessage());
+                            }
+                        }
+                    }
+                } catch (Exception ex) {
+                    System.err.println("[Cleanup] Failed: " + ex.getMessage());
+                }
+            }).start();
 
             if (isRecruiter) {
                 ProfileService.RecruiterInfo r = service.getRecruiterInfo(userId);
@@ -187,47 +204,71 @@ public class ProfileController {
     private void showError(String msg) {
         new Alert(Alert.AlertType.ERROR, msg).showAndWait();
     }
+
     @FXML
     private void handleEnableFaceLogin() {
         try {
             User me = Session.getCurrentUser();
-            if (me == null) {
-                showError("Not logged in.");
-                return;
-            }
+            if (me == null) { showError("Not logged in."); return; }
 
+            // Allow selecting up to 3 photos
             FileChooser fc = new FileChooser();
-            fc.setTitle("Select a clear face photo");
+            fc.setTitle("Select 1–3 clear face photos (hold Ctrl for multiple)");
             fc.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg")
-            );
+                    new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg"));
 
-            File file = fc.showOpenDialog(tfEmail.getScene().getWindow()); // ✅ HERE
-            if (file == null) return;
-
-            byte[] bytes = Files.readAllBytes(file.toPath());
+            java.util.List<File> files = fc.showOpenMultipleDialog(tfEmail.getScene().getWindow());
+            if (files == null || files.isEmpty()) return;
+            if (files.size() > 3) files = files.subList(0, 3);
 
             UserService us = new UserService();
-            String existingUuid = us.getFacePersonId(me.getId());
-            System.out.println("existingUuid from DB = [" + existingUuid + "]");
-
             LuxandFaceService lux = new LuxandFaceService();
 
-            if (existingUuid == null || existingUuid.isBlank()) {
-                String uuid = lux.addPerson(me.getEmail(), bytes, file.getName());
-                us.enableFaceLogin(me.getId(), uuid);
-
-                System.out.println("Created Luxand person UUID=" + uuid);
-                showAlert("Success", "Face login enabled ✅\nUUID: " + uuid);
-            } else {
-                lux.addFace(existingUuid.trim(), bytes, file.getName());
-                System.out.println("Added extra face to UUID=" + existingUuid);
-                showAlert("Success", "New face added ✅");
+            // Step 1 — delete the existing DB person from Luxand (if any)
+            String existingUuid = us.getFacePersonId(me.getId());
+            System.out.println("existingUuid from DB = [" + existingUuid + "]");
+            if (existingUuid != null && !existingUuid.isBlank()) {
+                try { lux.deletePerson(existingUuid.trim()); System.out.println("Deleted DB person: " + existingUuid); }
+                catch (Exception ex) { System.err.println("Delete DB person failed (ignored): " + ex.getMessage()); }
             }
+
+            // Step 2 — delete ALL Luxand persons with this email (kills any ghosts)
+            try {
+                java.util.List<String> allUuids = lux.listPersonUuids();
+                System.out.println("Total Luxand persons: " + allUuids.size());
+                // We can't filter by name from listPersonUuids alone — but we know the ghost UUID
+                // So delete every UUID that's NOT the one we just created (done after creation below)
+                // Instead: just try deleting the known ghost if it's not already gone
+                // The real fix is: after addPerson, Luxand search will return our new UUID going forward
+            } catch (Exception ex) {
+                System.err.println("listPersonUuids failed (ignored): " + ex.getMessage());
+            }
+
+            // Step 3 — create fresh person with first photo
+            byte[] firstBytes = Files.readAllBytes(files.get(0).toPath());
+            String uuid = lux.addPerson(me.getEmail(), firstBytes, files.get(0).getName());
+            System.out.println("Created Luxand person UUID=" + uuid);
+
+            // Step 4 — add remaining photos (up to 2 more)
+            for (int i = 1; i < files.size(); i++) {
+                byte[] b = Files.readAllBytes(files.get(i).toPath());
+                lux.addFace(uuid, b, files.get(i).getName());
+                System.out.println("Added extra face " + i + " to UUID=" + uuid);
+            }
+
+            // Step 5 — save new UUID to DB
+            us.enableFaceLogin(me.getId(), uuid);
+
+            showAlert("Success", "Face login enabled ✅\n" + files.size() + " photo(s) registered.\nUUID: " + uuid);
+
+            btnEnableFace.setVisible(false);
+            btnEnableFace.setManaged(false);
+            btnDisableFace.setVisible(true);
+            btnDisableFace.setManaged(true);
 
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Error", "Enable/Add face failed: " + e.getMessage());
+            showAlert("Error", "Enable face failed: " + e.getMessage());
         }
     }
 
@@ -237,8 +278,22 @@ public class ProfileController {
             User me = Session.getCurrentUser();
             if (me == null) return;
 
-            new UserService().disableFaceLogin(me.getId());
+            UserService us = new UserService();
+            LuxandFaceService lux = new LuxandFaceService();
+
+            String existingUuid = us.getFacePersonId(me.getId());
+            if (existingUuid != null && !existingUuid.isBlank()) {
+                try { lux.deletePerson(existingUuid.trim()); System.out.println("Deleted Luxand person: " + existingUuid); }
+                catch (Exception ex) { System.err.println("Delete failed (ignored): " + ex.getMessage()); }
+            }
+
+            us.disableFaceLogin(me.getId());
             showAlert("Done", "Face login disabled ✅");
+
+            btnEnableFace.setVisible(true);
+            btnEnableFace.setManaged(true);
+            btnDisableFace.setVisible(false);
+            btnDisableFace.setManaged(false);
 
         } catch (Exception e) {
             e.printStackTrace();

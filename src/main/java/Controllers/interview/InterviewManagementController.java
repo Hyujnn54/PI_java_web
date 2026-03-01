@@ -1506,9 +1506,9 @@ public class InterviewManagementController {
                         String contract  = rs.getString("contract_type");
                         String desc      = rs.getString("description");
                         if (email != null && !email.isBlank()) {
-                            Services.user.EmailService.sendAcceptanceNotification(
+                            Services.interview.InterviewEmailService.sendAcceptanceNotification(
                                 email, fullName, jobTitle, location, contract, desc);
-                            System.out.println("[InterviewController] Acceptance email sent to: " + email);
+                            System.out.println("[InterviewController] Acceptance email (Brevo) sent to: " + email);
                         }
                     }
                 }

@@ -219,6 +219,18 @@ public class SignUpController {
             }
 
             showAlert(Alert.AlertType.INFORMATION, "Success", "Account created successfully ✅");
+
+            // Send welcome email in background
+            final String finalEmail = email;
+            final String finalFirst = firstName;
+            new Thread(() -> {
+                try {
+                    new Services.user.EmailService().sendWelcome(finalEmail, finalFirst);
+                } catch (Exception ex) {
+                    System.err.println("[SignUp] Welcome email failed: " + ex.getMessage());
+                }
+            }, "welcome-email").start();
+
             handleShowLogin();
             clearForm();
 
