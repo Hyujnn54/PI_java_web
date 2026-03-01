@@ -1,7 +1,7 @@
 package Controllers.events;
 
 import Models.events.*;
-import Services.EmailService;
+import Services.user.EmailService;
 import Services.events.*;
 import Utils.SchemaFixer;
 import javafx.collections.FXCollections;
@@ -131,7 +131,7 @@ public class RecruiterDashboardController implements Initializable {
     private RecruiterService recruiterService;
     private UserService userService;
     private final Services.events.ReviewService reviewService = new Services.events.ReviewService();
-    private Recruiter currentRecruiter;
+    private EventRecruiter currentRecruiter;
     private RecruitmentEvent selectedEvent;
     private ObservableList<EventRegistration> masterRegistrationList = FXCollections.observableArrayList();
 
@@ -376,7 +376,7 @@ public class RecruiterDashboardController implements Initializable {
 
             // 2. Si non trouvé, prendre le premier recruteur de la table
             if (currentRecruiter == null) {
-                java.util.List<Recruiter> all = recruiterService.getAll();
+                java.util.List<EventRecruiter> all = recruiterService.getAll();
                 if (!all.isEmpty()) {
                     currentRecruiter = all.get(0);
                 }
@@ -387,8 +387,8 @@ public class RecruiterDashboardController implements Initializable {
                 String testEmail = "recruteur.test@talentbridge.com";
 
                 // Vérifier si l'utilisateur existe déjà par email
-                User testUser = null;
-                for (User u : userService.getAll()) {
+                EventUser testUser = null;
+                for (EventUser u : userService.getAll()) {
                     if (testEmail.equals(u.getEmail())) {
                         testUser = u;
                         break;
@@ -396,7 +396,7 @@ public class RecruiterDashboardController implements Initializable {
                 }
 
                 if (testUser == null) {
-                    testUser = new User();
+                    testUser = new EventUser();
                     testUser.setEmail(testEmail);
                     testUser.setPassword("password123");
                     testUser.setFirstName("Test");
@@ -406,7 +406,7 @@ public class RecruiterDashboardController implements Initializable {
                     userService.add(testUser);
                 }
 
-                currentRecruiter = new Recruiter();
+                currentRecruiter = new EventRecruiter();
                 currentRecruiter.setId(testUser.getId());
                 currentRecruiter.setCompanyName("Société de Test");
                 currentRecruiter.setCompanyLocation("Tunis");
@@ -423,9 +423,9 @@ public class RecruiterDashboardController implements Initializable {
             if (currentRecruiter != null) {
                 refreshTable();
 
-                // Fetch User details for top bar (only present in standalone dashboard, not embedded view)
+                // Fetch EventUser details for top bar (only present in standalone dashboard, not embedded view)
                 try {
-                    User user = userService.getById(currentRecruiter.getId());
+                    EventUser user = userService.getById(currentRecruiter.getId());
                     if (user != null) {
                         if (userNameLabel != null) userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
                         if (userRoleLabel != null) {
@@ -854,7 +854,7 @@ public class RecruiterDashboardController implements Initializable {
             return Integer.compare(ra, rb);
         };
 
-        // User secondary sort
+        // EventUser secondary sort
         java.util.Comparator<EventRegistration> secondarySort = null;
         if ("Date (plus récent)".equals(sortBy)) {
             secondarySort = (a, b) -> {

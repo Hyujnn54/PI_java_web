@@ -14,8 +14,8 @@ public class RecruitmentEvent {
     private String meetLink;
     private LocalDateTime createdAt;
     
-    // Optional: Recruiter object for display purposes
-    private Recruiter recruiter;
+    // Optional: EventRecruiter object for display purposes
+    private EventRecruiter recruiter;
 
     // Default constructor
     public RecruitmentEvent() {
@@ -119,11 +119,11 @@ public class RecruitmentEvent {
         this.createdAt = createdAt;
     }
 
-    public Recruiter getRecruiter() {
+    public EventRecruiter getRecruiter() {
         return recruiter;
     }
 
-    public void setRecruiter(Recruiter recruiter) {
+    public void setRecruiter(EventRecruiter recruiter) {
         this.recruiter = recruiter;
     }
 

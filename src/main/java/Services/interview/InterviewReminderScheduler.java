@@ -1,8 +1,8 @@
 package Services.interview;
 
 import Models.interview.Interview;
-import Services.EmailService;
-import Services.SMSService;
+import Services.user.EmailService;
+import Services.user.SMSService;
 import Utils.MyDatabase;
 
 import java.sql.Connection;

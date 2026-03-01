@@ -1,9 +1,9 @@
 package Controllers.events;
 
-import Models.events.Candidate;
+import Models.events.EventCandidate;
 import Models.events.EventRegistration;
 import Models.events.RecruitmentEvent;
-import Models.events.User;
+import Models.events.EventUser;
 import Services.events.EventRegistrationService;
 import Services.events.UserService;
 import javafx.fxml.FXML;
@@ -24,7 +24,7 @@ public class RegistrationModalController {
     private TextField emailField;
 
     private RecruitmentEvent event;
-    private Candidate candidate;
+    private EventCandidate candidate;
     private CandidateDashboardController parentController;
     private EventRegistrationService registrationService = new EventRegistrationService();
     private UserService userService = new UserService();
@@ -34,10 +34,10 @@ public class RegistrationModalController {
         eventTitleField.setText(event.getTitle());
     }
 
-    public void setCandidate(Candidate candidate) {
+    public void setCandidate(EventCandidate candidate) {
         this.candidate = candidate;
         try {
-            User user = userService.getById(candidate.getId());
+            EventUser user = userService.getById(candidate.getId());
             if (user != null) {
                 lastNameField.setText(user.getLastName());
                 firstNameField.setText(user.getFirstName());

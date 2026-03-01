@@ -1,6 +1,6 @@
 package Utils;
 
-import Models.User;
+import Models.user.User;
 
 public class Session {
     private static User currentUser;

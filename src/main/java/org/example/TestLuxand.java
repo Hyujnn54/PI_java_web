@@ -1,6 +1,6 @@
 package org.example;
 
-import Services.LuxandFaceService;
+import Services.user.LuxandFaceService;
 
 public class TestLuxand {
     public static void main(String[] args) throws Exception {

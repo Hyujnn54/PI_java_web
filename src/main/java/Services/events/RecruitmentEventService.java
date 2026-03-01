@@ -1,7 +1,7 @@
 package Services.events;
 
 import Models.events.RecruitmentEvent;
-import Models.events.Recruiter;
+import Models.events.EventRecruiter;
 import Utils.MyDatabase;
 
 import java.sql.*;
@@ -108,7 +108,7 @@ public class RecruitmentEventService {
             event.setMeetLink(rs.getString("meet_link"));
             event.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
 
-            Recruiter recruiter = new Recruiter();
+            EventRecruiter recruiter = new EventRecruiter();
             recruiter.setId(rs.getLong("recruiter_id"));
             recruiter.setCompanyName(rs.getString("company_name"));
             recruiter.setCompanyLocation(rs.getString("company_location"));

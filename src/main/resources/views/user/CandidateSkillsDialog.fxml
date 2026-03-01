@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<DialogPane xmlns="http://javafx.com/javafx/17"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="Controllers.user.CandidateSkillsController">
+
+    <content>
+        <VBox spacing="12">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <Label text="My Skills" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+
+            <ScrollPane fitToWidth="true" prefViewportHeight="320">
+                <content>
+                    <VBox fx:id="rowsBox" spacing="10" style="-fx-padding: 10;"/>
+                </content>
+            </ScrollPane>
+
+            <HBox spacing="10">
+                <Button text="➕ Add skill" onAction="#handleAddRow"/>
+                <Button text="💾 Save" onAction="#handleSave"/>
+                <Button text="🗑 Delete all" onAction="#handleDeleteAll"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="lblStatus" text=""/>
+            </HBox>
+        </VBox>
+    </content>
+
+</DialogPane>

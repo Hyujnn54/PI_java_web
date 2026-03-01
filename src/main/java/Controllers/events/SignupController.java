@@ -1,9 +1,9 @@
 package Controllers.events;
 
-import Models.events.Candidate;
-import Models.events.Recruiter;
+import Models.events.EventCandidate;
+import Models.events.EventRecruiter;
 import Models.events.RoleEnum;
-import Models.events.User;
+import Models.events.EventUser;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
@@ -59,7 +59,7 @@ public class SignupController {
 
         try {
             // 1. Créer l'utilisateur de base
-            User user = new User();
+            EventUser user = new EventUser();
             user.setEmail(email);
             user.setPassword(password);
             user.setFirstName(firstName);
@@ -72,10 +72,10 @@ public class SignupController {
 
             // 2. Créer le profil spécifique (Shared PK)
             if (user.getRole() == RoleEnum.CANDIDATE) {
-                Candidate candidate = new Candidate(user.getId(), "", "", 0, "");
+                EventCandidate candidate = new EventCandidate(user.getId(), "", "", 0, "");
                 candidateService.add(candidate);
             } else if (user.getRole() == RoleEnum.RECRUITER) {
-                Recruiter recruiter = new Recruiter(user.getId(), "", "", "");
+                EventRecruiter recruiter = new EventRecruiter(user.getId(), "", "", "");
                 recruiterService.add(recruiter);
             }
 

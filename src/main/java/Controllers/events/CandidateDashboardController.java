@@ -1,9 +1,9 @@
 package Controllers.events;
 
-import Models.events.Candidate;
+import Models.events.EventCandidate;
 import Models.events.EventRegistration;
 import Models.events.RecruitmentEvent;
-import Models.events.User;
+import Models.events.EventUser;
 import Models.events.RoleEnum;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -61,7 +61,7 @@ public class CandidateDashboardController implements Initializable {
     private EventRegistrationService registrationService;
     private CandidateService candidateService;
     private UserService userService;
-    private Candidate currentCandidate;
+    private EventCandidate currentCandidate;
     private java.util.List<String> recommendedTypes = new java.util.ArrayList<>();
 
     public CandidateDashboardController() {
@@ -120,15 +120,15 @@ public class CandidateDashboardController implements Initializable {
             long lookupId = (contextId != null) ? contextId : 5L;
             currentCandidate = candidateService.getByUserId(lookupId);
             if (currentCandidate == null) {
-                java.util.List<Candidate> all = candidateService.getAll();
+                java.util.List<EventCandidate> all = candidateService.getAll();
                 if (!all.isEmpty()) {
                     currentCandidate = all.get(0);
                 }
             }
             if (currentCandidate == null) {
                 String testEmail = "candidat.test@talentbridge.com";
-                User testUser = null;
-                for (User u : userService.getAll()) {
+                EventUser testUser = null;
+                for (EventUser u : userService.getAll()) {
                     if (testEmail.equals(u.getEmail())) {
                         testUser = u;
                         break;
@@ -136,20 +136,20 @@ public class CandidateDashboardController implements Initializable {
                 }
                 if (testUser != null) {
                     testUser.setFirstName("Rayen");
-                    testUser.setLastName("Candidate");
+                    testUser.setLastName("EventCandidate");
                     userService.update(testUser);
                 }
                 if (testUser == null) {
-                    testUser = new User();
+                    testUser = new EventUser();
                     testUser.setEmail(testEmail);
                     testUser.setPassword("password123");
                     testUser.setFirstName("Rayen");
-                    testUser.setLastName("Candidate");
+                    testUser.setLastName("EventCandidate");
                     testUser.setRole(RoleEnum.CANDIDATE);
                     testUser.setActive(true);
                     userService.add(testUser);
                 }
-                currentCandidate = new Candidate();
+                currentCandidate = new EventCandidate();
                 currentCandidate.setId(testUser.getId());
                 currentCandidate.setLocation("Tunis");
                 currentCandidate.setEducationLevel("Master");
@@ -160,9 +160,9 @@ public class CandidateDashboardController implements Initializable {
                 refreshEvents();
                 refreshRegistrations();
 
-                // Fetch User details for top bar (only present in standalone dashboard, not embedded view)
+                // Fetch EventUser details for top bar (only present in standalone dashboard, not embedded view)
                 try {
-                    User user = userService.getById(currentCandidate.getId());
+                    EventUser user = userService.getById(currentCandidate.getId());
                     if (user != null) {
                         if (userNameLabel != null) userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
                         if (userRoleLabel != null) {

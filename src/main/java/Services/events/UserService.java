@@ -1,7 +1,7 @@
 package Services.events;
 
 import Models.events.RoleEnum;
-import Models.events.User;
+import Models.events.EventUser;
 import Utils.MyDatabase;
 
 import java.sql.*;
@@ -51,7 +51,7 @@ public class UserService {
 
     // ── Events-module methods ──────────────────────────────────────────────
 
-    public void add(User user) throws SQLException {
+    public void add(EventUser user) throws SQLException {
         checkConnection();
         String query = "INSERT INTO users (email, password, first_name, last_name, phone, role, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
@@ -68,7 +68,7 @@ public class UserService {
         if (rs.next()) { user.setId(rs.getLong(1)); }
     }
 
-    public User login(String email, String password) throws SQLException {
+    public EventUser login(String email, String password) throws SQLException {
         checkConnection();
         String query = "SELECT * FROM users WHERE email = ? AND password = ? AND is_active = 1";
         PreparedStatement ps = connection.prepareStatement(query);
@@ -79,7 +79,7 @@ public class UserService {
         return null;
     }
 
-    public User getById(long id) throws SQLException {
+    public EventUser getById(long id) throws SQLException {
         checkConnection();
         String query = "SELECT * FROM users WHERE id = ?";
         PreparedStatement ps = connection.prepareStatement(query);
@@ -89,16 +89,16 @@ public class UserService {
         return null;
     }
 
-    public List<User> getAll() throws SQLException {
+    public List<EventUser> getAll() throws SQLException {
         checkConnection();
-        List<User> users = new ArrayList<>();
+        List<EventUser> users = new ArrayList<>();
         Statement st = connection.createStatement();
         ResultSet rs = st.executeQuery("SELECT * FROM users");
         while (rs.next()) { users.add(mapUser(rs)); }
         return users;
     }
 
-    public void update(User user) throws SQLException {
+    public void update(EventUser user) throws SQLException {
         checkConnection();
         String query = "UPDATE users SET email=?, first_name=?, last_name=?, phone=?, role=?, is_active=? WHERE id=?";
         PreparedStatement ps = connection.prepareStatement(query);
@@ -112,8 +112,8 @@ public class UserService {
         ps.executeUpdate();
     }
 
-    private User mapUser(ResultSet rs) throws SQLException {
-        User user = new User();
+    private EventUser mapUser(ResultSet rs) throws SQLException {
+        EventUser user = new EventUser();
         user.setId(rs.getLong("id"));
         user.setEmail(rs.getString("email"));
         user.setPassword(rs.getString("password"));

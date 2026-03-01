@@ -1,6 +1,6 @@
 package Controllers.events;
 
-import Models.events.User;
+import Models.events.EventUser;
 import Services.events.UserService;
 import Utils.SceneManager;
 import Utils.SessionManager;
@@ -33,7 +33,7 @@ public class LoginController {
             return;
         }
         try {
-            User user = userService.login(email, password);
+            EventUser user = userService.login(email, password);
             if (user != null) {
                 SessionManager.setCurrentUser(user);
                 Stage stage = (Stage) loginButton.getScene().getWindow();
@@ -41,9 +41,9 @@ public class LoginController {
                 if (role.equals("ADMIN")) {
                     SceneManager.switchScene(stage, "/GUI/admin_dashboard.fxml", "Admin Dashboard");
                 } else if (role.equals("RECRUITER")) {
-                    SceneManager.switchScene(stage, "/GUI/recruiter_dashboard.fxml", "Recruiter Dashboard");
+                    SceneManager.switchScene(stage, "/GUI/recruiter_dashboard.fxml", "EventRecruiter Dashboard");
                 } else if (role.equals("CANDIDATE")) {
-                    SceneManager.switchScene(stage, "/GUI/candidate_dashboard.fxml", "Candidate Dashboard");
+                    SceneManager.switchScene(stage, "/GUI/candidate_dashboard.fxml", "EventCandidate Dashboard");
                 }
             } else {
                 errorLabel.setText("Email ou mot de passe incorrect");

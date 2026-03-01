@@ -1,18 +1,18 @@
 package Utils;
 
-import Models.events.User;
+import Models.events.EventUser;
 
 /**
  * Classe simple pour stocker l'utilisateur connecté
  */
 public class SessionManager {
-    private static User currentUser = null;
+    private static EventUser currentUser = null;
 
-    public static void setCurrentUser(User user) {
+    public static void setCurrentUser(EventUser user) {
         currentUser = user;
     }
 
-    public static User getCurrentUser() {
+    public static EventUser getCurrentUser() {
         return currentUser;
     }
 

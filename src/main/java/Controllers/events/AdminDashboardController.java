@@ -19,9 +19,9 @@ import java.util.ResourceBundle;
  */
 public class AdminDashboardController implements Initializable {
 
-    @FXML private TableView<User> usersTable;
-    @FXML private TableView<Candidate> candidatesTable;
-    @FXML private TableView<Recruiter> recruitersTable;
+    @FXML private TableView<EventUser> usersTable;
+    @FXML private TableView<EventCandidate> candidatesTable;
+    @FXML private TableView<EventRecruiter> recruitersTable;
     @FXML private TableView<EventRegistration> registrationsTable;
 
     private UserService userService;
@@ -46,36 +46,36 @@ public class AdminDashboardController implements Initializable {
     }
 
     private void setupUsersTable() {
-        TableColumn<User, Long> idCol = new TableColumn<>("ID");
+        TableColumn<EventUser, Long> idCol = new TableColumn<>("ID");
         idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
         
-        TableColumn<User, String> emailCol = new TableColumn<>("Email");
+        TableColumn<EventUser, String> emailCol = new TableColumn<>("Email");
         emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
         
-        TableColumn<User, String> roleCol = new TableColumn<>("Rôle");
+        TableColumn<EventUser, String> roleCol = new TableColumn<>("Rôle");
         roleCol.setCellValueFactory(new PropertyValueFactory<>("role"));
 
         usersTable.getColumns().addAll(idCol, emailCol, roleCol);
     }
 
     private void setupCandidatesTable() {
-        TableColumn<Candidate, Long> idCol = new TableColumn<>("ID");
+        TableColumn<EventCandidate, Long> idCol = new TableColumn<>("ID");
         idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
         
-        TableColumn<Candidate, String> locCol = new TableColumn<>("Lieu");
+        TableColumn<EventCandidate, String> locCol = new TableColumn<>("Lieu");
         locCol.setCellValueFactory(new PropertyValueFactory<>("location"));
         
-        TableColumn<Candidate, Integer> expCol = new TableColumn<>("Expérience");
+        TableColumn<EventCandidate, Integer> expCol = new TableColumn<>("Expérience");
         expCol.setCellValueFactory(new PropertyValueFactory<>("experienceYears"));
 
         candidatesTable.getColumns().addAll(idCol, locCol, expCol);
     }
 
     private void setupRecruitersTable() {
-        TableColumn<Recruiter, Long> idCol = new TableColumn<>("ID");
+        TableColumn<EventRecruiter, Long> idCol = new TableColumn<>("ID");
         idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
         
-        TableColumn<Recruiter, String> companyCol = new TableColumn<>("Entreprise");
+        TableColumn<EventRecruiter, String> companyCol = new TableColumn<>("Entreprise");
         companyCol.setCellValueFactory(new PropertyValueFactory<>("companyName"));
 
         recruitersTable.getColumns().addAll(idCol, companyCol);

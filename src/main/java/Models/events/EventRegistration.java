@@ -10,7 +10,7 @@ public class EventRegistration {
     private AttendanceStatusEnum attendanceStatus;
 
     private RecruitmentEvent event;
-    private Candidate candidate;
+    private EventCandidate candidate;
     private String candidateName; // Full name (fallback)
     private String firstName;
     private String lastName;
@@ -120,11 +120,11 @@ public class EventRegistration {
         this.event = event;
     }
 
-    public Candidate getCandidate() {
+    public EventCandidate getCandidate() {
         return candidate;
     }
 
-    public void setCandidate(Candidate candidate) {
+    public void setCandidate(EventCandidate candidate) {
         this.candidate = candidate;
     }
 

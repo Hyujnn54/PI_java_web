@@ -4,7 +4,7 @@ import javafx.fxml.FXML;
 import javafx.stage.Stage;
 import Utils.SceneManager;
 import Utils.SessionManager;
-import Models.events.User;
+import Models.events.EventUser;
 import Models.events.RoleEnum;
 
 public class MainSelectionController {
@@ -12,7 +12,7 @@ public class MainSelectionController {
     @FXML
     private void goToFrontOffice() {
         // Simuler connexion Candidat
-        User candidate = new User();
+        EventUser candidate = new EventUser();
         candidate.setId(2); // ID supposé d'un candidat existant ou mock
         candidate.setEmail("candidate@test.com");
         candidate.setFirstName("John");
@@ -28,7 +28,7 @@ public class MainSelectionController {
     @FXML
     private void goToBackOffice() {
         // Simuler connexion Recruteur
-        User recruiter = new User();
+        EventUser recruiter = new EventUser();
         recruiter.setId(4); // ID supposé d'un recruteur existant ou mock
         recruiter.setEmail("recruiter@test.com");
         recruiter.setFirstName("Jane");

@@ -1,6 +1,6 @@
 package Services.events;
 
-import Models.events.Candidate;
+import Models.events.EventCandidate;
 import Utils.MyDatabase;
 
 import java.sql.*;
@@ -21,7 +21,7 @@ public class CandidateService {
         }
     }
 
-    public void add(Candidate candidate) throws SQLException {
+    public void add(EventCandidate candidate) throws SQLException {
         checkConnection();
         String sql = "INSERT INTO candidate (id, user_id, location, education_level, experience_years, cv_path) VALUES (?, ?, ?, ?, ?, ?)";
         PreparedStatement ps = connection.prepareStatement(sql);
@@ -34,14 +34,14 @@ public class CandidateService {
         ps.executeUpdate();
     }
 
-    public Candidate getByUserId(long userId) throws SQLException {
+    public EventCandidate getByUserId(long userId) throws SQLException {
         checkConnection();
         String sql = "SELECT * FROM candidate WHERE id = ?";
         PreparedStatement ps = connection.prepareStatement(sql);
         ps.setLong(1, userId);
         ResultSet rs = ps.executeQuery();
         if (rs.next()) {
-            Candidate c = new Candidate();
+            EventCandidate c = new EventCandidate();
             c.setId(rs.getLong("id"));
             c.setLocation(rs.getString("location"));
             c.setEducationLevel(rs.getString("education_level"));
@@ -52,14 +52,14 @@ public class CandidateService {
         return null; // Retourne null si pas de profil candidat, ce qui est géré par le contrôleur
     }
 
-    public List<Candidate> getAll() throws SQLException {
+    public List<EventCandidate> getAll() throws SQLException {
         checkConnection();
         String sql = "SELECT * FROM candidate";
-        List<Candidate> list = new ArrayList<>();
+        List<EventCandidate> list = new ArrayList<>();
         Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery(sql);
         while (rs.next()) {
-            Candidate c = new Candidate();
+            EventCandidate c = new EventCandidate();
             c.setId(rs.getLong("id"));
             c.setLocation(rs.getString("location"));
             c.setEducationLevel(rs.getString("education_level"));

@@ -1,9 +1,9 @@
 package Utils;
 
-import Models.Admin;
-import Models.Candidate;
-import Models.Recruiter;
-import Models.User;
+import Models.user.Admin;
+import Models.user.Candidate;
+import Models.user.Recruiter;
+import Models.user.User;
 
 /**
  * UserContext — bridges to Utils.Session for backward compatibility.

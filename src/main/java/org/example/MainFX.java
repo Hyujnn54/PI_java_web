@@ -26,7 +26,7 @@ public class MainFX extends Application {
 
         try {
             System.out.println("Loading Login.fxml...");
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/Login.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/views/user/Login.fxml"));
             Parent root = fxmlLoader.load();
 
             Scene scene = new Scene(root, WINDOWED_WIDTH, WINDOWED_HEIGHT);

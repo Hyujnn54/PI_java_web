@@ -116,7 +116,7 @@ public class EventsViewController implements Initializable {
         eventsContainer.getChildren().clear();
         lblCount.setText(events.size() + " événement(s)");
 
-        // 1. Fetch Candidate Preferences for sorting
+        // 1. Fetch EventCandidate Preferences for sorting
         List<String> preferredTypes = new ArrayList<>();
         if (!isRecruiter && !isAdmin && currentCandidateId > 0) {
             try {
@@ -294,7 +294,7 @@ public class EventsViewController implements Initializable {
             btnCancel.setVisible(false); btnCancel.setManaged(false);
             if (btnAnalyze != null) { btnAnalyze.setVisible(false); btnAnalyze.setManaged(false); }
         } else {
-            // Candidate — only future events shown here
+            // EventCandidate — only future events shown here
             btnApply.setVisible(true); btnApply.setManaged(true);
             if (btnAnalyze != null) { btnAnalyze.setVisible(true); btnAnalyze.setManaged(true); }
             if (currentCandidateId > 0) {
@@ -425,7 +425,7 @@ public class EventsViewController implements Initializable {
                                        (info.lastName()  != null ? info.lastName()  : "")).trim();
                         String date = selectedEvent.getEventDate() != null
                                 ? selectedEvent.getEventDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "";
-                        Services.EmailService.sendEventRegistrationConfirmation(
+                        Services.user.EmailService.sendEventRegistrationConfirmation(
                                 info.email(), name, selectedEvent.getTitle(),
                                 date,
                                 selectedEvent.getLocation() != null ? selectedEvent.getLocation() : "",
@@ -505,7 +505,7 @@ public class EventsViewController implements Initializable {
         new Thread(() -> {
             try {
                 // Fetch candidate profile
-                Models.events.Candidate candidate = candidateService.getByUserId(currentCandidateId);
+                Models.events.EventCandidate candidate = candidateService.getByUserId(currentCandidateId);
                 
                 String prompt = "Tu es un assistant IA expert en conseil de carrière.\n" +
                         "Un candidat souhaite participer à un événement de recrutement.\n\n" +
@@ -574,7 +574,7 @@ public class EventsViewController implements Initializable {
         }).start();
     }
 
-    private String candidateProfileSummary(Models.events.Candidate candidate) {
+    private String candidateProfileSummary(Models.events.EventCandidate candidate) {
         if (candidate == null) return "Profil du candidat non renseigné au complet.";
         return String.format("- Localisation : %s\n- Niveau d'étude : %s\n- Années d'expérience : %d",
                 candidate.getLocation() != null ? candidate.getLocation() : "Non spécifié",

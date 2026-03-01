@@ -77,7 +77,7 @@ public class EventRegistrationService {
         ps.executeUpdate();
     }
 
-    /** Candidate cancels: sets status to CANCELLED, keeps the row visible to the recruiter. */
+    /** EventCandidate cancels: sets status to CANCELLED, keeps the row visible to the recruiter. */
     public void cancelByCandidate(long eventId, long candidateId) throws SQLException {
         checkConnection();
         String query = "UPDATE event_registration SET attendance_status = 'CANCELLED' WHERE event_id = ? AND candidate_id = ?";
@@ -234,7 +234,7 @@ public class EventRegistrationService {
             reg.setEvent(event);
         } catch (SQLException ignored) {}
 
-        Candidate cand = new Candidate();
+        EventCandidate cand = new EventCandidate();
         cand.setId(rs.getLong("candidate_id"));
         reg.setCandidate(cand);
 

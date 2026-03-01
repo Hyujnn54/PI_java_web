@@ -1,6 +1,6 @@
 package Services.events;
 
-import Models.events.Recruiter;
+import Models.events.EventRecruiter;
 import Utils.MyDatabase;
 
 import java.sql.*;
@@ -21,7 +21,7 @@ public class RecruiterService {
         }
     }
 
-    public void add(Recruiter recruiter) throws SQLException {
+    public void add(EventRecruiter recruiter) throws SQLException {
         checkConnection();
         String sql = "INSERT INTO recruiter (id, user_id, company_name, company_location, company_description) VALUES (?, ?, ?, ?, ?)";
         PreparedStatement ps = connection.prepareStatement(sql);
@@ -33,14 +33,14 @@ public class RecruiterService {
         ps.executeUpdate();
     }
 
-    public Recruiter getByUserId(long userId) throws SQLException {
+    public EventRecruiter getByUserId(long userId) throws SQLException {
         checkConnection();
         String sql = "SELECT * FROM recruiter WHERE id = ?";
         PreparedStatement ps = connection.prepareStatement(sql);
         ps.setLong(1, userId);
         ResultSet rs = ps.executeQuery();
         if (rs.next()) {
-            Recruiter r = new Recruiter();
+            EventRecruiter r = new EventRecruiter();
             r.setId(rs.getLong("id"));
             r.setCompanyName(rs.getString("company_name"));
             r.setCompanyLocation(rs.getString("company_location"));
@@ -50,14 +50,14 @@ public class RecruiterService {
         return null;
     }
 
-    public List<Recruiter> getAll() throws SQLException {
+    public List<EventRecruiter> getAll() throws SQLException {
         checkConnection();
         String sql = "SELECT * FROM recruiter";
-        List<Recruiter> list = new ArrayList<>();
+        List<EventRecruiter> list = new ArrayList<>();
         Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery(sql);
         while (rs.next()) {
-            Recruiter r = new Recruiter();
+            EventRecruiter r = new EventRecruiter();
             r.setId(rs.getLong("id"));
             r.setCompanyName(rs.getString("company_name"));
             r.setCompanyLocation(rs.getString("company_location"));
