@@ -294,18 +294,29 @@ public class CalendarViewController {
     private void loadData() {
         offersByDate.clear(); interviewsByDate.clear();
 
-        // Job offers
+        // Job offers — scoped by role
         try {
-            for (JobOffer o : jobOfferService.getAllJobOffers())
+            List<JobOffer> offers;
+            if (UserContext.getRole() == UserContext.Role.RECRUITER) {
+                // Recruiter: only their own offers
+                Long rid = UserContext.getRecruiterId();
+                offers = (rid != null) ? JobOfferService.getByRecruiterId(rid) : new ArrayList<>();
+            } else {
+                // Candidate / Admin: all open offers
+                offers = jobOfferService.getAllOpenJobOffers();
+            }
+            for (JobOffer o : offers)
                 if (o.getDeadline() != null)
                     offersByDate.computeIfAbsent(o.getDeadline().toLocalDate(), k -> new ArrayList<>()).add(o);
         } catch (Exception e) { System.err.println("Offers load: " + e.getMessage()); }
 
-        // Interviews
+        // Interviews — scoped by role
         try {
             List<Interview> interviews;
             if (UserContext.getRole() == UserContext.Role.RECRUITER)
                 interviews = fetchInterviewsByRecruiter(UserContext.getRecruiterId());
+            else if (UserContext.getRole() == UserContext.Role.CANDIDATE)
+                interviews = fetchInterviewsByCandidate(UserContext.getCandidateId());
             else
                 interviews = InterviewService.getAll();
 
@@ -317,27 +328,44 @@ public class CalendarViewController {
 
     private List<Interview> fetchInterviewsByRecruiter(Long rid) {
         List<Interview> list = new ArrayList<>();
-        if (rid == null) return InterviewService.getAll();
+        if (rid == null) return list;
         String sql = "SELECT * FROM interview WHERE recruiter_id = ? ORDER BY scheduled_at ASC";
         try (PreparedStatement ps = MyDatabase.getInstance().getConnection().prepareStatement(sql)) {
             ps.setLong(1, rid);
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                Interview i = new Interview();
-                i.setId(rs.getLong("id"));
-                i.setApplicationId(rs.getLong("application_id"));
-                i.setRecruiterId(rs.getLong("recruiter_id"));
-                i.setScheduledAt(rs.getTimestamp("scheduled_at").toLocalDateTime());
-                i.setDurationMinutes(rs.getInt("duration_minutes"));
-                i.setMode(rs.getString("mode"));
-                i.setMeetingLink(rs.getString("meeting_link"));
-                i.setLocation(rs.getString("location"));
-                i.setNotes(rs.getString("notes"));
-                i.setStatus(rs.getString("status"));
-                list.add(i);
-            }
+            while (rs.next()) list.add(mapInterviewRow(rs));
         } catch (SQLException e) { System.err.println("fetchByRecruiter: " + e.getMessage()); }
         return list;
+    }
+
+    private List<Interview> fetchInterviewsByCandidate(Long candidateId) {
+        List<Interview> list = new ArrayList<>();
+        if (candidateId == null) return list;
+        // interviews linked to applications of this candidate
+        String sql = "SELECT i.* FROM interview i " +
+                     "JOIN job_application ja ON i.application_id = ja.id " +
+                     "WHERE ja.candidate_id = ? ORDER BY i.scheduled_at ASC";
+        try (PreparedStatement ps = MyDatabase.getInstance().getConnection().prepareStatement(sql)) {
+            ps.setLong(1, candidateId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) list.add(mapInterviewRow(rs));
+        } catch (SQLException e) { System.err.println("fetchByCandidate: " + e.getMessage()); }
+        return list;
+    }
+
+    private Interview mapInterviewRow(ResultSet rs) throws SQLException {
+        Interview i = new Interview();
+        i.setId(rs.getLong("id"));
+        i.setApplicationId(rs.getLong("application_id"));
+        i.setRecruiterId(rs.getLong("recruiter_id"));
+        i.setScheduledAt(rs.getTimestamp("scheduled_at").toLocalDateTime());
+        i.setDurationMinutes(rs.getInt("duration_minutes"));
+        i.setMode(rs.getString("mode"));
+        i.setMeetingLink(rs.getString("meeting_link"));
+        i.setLocation(rs.getString("location"));
+        i.setNotes(rs.getString("notes"));
+        i.setStatus(rs.getString("status"));
+        return i;
     }
 
     // =========================================================================

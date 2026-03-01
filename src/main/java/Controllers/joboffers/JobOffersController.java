@@ -117,42 +117,88 @@ public class JobOffersController {
     private void buildUI() {
         if (mainContainer == null) return;
         mainContainer.getChildren().clear();
-        mainContainer.setStyle("-fx-background-color: #F5F6F8; -fx-padding: 20;");
+        mainContainer.setStyle("-fx-background-color: #EBF0F8; -fx-padding: 20; -fx-spacing: 14;");
 
-        // Header
-        HBox headerBox = new HBox(15);
+        // ── Header ──
+        HBox headerBox = new HBox(12);
         headerBox.setAlignment(Pos.CENTER_LEFT);
-
-        Label recruiterBadge = new Label("ESPACE RECRUTEUR");
-        recruiterBadge.setStyle("-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-padding: 8 16; " +
-                "-fx-background-radius: 8; -fx-font-weight: 700; -fx-font-size: 14px;");
-
+        VBox titleBox = new VBox(3);
+        HBox.setHgrow(titleBox, Priority.ALWAYS);
         Label pageTitle = new Label("Gestion de mes offres");
-        pageTitle.setStyle("-fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
-
-        headerBox.getChildren().addAll(recruiterBadge, pageTitle);
+        pageTitle.setStyle("-fx-font-size:24px; -fx-font-weight:700; -fx-text-fill:#2c3e50;");
+        Label pageSub = new Label("Créez, modifiez et suivez vos offres d'emploi");
+        pageSub.setStyle("-fx-font-size:12px; -fx-text-fill:#8FA3B8;");
+        titleBox.getChildren().addAll(pageTitle, pageSub);
+        Button btnCreate = new Button("+ Nouvelle offre");
+        btnCreate.setStyle("-fx-background-color:#28a745; -fx-text-fill:white; -fx-font-weight:700; " +
+                "-fx-font-size:13px; -fx-padding:10 20; -fx-background-radius:9; -fx-cursor:hand;");
+        btnCreate.setOnAction(e -> showCreateForm());
+        headerBox.getChildren().addAll(titleBox, btnCreate);
         mainContainer.getChildren().add(headerBox);
 
-        Region gap1 = new Region(); gap1.setPrefHeight(15);
-        mainContainer.getChildren().add(gap1);
+        // ── Search/filter bar ──
         mainContainer.getChildren().add(createSearchFilterBox());
 
-        Region gap2 = new Region(); gap2.setPrefHeight(15);
-        mainContainer.getChildren().add(gap2);
+        // ── SplitPane ──
+        javafx.scene.control.SplitPane split = new javafx.scene.control.SplitPane();
+        split.setDividerPositions(0.40);
+        VBox.setVgrow(split, Priority.ALWAYS);
+        split.setStyle("-fx-background-color: transparent; -fx-box-border: transparent; -fx-padding:0;");
 
-        HBox contentArea = new HBox(20);
-        VBox.setVgrow(contentArea, Priority.ALWAYS);
+        // Left side
+        javafx.scene.control.ScrollPane leftScroll = new javafx.scene.control.ScrollPane();
+        leftScroll.setFitToWidth(true);
+        leftScroll.setStyle("-fx-background: transparent; -fx-background-color: #EBF0F8;");
+        leftScroll.getStyleClass().add("transparent-scroll");
+        VBox leftContent = new VBox(10);
+        leftContent.setStyle("-fx-background-color: #EBF0F8;");
+        leftContent.setPadding(new Insets(4, 8, 16, 2));
 
-        VBox leftSide = createJobListPanel();
-        leftSide.setPrefWidth(400);
-        leftSide.setMinWidth(350);
-        leftSide.setMaxWidth(450);
+        HBox leftHeader = new HBox(8);
+        leftHeader.setAlignment(Pos.CENTER_LEFT);
+        leftHeader.setStyle("-fx-padding: 0 0 4 2;");
+        Label leftTitle = new Label("Mes offres d'emploi");
+        leftTitle.setStyle("-fx-font-size:13px; -fx-font-weight:700; -fx-text-fill:#2c3e50;");
+        HBox.setHgrow(leftTitle, Priority.ALWAYS);
+        jobCountLabel = new Label("");
+        jobCountLabel.setStyle("-fx-font-size:11px; -fx-text-fill:#8FA3B8; " +
+                "-fx-background-color:#D4DCE8; -fx-background-radius:10; -fx-padding:2 8;");
+        leftHeader.getChildren().addAll(leftTitle, jobCountLabel);
 
-        VBox rightSide = createDetailPanel();
-        HBox.setHgrow(rightSide, Priority.ALWAYS);
+        jobListContainer = new VBox(8);
+        leftContent.getChildren().addAll(leftHeader, jobListContainer);
+        leftScroll.setContent(leftContent);
 
-        contentArea.getChildren().addAll(leftSide, rightSide);
-        mainContainer.getChildren().add(contentArea);
+        // Right side
+        javafx.scene.control.ScrollPane rightScroll = new javafx.scene.control.ScrollPane();
+        rightScroll.setFitToWidth(true);
+        rightScroll.setStyle("-fx-background: transparent; -fx-background-color: #EBF0F8;");
+        rightScroll.getStyleClass().add("transparent-scroll");
+        VBox rightContent = new VBox(14);
+        rightContent.setStyle("-fx-background-color: #EBF0F8;");
+        rightContent.setPadding(new Insets(4, 4, 16, 8));
+
+        detailContainer = new VBox(14);
+        // Placeholder
+        VBox ph = new VBox(16);
+        ph.setAlignment(Pos.CENTER);
+        ph.setStyle("-fx-background-color:white; -fx-background-radius:14; -fx-padding:50 24;" +
+                "-fx-border-color:#E8EEF8; -fx-border-width:1; -fx-border-radius:14;" +
+                "-fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);");
+        Label phIcon = new Label("💼"); phIcon.setStyle("-fx-font-size:40px;");
+        Label phTitle = new Label("Sélectionnez une offre");
+        phTitle.setStyle("-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:#2c3e50;");
+        Label phSub = new Label("Cliquez sur une offre pour voir les détails et la gérer");
+        phSub.setStyle("-fx-font-size:12px; -fx-text-fill:#8FA3B8; -fx-text-alignment:center;");
+        phSub.setWrapText(true);
+        ph.getChildren().addAll(phIcon, phTitle, phSub);
+        detailContainer.getChildren().add(ph);
+
+        rightContent.getChildren().add(detailContainer);
+        rightScroll.setContent(rightContent);
+
+        split.getItems().addAll(leftScroll, rightScroll);
+        mainContainer.getChildren().add(split);
     }
 
     // =========================================================================
@@ -248,7 +294,18 @@ public class JobOffersController {
         if (jobListContainer == null) return;
         jobListContainer.getChildren().clear();
         try {
-            List<JobOffer> jobs = jobOfferService.filterJobOffers(selectedLocation, selectedContractType, null);
+            Long recruiterId = UserContext.getRecruiterId();
+            List<JobOffer> jobs = (recruiterId != null)
+                    ? JobOfferService.getByRecruiterId(recruiterId)
+                    : new java.util.ArrayList<>();
+            // Apply contract type filter
+            if (selectedContractType != null) {
+                jobs = jobs.stream().filter(j -> j.getContractType() == selectedContractType).toList();
+            }
+            // Apply location filter
+            if (selectedLocation != null && !selectedLocation.isBlank()) {
+                jobs = jobs.stream().filter(j -> selectedLocation.equals(j.getLocation())).toList();
+            }
             String kw = txtSearch != null ? txtSearch.getText().trim().toLowerCase() : "";
             if (!kw.isEmpty()) {
                 jobs = jobs.stream()
@@ -258,6 +315,7 @@ public class JobOffersController {
                         .toList();
             }
             updateResultCount(jobs.size());
+            if (jobCountLabel != null) jobCountLabel.setText(jobs.size() + " offre(s)");
             if (jobs.isEmpty()) { jobListContainer.getChildren().add(createEmptyState()); return; }
             boolean first = true;
             for (JobOffer job : jobs) {
@@ -265,7 +323,7 @@ public class JobOffersController {
                 jobListContainer.getChildren().add(card);
                 if (first) { selectJob(job, card); first = false; }
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             showAlert("Erreur", "Impossible de charger: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
@@ -327,13 +385,22 @@ public class JobOffersController {
     // List panel
     // =========================================================================
 
+    private Label jobCountLabel; // tracks how many offers shown
+
     private VBox createJobListPanel() {
         VBox panel = new VBox(12);
         panel.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; " +
                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 2);");
 
+        HBox titleRow = new HBox(8);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
         Label title = new Label("Mes offres d'emploi");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
+        HBox.setHgrow(title, Priority.ALWAYS);
+        jobCountLabel = new Label("");
+        jobCountLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #8FA3B8; " +
+                "-fx-background-color: #EBF0F8; -fx-background-radius: 10; -fx-padding: 2 8;");
+        titleRow.getChildren().addAll(title, jobCountLabel);
 
         ScrollPane scroll = new ScrollPane();
         scroll.setFitToWidth(true);
@@ -345,7 +412,7 @@ public class JobOffersController {
         jobListContainer.setStyle("-fx-padding: 5 5 5 0;");
         scroll.setContent(jobListContainer);
 
-        panel.getChildren().addAll(title, scroll);
+        panel.getChildren().addAll(titleRow, scroll);
         return panel;
     }
 
@@ -384,8 +451,16 @@ public class JobOffersController {
         scrollPane.setContent(detailContainer);
 
         // Placeholder
-        Label placeholder = new Label("Selectionnez une offre pour voir les details");
-        placeholder.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 14px; -fx-padding: 40;");
+        VBox placeholder = new VBox(14);
+        placeholder.setAlignment(Pos.CENTER);
+        placeholder.setStyle("-fx-padding: 60 24;");
+        Label phIcon = new Label("💼"); phIcon.setStyle("-fx-font-size:40px;");
+        Label phTitle = new Label("Sélectionnez une offre");
+        phTitle.setStyle("-fx-font-size:15px; -fx-font-weight:700; -fx-text-fill:#2c3e50;");
+        Label phSub = new Label("Cliquez sur une offre à gauche pour voir les détails et gérer l'annonce");
+        phSub.setStyle("-fx-font-size:12px; -fx-text-fill:#8FA3B8; -fx-text-alignment:center;");
+        phSub.setWrapText(true);
+        placeholder.getChildren().addAll(phIcon, phTitle, phSub);
         detailContainer.getChildren().add(placeholder);
 
         panel.getChildren().addAll(topBar, scrollPane);
@@ -400,7 +475,11 @@ public class JobOffersController {
         if (jobListContainer == null) return;
         jobListContainer.getChildren().clear();
         try {
-            List<JobOffer> jobs = jobOfferService.getAllJobOffers();
+            Long recruiterId = UserContext.getRecruiterId();
+            List<JobOffer> jobs = (recruiterId != null)
+                    ? JobOfferService.getByRecruiterId(recruiterId)
+                    : new java.util.ArrayList<>();
+            if (jobCountLabel != null) jobCountLabel.setText(jobs.size() + " offre(s)");
             if (jobs.isEmpty()) { jobListContainer.getChildren().add(createEmptyState()); return; }
             boolean first = true;
             for (JobOffer job : jobs) {
@@ -408,7 +487,7 @@ public class JobOffersController {
                 jobListContainer.getChildren().add(card);
                 if (first) { selectJob(job, card); first = false; }
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             showAlert("Erreur", "Impossible de charger les offres : " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }

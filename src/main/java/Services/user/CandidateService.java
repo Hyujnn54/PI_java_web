@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CandidateService {
-    private final Connection cnx = MyDatabase.getInstance().getConnection();
+    private Connection cnx() { return MyDatabase.getInstance().getConnection(); }
     private final UserService userService = new UserService();
 
     public void addCandidate(Candidate c) throws SQLException {
@@ -16,13 +16,11 @@ public class CandidateService {
             INSERT INTO candidate (id, location, education_level, experience_years, cv_path)
             VALUES (?,?,?,?,?)
         """;
-
+        Connection conn = cnx();
         try {
-            cnx.setAutoCommit(false);
-
+            conn.setAutoCommit(false);
             long userId = userService.addUser(c);
-
-            try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setLong(1, userId);
                 ps.setString(2, c.getLocation());
                 ps.setString(3, c.getEducationLevel());
@@ -31,13 +29,12 @@ public class CandidateService {
                 ps.setString(5, c.getCvPath());
                 ps.executeUpdate();
             }
-
-            cnx.commit();
+            conn.commit();
         } catch (SQLException e) {
-            cnx.rollback();
+            conn.rollback();
             throw e;
         } finally {
-            cnx.setAutoCommit(true);
+            conn.setAutoCommit(true);
         }
     }
 
@@ -49,22 +46,16 @@ public class CandidateService {
             JOIN candidate c ON c.id = u.id
             WHERE u.id=?
         """;
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
-
                 Candidate c = new Candidate(
-                        rs.getString("email"),
-                        rs.getString("password"),
-                        rs.getString("first_name"),
-                        rs.getString("last_name"),
-                        rs.getString("phone"),
-                        rs.getString("location"),
+                        rs.getString("email"), rs.getString("password"),
+                        rs.getString("first_name"), rs.getString("last_name"),
+                        rs.getString("phone"), rs.getString("location"),
                         rs.getString("education_level"),
-                        (Integer) rs.getObject("experience_years"),
-                        rs.getString("cv_path")
-                );
+                        (Integer) rs.getObject("experience_years"), rs.getString("cv_path"));
                 c.setId(rs.getLong("id"));
                 return c;
             }
@@ -80,20 +71,15 @@ public class CandidateService {
             ORDER BY u.id DESC
         """;
         List<Candidate> list = new ArrayList<>();
-        try (PreparedStatement ps = cnx.prepareStatement(sql);
+        try (PreparedStatement ps = cnx().prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Candidate c = new Candidate(
-                        rs.getString("email"),
-                        rs.getString("password"),
-                        rs.getString("first_name"),
-                        rs.getString("last_name"),
-                        rs.getString("phone"),
-                        rs.getString("location"),
+                        rs.getString("email"), rs.getString("password"),
+                        rs.getString("first_name"), rs.getString("last_name"),
+                        rs.getString("phone"), rs.getString("location"),
                         rs.getString("education_level"),
-                        (Integer) rs.getObject("experience_years"),
-                        rs.getString("cv_path")
-                );
+                        (Integer) rs.getObject("experience_years"), rs.getString("cv_path"));
                 c.setId(rs.getLong("id"));
                 list.add(c);
             }
@@ -102,17 +88,16 @@ public class CandidateService {
     }
 
     public void updateCandidate(Candidate c) throws SQLException {
+        Connection conn = cnx();
         try {
-            cnx.setAutoCommit(false);
-
+            conn.setAutoCommit(false);
             userService.updateUser(c);
-
             String sql = """
                 UPDATE candidate
                 SET location=?, education_level=?, experience_years=?, cv_path=?
                 WHERE id=?
             """;
-            try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, c.getLocation());
                 ps.setString(2, c.getEducationLevel());
                 if (c.getExperienceYears() == null) ps.setNull(3, Types.INTEGER);
@@ -121,13 +106,12 @@ public class CandidateService {
                 ps.setLong(5, c.getId());
                 ps.executeUpdate();
             }
-
-            cnx.commit();
+            conn.commit();
         } catch (SQLException e) {
-            cnx.rollback();
+            conn.rollback();
             throw e;
         } finally {
-            cnx.setAutoCommit(true);
+            conn.setAutoCommit(true);
         }
     }
 

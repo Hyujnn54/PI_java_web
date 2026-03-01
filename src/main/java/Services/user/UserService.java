@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserService {
-    private final Connection cnx = MyDatabase.getInstance().getConnection();
+    private Connection cnx() { return MyDatabase.getInstance().getConnection(); }
 
     // ===== CREATE =====
     public long addUser(User u) throws SQLException {
@@ -21,7 +21,7 @@ public class UserService {
 
         String hashed = PasswordUtil.hash(u.getPassword()); // ✅ hash here
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, u.getEmail());
             ps.setString(2, hashed);
             ps.setString(3, u.getFirstName());
@@ -40,7 +40,7 @@ public class UserService {
     // ===== READ =====
     public User getById(long id) throws SQLException {
         String sql = "SELECT id, email, password, first_name, last_name, phone FROM users WHERE id=?";
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -61,7 +61,7 @@ public class UserService {
     public List<User> getAll() throws SQLException {
         String sql = "SELECT id, email, password, first_name, last_name, phone FROM users ORDER BY id DESC";
         List<User> list = new ArrayList<>();
-        try (PreparedStatement ps = cnx.prepareStatement(sql);
+        try (PreparedStatement ps = cnx().prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
@@ -93,7 +93,7 @@ public class UserService {
             passToStore = PasswordUtil.hash(passToStore);
         }
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setString(1, u.getEmail());
             ps.setString(2, passToStore);
             ps.setString(3, u.getFirstName());
@@ -106,7 +106,7 @@ public class UserService {
 
     // ===== DELETE =====
     public void deleteUser(long id) throws SQLException {
-        try (PreparedStatement ps = cnx.prepareStatement("DELETE FROM users WHERE id=?")) {
+        try (PreparedStatement ps = cnx().prepareStatement("DELETE FROM users WHERE id=?")) {
             ps.setLong(1, id);
             ps.executeUpdate();
         }
@@ -115,7 +115,7 @@ public class UserService {
     // ===== VALIDATION =====
     public boolean emailExists(String email, Long excludeId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM users WHERE email=? " + (excludeId != null ? "AND id<>?" : "");
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setString(1, email);
             if (excludeId != null) ps.setLong(2, excludeId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -126,7 +126,7 @@ public class UserService {
     }
     public void enableFaceLogin(long userId, String uuid) throws SQLException {
         String sql = "UPDATE users SET face_person_id=? WHERE id=?";
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setString(1, uuid);
             ps.setLong(2, userId);
             ps.executeUpdate();
@@ -135,7 +135,7 @@ public class UserService {
 
     public void disableFaceLogin(long userId) throws SQLException {
         String sql = "UPDATE users SET face_person_id=NULL WHERE id=?";
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, userId);
             ps.executeUpdate();
         }
@@ -143,7 +143,7 @@ public class UserService {
 
     public String getFacePersonId(long userId) throws SQLException {
         String sql = "SELECT face_person_id FROM users WHERE id=?";
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -159,7 +159,7 @@ public class UserService {
         String sql = "SELECT id, email, password, first_name, last_name, phone " +
                 "FROM users WHERE face_person_id=? AND is_active=1";
 
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setString(1, facePersonId);
 
             try (ResultSet rs = ps.executeQuery()) {

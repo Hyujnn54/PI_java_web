@@ -1,9 +1,12 @@
 package Controllers.events;
 
 import Models.events.*;
+import Models.user.Recruiter;
+import Models.user.User;
 import Services.user.EmailService;
 import Services.events.*;
 import Utils.SchemaFixer;
+import Utils.Session;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -368,77 +371,59 @@ public class RecruiterDashboardController implements Initializable {
 
     private void loadRecruiterData() {
         try {
-            // Use the actual logged-in recruiter ID from UserContext
             Long contextId = Utils.UserContext.getRecruiterId();
-            long lookupId = (contextId != null) ? contextId : 1L;
-            System.out.println("[RecruiterDashboard] Loading data for recruiter id=" + lookupId);
-            currentRecruiter = recruiterService.getByUserId(lookupId);
-
-            // 2. Si non trouvé, prendre le premier recruteur de la table
-            if (currentRecruiter == null) {
-                java.util.List<EventRecruiter> all = recruiterService.getAll();
-                if (!all.isEmpty()) {
-                    currentRecruiter = all.get(0);
+            if (contextId == null) {
+                System.err.println("[RecruiterDashboard] No recruiter in session.");
+                if (eventsListBox != null) {
+                    eventsListBox.getChildren().clear();
+                    Label msg = new Label("Veuillez vous connecter en tant que recruteur.");
+                    msg.setStyle("-fx-font-size:13px; -fx-text-fill:#dc3545; -fx-padding:20;");
+                    eventsListBox.getChildren().add(msg);
                 }
+                return;
             }
+            System.out.println("[RecruiterDashboard] Loading data for recruiter id=" + contextId);
+            currentRecruiter = recruiterService.getByUserId(contextId);
 
-            // 3. Si toujours rien, créer un profil par défaut pour le test
             if (currentRecruiter == null) {
-                String testEmail = "recruteur.test@talentbridge.com";
-
-                // Vérifier si l'utilisateur existe déjà par email
-                EventUser testUser = null;
-                for (EventUser u : userService.getAll()) {
-                    if (testEmail.equals(u.getEmail())) {
-                        testUser = u;
-                        break;
+                System.err.println("[RecruiterDashboard] Recruiter profile not found for id=" + contextId);
+                // Try to create a minimal profile from the session user
+                Models.user.User sessionUser = Utils.Session.getCurrentUser();
+                if (sessionUser instanceof Models.user.Recruiter sr) {
+                    currentRecruiter = new EventRecruiter();
+                    currentRecruiter.setId(contextId);
+                    currentRecruiter.setCompanyName(sr.getCompanyName() != null ? sr.getCompanyName() : "");
+                    currentRecruiter.setCompanyLocation(sr.getCompanyLocation() != null ? sr.getCompanyLocation() : "");
+                    currentRecruiter.setCompanyDescription("");
+                    try { recruiterService.add(currentRecruiter); } catch (Exception ignored) {
+                        currentRecruiter = recruiterService.getByUserId(contextId);
                     }
-                }
-
-                if (testUser == null) {
-                    testUser = new EventUser();
-                    testUser.setEmail(testEmail);
-                    testUser.setPassword("password123");
-                    testUser.setFirstName("Test");
-                    testUser.setLastName("Recruteur");
-                    testUser.setRole(RoleEnum.RECRUITER);
-                    testUser.setActive(true);
-                    userService.add(testUser);
-                }
-
-                currentRecruiter = new EventRecruiter();
-                currentRecruiter.setId(testUser.getId());
-                currentRecruiter.setCompanyName("Société de Test");
-                currentRecruiter.setCompanyLocation("Tunis");
-                currentRecruiter.setCompanyDescription("Société créée pour les tests directs.");
-
-                try {
-                    recruiterService.add(currentRecruiter);
-                } catch (SQLException e) {
-                    // Déjà existant ou erreur de schéma gérée par SchemaFixer
-                    currentRecruiter = recruiterService.getByUserId(testUser.getId());
                 }
             }
 
             if (currentRecruiter != null) {
                 refreshTable();
-
-                // Fetch EventUser details for top bar (only present in standalone dashboard, not embedded view)
-                try {
-                    EventUser user = userService.getById(currentRecruiter.getId());
-                    if (user != null) {
-                        if (userNameLabel != null) userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
-                        if (userRoleLabel != null) {
-                            userRoleLabel.setText("RECRUTEUR");
-                            userRoleLabel.getStyleClass().add("badge-recruiter");
-                        }
+                // Update top-bar labels if present
+                Models.user.User sessionUser = Utils.Session.getCurrentUser();
+                if (sessionUser != null) {
+                    String displayName = (sessionUser.getFirstName() != null ? sessionUser.getFirstName() : "")
+                            + (sessionUser.getLastName() != null ? " " + sessionUser.getLastName() : "");
+                    if (userNameLabel != null) userNameLabel.setText(displayName.trim());
+                    if (userRoleLabel != null) {
+                        userRoleLabel.setText("RECRUTEUR");
+                        userRoleLabel.getStyleClass().add("badge-recruiter");
                     }
-                } catch (SQLException e) {
-                    System.err.println("Error loading user name: " + e.getMessage());
+                }
+            } else {
+                if (eventsListBox != null) {
+                    eventsListBox.getChildren().clear();
+                    Label msg = new Label("Profil recruteur introuvable.");
+                    msg.setStyle("-fx-font-size:13px; -fx-text-fill:#dc3545; -fx-padding:20;");
+                    eventsListBox.getChildren().add(msg);
                 }
             }
         } catch (SQLException e) {
-            showAlert("Erreur Initialisation", "Impossible de préparer le profil test : " + e.getMessage());
+            System.err.println("[RecruiterDashboard] loadRecruiterData error: " + e.getMessage());
         }
     }
 
@@ -1221,6 +1206,29 @@ public class RecruiterDashboardController implements Initializable {
                 locationField.setText(address);
             });
         });
+    }
+
+    @FXML
+    private void handlePickLocationNew() {
+        Controllers.joboffers.LocationPickerController.pickLocation((lat, lng, address) -> {
+            javafx.application.Platform.runLater(() -> {
+                if (newLocationField != null) newLocationField.setText(address);
+            });
+        });
+    }
+
+    @FXML
+    private void handleGenerateDescriptionAINew() {
+        if (newTitleField == null || newDescriptionField == null) return;
+        String title = newTitleField.getText();
+        if (title == null || title.trim().isEmpty()) {
+            showAlert("Information manquante", "Veuillez remplir le titre pour générer une description.");
+            return;
+        }
+        String type = newTypeCombo != null ? newTypeCombo.getValue() : null;
+        String location = newLocationField != null ? newLocationField.getText() : null;
+        String generated = generateLocalEventDescription(title, type, location);
+        newDescriptionField.setText(generated);
     }
 
     @FXML

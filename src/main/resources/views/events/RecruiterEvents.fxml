@@ -5,6 +5,7 @@
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
@@ -68,25 +69,23 @@
                                -fx-background-radius:8; -fx-padding:9 18;"/>
             </HBox>
 
-            <!-- Body: left list + right detail -->
-            <HBox VBox.vgrow="ALWAYS">
+            <!-- Body: left list + right detail (draggable SplitPane) -->
+            <SplitPane VBox.vgrow="ALWAYS" dividerPositions="0.38"
+                       style="-fx-background-color:transparent; -fx-box-border:transparent; -fx-padding:0;">
 
                 <!-- LEFT: event cards -->
-                <VBox prefWidth="310" minWidth="260" maxWidth="340"
-                      style="-fx-background-color:#EBF0F8;
-                             -fx-border-color:#E4EBF5; -fx-border-width:0 1 0 0;">
-                    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
-                                style="-fx-background:transparent; -fx-background-color:transparent;
-                                       -fx-border-color:transparent;">
+                <ScrollPane fitToWidth="true"
+                            style="-fx-background:transparent; -fx-background-color:#EBF0F8;
+                                   -fx-border-color:transparent;">
+                    <VBox spacing="0" style="-fx-background-color:#EBF0F8;">
                         <VBox fx:id="eventsListBox" spacing="10"
                               style="-fx-padding:14 10 14 14;"/>
-                    </ScrollPane>
-                    <HBox alignment="CENTER" style="-fx-padding:6 14;
-                          -fx-border-color:#E4EBF5; -fx-border-width:1 0 0 0;">
-                        <Label fx:id="eventsCountLabel" text="0 evenement(s)"
-                               style="-fx-font-size:11px; -fx-text-fill:#94A3B8;"/>
-                    </HBox>
-                </VBox>
+                        <HBox alignment="CENTER" style="-fx-padding:6 14;">
+                            <Label fx:id="eventsCountLabel" text="0 evenement(s)"
+                                   style="-fx-font-size:11px; -fx-text-fill:#94A3B8;"/>
+                        </HBox>
+                    </VBox>
+                </ScrollPane>
 
                 <!-- RIGHT: detail + edit form + reviews -->
                 <ScrollPane fitToWidth="true" HBox.hgrow="ALWAYS"
@@ -289,7 +288,7 @@
                                         style="-fx-background-color:#F1F5F9; -fx-text-fill:#475569;
                                                -fx-background-radius:8; -fx-padding:7 14;"/>
                             </HBox>
-                            <!-- form fields reused from rightDetail via controller -->
+                            <!-- Title + Type row -->
                             <HBox spacing="10">
                                 <VBox HBox.hgrow="ALWAYS" spacing="3">
                                     <TextField fx:id="newTitleField" promptText="Titre"
@@ -303,11 +302,18 @@
                                                      -fx-border-color:#E4EBF5; -fx-font-size:13px;"/>
                                 </VBox>
                             </HBox>
+                            <!-- Location (with map button) + Date + Capacity -->
                             <HBox spacing="10">
-                                <TextField fx:id="newLocationField" promptText="Lieu" HBox.hgrow="ALWAYS"
-                                           style="-fx-background-radius:8; -fx-border-radius:8;
-                                                  -fx-border-color:#E4EBF5; -fx-border-width:1;
-                                                  -fx-padding:8 12; -fx-font-size:13px;"/>
+                                <HBox HBox.hgrow="ALWAYS" spacing="5" alignment="CENTER_LEFT">
+                                    <TextField fx:id="newLocationField" promptText="Lieu" HBox.hgrow="ALWAYS"
+                                               style="-fx-background-radius:8; -fx-border-radius:8;
+                                                      -fx-border-color:#E4EBF5; -fx-border-width:1;
+                                                      -fx-padding:8 12; -fx-font-size:13px;"/>
+                                    <Button text="🗺 Carte" onAction="#handlePickLocationNew"
+                                            style="-fx-background-color:#2196F3; -fx-text-fill:white;
+                                                   -fx-padding:7 12; -fx-background-radius:6;
+                                                   -fx-font-size:12px; -fx-cursor:hand;"/>
+                                </HBox>
                                 <DatePicker fx:id="newDateField" promptText="Date"
                                             style="-fx-background-radius:8; -fx-border-color:#E4EBF5; -fx-font-size:13px;"/>
                                 <TextField fx:id="newCapacityField" prefWidth="100" promptText="Capacite"
@@ -315,11 +321,23 @@
                                                   -fx-border-color:#E4EBF5; -fx-border-width:1;
                                                   -fx-padding:8 12; -fx-font-size:13px;"/>
                             </HBox>
-                            <TextArea fx:id="newDescriptionField" prefHeight="80" promptText="Description..."
-                                      wrapText="true"
-                                      style="-fx-background-radius:8; -fx-border-radius:8;
-                                             -fx-border-color:#E4EBF5; -fx-border-width:1;
-                                             -fx-font-size:13px; -fx-padding:8 12;"/>
+                            <!-- Description with AI button -->
+                            <VBox spacing="4">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <Label text="Description"
+                                           style="-fx-font-size:13px; -fx-font-weight:600; -fx-text-fill:#334155;"
+                                           HBox.hgrow="ALWAYS"/>
+                                    <Button text="✨ IA" onAction="#handleGenerateDescriptionAINew"
+                                            style="-fx-background-color:#6f42c1; -fx-text-fill:white;
+                                                   -fx-font-size:11px; -fx-padding:6 12; -fx-background-radius:6;
+                                                   -fx-cursor:hand;"/>
+                                </HBox>
+                                <TextArea fx:id="newDescriptionField" prefHeight="90" promptText="Description..."
+                                          wrapText="true"
+                                          style="-fx-background-radius:8; -fx-border-radius:8;
+                                                 -fx-border-color:#E4EBF5; -fx-border-width:1;
+                                                 -fx-font-size:13px; -fx-padding:8 12;"/>
+                            </VBox>
                             <Label fx:id="newFormErrorLabel" managed="false" visible="false"
                                    style="-fx-font-size:11px; -fx-text-fill:#DC2626;"/>
                             <HBox alignment="CENTER_RIGHT">
@@ -331,7 +349,7 @@
 
                     </VBox>
                 </ScrollPane>
-            </HBox>
+            </SplitPane>
         </VBox>
 
         <!-- ══ VIEW 2: SUBSCRIPTIONS / ATTENDEES ══ -->

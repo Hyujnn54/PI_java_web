@@ -4,6 +4,7 @@
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
@@ -15,200 +16,214 @@
 <BorderPane xmlns="http://javafx.com/javafx/8.0.171"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="Controllers.events.PastEventsController"
-            style="-fx-background-color:#F0F4FA;">
+            style="-fx-background-color:#EBF0F8;">
 
     <!-- TOP BAR -->
     <top>
         <VBox style="-fx-background-color:white; -fx-padding:18 28 14 28;
                      -fx-border-color:#E4EBF5; -fx-border-width:0 0 1 0;">
             <HBox alignment="CENTER_LEFT" spacing="14">
-                <Label text="Mes evenements passes"
-                       style="-fx-font-size:22px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
-                <Pane HBox.hgrow="ALWAYS"/>
+                <VBox spacing="3" HBox.hgrow="ALWAYS">
+                    <Label text="Mes evenements passes"
+                           style="-fx-font-size:22px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
+                    <Label text="Consultez vos evenements passes et laissez un avis si vous avez participe."
+                           style="-fx-font-size:12px; -fx-text-fill:#64748B;"/>
+                </VBox>
                 <Button text="Actualiser" onAction="#handleRefresh"
                         style="-fx-background-color:#EBF3FF; -fx-text-fill:#1565C0; -fx-font-weight:600;
                                -fx-background-radius:8; -fx-padding:8 16;
                                -fx-border-color:#BBDEFB; -fx-border-width:1; -fx-border-radius:8;"/>
             </HBox>
-            <Label text="Consultez vos evenements passes et laissez un avis si vous avez participe."
-                   style="-fx-font-size:13px; -fx-text-fill:#64748B; -fx-padding:4 0 0 0;"/>
         </VBox>
     </top>
 
-    <!-- MAIN CONTENT: Left list + Right detail -->
+    <!-- MAIN CONTENT: SplitPane -->
     <center>
-        <HBox spacing="0" style="-fx-background-color:#F0F4FA;">
+        <SplitPane dividerPositions="0.40"
+                   style="-fx-background-color:#EBF0F8; -fx-box-border:transparent; -fx-padding:0;">
 
             <!-- ══ LEFT: Past events list ══ -->
-            <VBox spacing="0" prefWidth="340" minWidth="280" maxWidth="380"
-                  style="-fx-background-color:#F0F4FA; -fx-padding:18 12 18 20;">
+            <ScrollPane fitToWidth="true"
+                        style="-fx-background:transparent; -fx-background-color:#EBF0F8;
+                               -fx-border-color:transparent;">
+                <VBox spacing="10" style="-fx-background-color:#EBF0F8; -fx-padding:16 10 16 18;">
 
-                <!-- Search + filter -->
-                <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding:0 0 12 0;">
-                    <TextField fx:id="searchField"
-                               promptText="Rechercher..."
-                               onKeyReleased="#handleSearch"
-                               HBox.hgrow="ALWAYS"
-                               style="-fx-background-color:white; -fx-background-radius:10;
-                                      -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:10;
-                                      -fx-padding:8 12; -fx-font-size:13px;"/>
-                    <ComboBox fx:id="typeFilter" promptText="Type"
-                              onAction="#handleSearch" prefWidth="130"
-                              style="-fx-background-color:white; -fx-background-radius:10;
-                                     -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:10;
-                                     -fx-font-size:13px;"/>
-                </HBox>
+                    <!-- Search + filter -->
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <TextField fx:id="searchField"
+                                   promptText="Rechercher..."
+                                   onKeyReleased="#handleSearch"
+                                   HBox.hgrow="ALWAYS"
+                                   style="-fx-background-color:white; -fx-background-radius:8;
+                                          -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:8;
+                                          -fx-padding:8 12; -fx-font-size:13px;"/>
+                        <ComboBox fx:id="typeFilter" promptText="Type"
+                                  onAction="#handleSearch" prefWidth="130"
+                                  style="-fx-background-color:white; -fx-background-radius:8;
+                                         -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:8;
+                                         -fx-font-size:13px;"/>
+                    </HBox>
 
-                <Label fx:id="lblCount" text="0 evenement(s)"
-                       style="-fx-font-size:11px; -fx-text-fill:#94A3B8; -fx-padding:0 0 8 2;"/>
+                    <Label fx:id="lblCount" text="0 evenement(s)"
+                           style="-fx-font-size:11px; -fx-text-fill:#94A3B8; -fx-padding:0 0 4 2;"/>
 
-                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
-                            style="-fx-background-color:transparent; -fx-background:transparent;
-                                   -fx-border-color:transparent;">
-                    <VBox fx:id="eventsContainer" spacing="10"
-                          style="-fx-padding:2 4 20 2;"/>
-                </ScrollPane>
-            </VBox>
+                    <VBox fx:id="eventsContainer" spacing="10" style="-fx-padding:2 2 16 2;"/>
+                </VBox>
+            </ScrollPane>
 
             <!-- ══ RIGHT: Detail + Review panel ══ -->
-            <VBox HBox.hgrow="ALWAYS" spacing="0"
-                  style="-fx-background-color:white; -fx-border-color:#E4EBF5;
-                         -fx-border-width:0 0 0 1;">
+            <ScrollPane fitToWidth="true"
+                        style="-fx-background:transparent; -fx-background-color:#EBF0F8;
+                               -fx-border-color:transparent;">
+                <VBox spacing="14" style="-fx-background-color:#EBF0F8; -fx-padding:16 18 16 10;">
 
-                <!-- Placeholder -->
-                <VBox fx:id="detailPlaceholder" alignment="CENTER" spacing="14" VBox.vgrow="ALWAYS"
-                      style="-fx-padding:60 40;">
-                    <Label text="Selectionnez un evenement"
-                           style="-fx-font-size:18px; -fx-font-weight:700; -fx-text-fill:#334155;"/>
-                    <Label text="Choisissez un evenement dans la liste pour voir les details et laisser votre avis."
-                           style="-fx-font-size:13px; -fx-text-fill:#94A3B8; -fx-text-alignment:center;"
-                           textAlignment="CENTER" wrapText="true"/>
-                </VBox>
-
-                <!-- Detail + Review content -->
-                <ScrollPane fx:id="detailScroll" fitToWidth="true" VBox.vgrow="ALWAYS"
-                            managed="false" visible="false"
-                            style="-fx-background-color:transparent; -fx-background:transparent;
-                                   -fx-border-color:transparent;">
-                    <VBox spacing="0">
-
-                        <!-- Event header banner -->
-                        <VBox spacing="8"
-                              style="-fx-background-color:linear-gradient(to right,#334155,#475569);
-                                     -fx-padding:28 28 22 28;">
-                            <Label fx:id="detailType"
-                                   style="-fx-background-color:#FFFFFF22; -fx-background-radius:6;
-                                          -fx-padding:3 10; -fx-font-size:11px; -fx-font-weight:700;
-                                          -fx-text-fill:white;"/>
-                            <Label fx:id="detailTitle"
-                                   style="-fx-font-size:20px; -fx-font-weight:800; -fx-text-fill:white;"
-                                   wrapText="true"/>
-                            <Label fx:id="detailDateLocation"
-                                   style="-fx-font-size:12px; -fx-text-fill:#CBD5E1;" wrapText="true"/>
-                        </VBox>
-
-                        <VBox spacing="16" style="-fx-padding:22 28;">
-
-                            <!-- Event info -->
-                            <Label fx:id="detailDescription"
-                                   style="-fx-font-size:13px; -fx-text-fill:#475569; -fx-line-spacing:4;"
-                                   wrapText="true"/>
-
-                            <!-- Registration status badge -->
-                            <Label fx:id="detailStatusBadge" managed="false" visible="false"
-                                   style="-fx-font-size:12px; -fx-font-weight:700; -fx-background-radius:20;
-                                          -fx-padding:6 14;"/>
-
-                            <!-- ══ REVIEW SECTION ══ -->
-                            <VBox spacing="12"
-                                  style="-fx-background-color:#FFFBEB; -fx-background-radius:14;
-                                         -fx-border-color:#FDE68A; -fx-border-width:1; -fx-border-radius:14;
-                                         -fx-padding:18 20;">
-
-                                <Label text="Votre avis sur cet evenement"
-                                       style="-fx-font-size:15px; -fx-font-weight:700; -fx-text-fill:#92400E;"/>
-
-                                <!-- Not eligible -->
-                                <Label fx:id="reviewNotEligibleLabel" managed="false" visible="false"
-                                       wrapText="true"
-                                       style="-fx-font-size:12px; -fx-text-fill:#92400E;
-                                              -fx-background-color:#FEF3C7; -fx-background-radius:8;
-                                              -fx-padding:10 14; -fx-border-color:#FDE68A;
-                                              -fx-border-width:1; -fx-border-radius:8;"/>
-
-                                <!-- Already reviewed -->
-                                <Label fx:id="reviewAlreadyDoneLabel" managed="false" visible="false"
-                                       text="Votre avis a deja ete soumis. Merci !"
-                                       style="-fx-font-size:12px; -fx-text-fill:#166534;
-                                              -fx-background-color:#DCFCE7; -fx-background-radius:8;
-                                              -fx-padding:10 14; -fx-border-color:#A5D6A7;
-                                              -fx-border-width:1; -fx-border-radius:8;"/>
-
-                                <!-- Review input form -->
-                                <VBox fx:id="reviewInputBox" spacing="10" managed="false" visible="false">
-                                    <Label text="Note :"
-                                           style="-fx-font-size:12px; -fx-font-weight:600; -fx-text-fill:#78350F;"/>
-                                    <HBox fx:id="starsBox" spacing="4" alignment="CENTER_LEFT">
-                                        <ToggleButton fx:id="star1" text="★" onAction="#handleStarClick"
-                                                      style="-fx-font-size:28px; -fx-background-color:transparent;
-                                                             -fx-text-fill:#D1D5DB; -fx-padding:0 2;
-                                                             -fx-border-color:transparent; -fx-cursor:hand;"/>
-                                        <ToggleButton fx:id="star2" text="★" onAction="#handleStarClick"
-                                                      style="-fx-font-size:28px; -fx-background-color:transparent;
-                                                             -fx-text-fill:#D1D5DB; -fx-padding:0 2;
-                                                             -fx-border-color:transparent; -fx-cursor:hand;"/>
-                                        <ToggleButton fx:id="star3" text="★" onAction="#handleStarClick"
-                                                      style="-fx-font-size:28px; -fx-background-color:transparent;
-                                                             -fx-text-fill:#D1D5DB; -fx-padding:0 2;
-                                                             -fx-border-color:transparent; -fx-cursor:hand;"/>
-                                        <ToggleButton fx:id="star4" text="★" onAction="#handleStarClick"
-                                                      style="-fx-font-size:28px; -fx-background-color:transparent;
-                                                             -fx-text-fill:#D1D5DB; -fx-padding:0 2;
-                                                             -fx-border-color:transparent; -fx-cursor:hand;"/>
-                                        <ToggleButton fx:id="star5" text="★" onAction="#handleStarClick"
-                                                      style="-fx-font-size:28px; -fx-background-color:transparent;
-                                                             -fx-text-fill:#D1D5DB; -fx-padding:0 2;
-                                                             -fx-border-color:transparent; -fx-cursor:hand;"/>
-                                        <Label fx:id="starValueLabel" text=""
-                                               style="-fx-font-size:13px; -fx-text-fill:#92400E; -fx-font-weight:700;"/>
-                                    </HBox>
-                                    <TextArea fx:id="reviewCommentField" prefHeight="90"
-                                              promptText="Partagez votre experience (optionnel)..."
-                                              wrapText="true"
-                                              style="-fx-background-radius:8; -fx-border-radius:8;
-                                                     -fx-border-color:#FDE68A; -fx-border-width:1;
-                                                     -fx-font-size:13px; -fx-padding:8 12;"/>
-                                    <Label fx:id="reviewErrorLabel" managed="false" visible="false"
-                                           style="-fx-font-size:11px; -fx-text-fill:#DC2626;"/>
-                                    <Button fx:id="btnSubmitReview" text="Soumettre mon avis"
-                                            onAction="#handleSubmitReview"
-                                            style="-fx-background-color:#D97706; -fx-text-fill:white;
-                                                   -fx-font-weight:700; -fx-background-radius:8;
-                                                   -fx-padding:9 22;"/>
-                                </VBox>
-                            </VBox>
-
-                            <!-- ══ REVIEWS SUMMARY ══ -->
-                            <VBox fx:id="reviewsSummaryPanel" spacing="10" managed="false" visible="false"
-                                  style="-fx-background-color:white; -fx-background-radius:12;
-                                         -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:12;
-                                         -fx-padding:16 18;">
-                                <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <Label text="Avis des participants"
-                                           style="-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
-                                    <Label fx:id="avgRatingLabel" text=""
-                                           style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#D97706;
-                                                  -fx-background-color:#FEF9C3; -fx-background-radius:20;
-                                                  -fx-padding:3 10;"/>
-                                </HBox>
-                                <VBox fx:id="reviewsListBox" spacing="8"/>
-                            </VBox>
-
-                        </VBox>
+                    <!-- Placeholder -->
+                    <VBox fx:id="detailPlaceholder" alignment="CENTER" spacing="16"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:50 24;
+                                 -fx-border-color:#E8EEF8; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
+                        <Label text="🎪" style="-fx-font-size:40px;"/>
+                        <Label text="Selectionnez un evenement"
+                               style="-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:#2c3e50;"/>
+                        <Label text="Choisissez un evenement dans la liste pour voir les details et laisser votre avis."
+                               style="-fx-font-size:12px; -fx-text-fill:#8FA3B8; -fx-text-alignment:center;"
+                               textAlignment="CENTER" wrapText="true"/>
                     </VBox>
-                </ScrollPane>
-            </VBox>
-        </HBox>
+
+                    <!-- Detail + Review content -->
+                    <ScrollPane fx:id="detailScroll" fitToWidth="true"
+                                managed="false" visible="false"
+                                style="-fx-background-color:transparent; -fx-background:transparent;
+                                       -fx-border-color:transparent;">
+                        <VBox spacing="14">
+
+                            <!-- Event header banner -->
+                            <VBox spacing="8"
+                                  style="-fx-background-color:linear-gradient(to right,#1E293B,#334155);
+                                         -fx-background-radius:14; -fx-padding:24 24 20 24;">
+                                <Label fx:id="detailType"
+                                       style="-fx-background-color:#FFFFFF22; -fx-background-radius:6;
+                                              -fx-padding:3 10; -fx-font-size:11px; -fx-font-weight:700;
+                                              -fx-text-fill:white;"/>
+                                <Label fx:id="detailTitle"
+                                       style="-fx-font-size:20px; -fx-font-weight:800; -fx-text-fill:white;"
+                                       wrapText="true"/>
+                                <Label fx:id="detailDateLocation"
+                                       style="-fx-font-size:12px; -fx-text-fill:#CBD5E1;" wrapText="true"/>
+                            </VBox>
+
+                            <!-- Info + reviews section -->
+                            <VBox spacing="14">
+
+                                <!-- Event description card -->
+                                <VBox spacing="8"
+                                      style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:18 20;
+                                             -fx-border-color:#E8EEF8; -fx-border-width:1; -fx-border-radius:14;
+                                             -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),10,0,0,2);">
+                                    <Label fx:id="detailDescription"
+                                           style="-fx-font-size:13px; -fx-text-fill:#475569; -fx-line-spacing:4;"
+                                           wrapText="true"/>
+                                    <Label fx:id="detailStatusBadge" managed="false" visible="false"
+                                           style="-fx-font-size:12px; -fx-font-weight:700; -fx-background-radius:20;
+                                                  -fx-padding:6 14;"/>
+                                </VBox>
+
+                                <!-- ══ REVIEW SECTION ══ -->
+                                <VBox spacing="12"
+                                      style="-fx-background-color:white; -fx-background-radius:14;
+                                             -fx-border-color:#FDE68A; -fx-border-width:2; -fx-border-radius:14;
+                                             -fx-padding:18 20;
+                                             -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),10,0,0,2);">
+
+                                    <Label text="Votre avis sur cet evenement"
+                                           style="-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:#92400E;"/>
+
+                                    <!-- Not eligible -->
+                                    <Label fx:id="reviewNotEligibleLabel" managed="false" visible="false"
+                                           wrapText="true"
+                                           style="-fx-font-size:12px; -fx-text-fill:#92400E;
+                                                  -fx-background-color:#FEF3C7; -fx-background-radius:8;
+                                                  -fx-padding:10 14; -fx-border-color:#FDE68A;
+                                                  -fx-border-width:1; -fx-border-radius:8;"/>
+
+                                    <!-- Already reviewed / info banner -->
+                                    <Label fx:id="reviewAlreadyDoneLabel" managed="false" visible="false"
+                                           text="Votre avis a deja ete soumis. Merci !"
+                                           wrapText="true"
+                                           style="-fx-font-size:12px; -fx-text-fill:#166534;
+                                                  -fx-background-color:#DCFCE7; -fx-background-radius:8;
+                                                  -fx-padding:10 14; -fx-border-color:#A5D6A7;
+                                                  -fx-border-width:1; -fx-border-radius:8;"/>
+
+                                    <!-- Review input form -->
+                                    <VBox fx:id="reviewInputBox" spacing="10" managed="false" visible="false">
+                                        <Label text="Note :"
+                                               style="-fx-font-size:12px; -fx-font-weight:600; -fx-text-fill:#78350F;"/>
+                                        <HBox fx:id="starsBox" spacing="4" alignment="CENTER_LEFT">
+                                            <ToggleButton fx:id="star1" text="★" onAction="#handleStarClick"
+                                                          style="-fx-font-size:28px; -fx-background-color:transparent;
+                                                                 -fx-text-fill:#D1D5DB; -fx-padding:0 2;
+                                                                 -fx-border-color:transparent; -fx-cursor:hand;"/>
+                                            <ToggleButton fx:id="star2" text="★" onAction="#handleStarClick"
+                                                          style="-fx-font-size:28px; -fx-background-color:transparent;
+                                                                 -fx-text-fill:#D1D5DB; -fx-padding:0 2;
+                                                                 -fx-border-color:transparent; -fx-cursor:hand;"/>
+                                            <ToggleButton fx:id="star3" text="★" onAction="#handleStarClick"
+                                                          style="-fx-font-size:28px; -fx-background-color:transparent;
+                                                                 -fx-text-fill:#D1D5DB; -fx-padding:0 2;
+                                                                 -fx-border-color:transparent; -fx-cursor:hand;"/>
+                                            <ToggleButton fx:id="star4" text="★" onAction="#handleStarClick"
+                                                          style="-fx-font-size:28px; -fx-background-color:transparent;
+                                                                 -fx-text-fill:#D1D5DB; -fx-padding:0 2;
+                                                                 -fx-border-color:transparent; -fx-cursor:hand;"/>
+                                            <ToggleButton fx:id="star5" text="★" onAction="#handleStarClick"
+                                                          style="-fx-font-size:28px; -fx-background-color:transparent;
+                                                                 -fx-text-fill:#D1D5DB; -fx-padding:0 2;
+                                                                 -fx-border-color:transparent; -fx-cursor:hand;"/>
+                                            <Label fx:id="starValueLabel" text=""
+                                                   style="-fx-font-size:13px; -fx-text-fill:#92400E; -fx-font-weight:700;"/>
+                                        </HBox>
+                                        <TextArea fx:id="reviewCommentField" prefHeight="90"
+                                                  promptText="Partagez votre experience (optionnel)..."
+                                                  wrapText="true"
+                                                  style="-fx-background-radius:8; -fx-border-radius:8;
+                                                         -fx-border-color:#FDE68A; -fx-border-width:1;
+                                                         -fx-font-size:13px; -fx-padding:8 12;"/>
+                                        <Label fx:id="reviewErrorLabel" managed="false" visible="false"
+                                               style="-fx-font-size:11px; -fx-text-fill:#DC2626;"/>
+                                        <Button fx:id="btnSubmitReview" text="Soumettre mon avis"
+                                                onAction="#handleSubmitReview"
+                                                style="-fx-background-color:#D97706; -fx-text-fill:white;
+                                                       -fx-font-weight:700; -fx-background-radius:8;
+                                                       -fx-padding:9 22; -fx-cursor:hand;"/>
+                                    </VBox>
+                                </VBox>
+
+                                <!-- ══ REVIEWS SUMMARY ══ -->
+                                <VBox fx:id="reviewsSummaryPanel" spacing="10" managed="false" visible="false"
+                                      style="-fx-background-color:white; -fx-background-radius:14;
+                                             -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                             -fx-padding:16 18;
+                                             -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),10,0,0,2);">
+                                    <HBox alignment="CENTER_LEFT" spacing="12">
+                                        <Label text="Avis des participants"
+                                               style="-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
+                                        <Label fx:id="avgRatingLabel" text=""
+                                               style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#D97706;
+                                                      -fx-background-color:#FEF9C3; -fx-background-radius:20;
+                                                      -fx-padding:3 10;"/>
+                                    </HBox>
+                                    <VBox fx:id="reviewsListBox" spacing="8"/>
+                                </VBox>
+
+                            </VBox>
+                        </VBox>
+                    </ScrollPane>
+
+                </VBox>
+            </ScrollPane>
+
+        </SplitPane>
     </center>
 </BorderPane>
 

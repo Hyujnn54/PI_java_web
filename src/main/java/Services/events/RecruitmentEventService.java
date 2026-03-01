@@ -10,23 +10,13 @@ import java.util.List;
 
 public class RecruitmentEventService {
 
-    private Connection connection;
+    private Connection conn() { return MyDatabase.getInstance().getConnection(); }
 
-    public RecruitmentEventService() {
-        connection = MyDatabase.getInstance().getConnection();
-    }
-
-    private void checkConnection() throws SQLException {
-        connection = MyDatabase.getInstance().getConnection();
-        if (connection == null) {
-            throw new SQLException("Pas de connexion à la base de données. Vérifiez db.properties.");
-        }
-    }
+    public RecruitmentEventService() {}
 
     public void add(RecruitmentEvent event) throws SQLException {
-        checkConnection();
         String query = "INSERT INTO recruitment_event (recruiter_id, title, description, event_type, location, event_date, capacity, meet_link, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+        PreparedStatement ps = conn().prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
         ps.setLong(1, event.getRecruiterId());
         ps.setString(2, event.getTitle());
         ps.setString(3, event.getDescription());
@@ -42,9 +32,8 @@ public class RecruitmentEventService {
     }
 
     public void update(RecruitmentEvent event) throws SQLException {
-        checkConnection();
         String query = "UPDATE recruitment_event SET title=?, description=?, event_type=?, location=?, event_date=?, capacity=?, meet_link=? WHERE id=?";
-        PreparedStatement ps = connection.prepareStatement(query);
+        PreparedStatement ps = conn().prepareStatement(query);
         ps.setString(1, event.getTitle());
         ps.setString(2, event.getDescription());
         ps.setString(3, event.getEventType());
@@ -57,17 +46,15 @@ public class RecruitmentEventService {
     }
 
     public void delete(long id) throws SQLException {
-        checkConnection();
         String query = "DELETE FROM recruitment_event WHERE id=?";
-        PreparedStatement ps = connection.prepareStatement(query);
+        PreparedStatement ps = conn().prepareStatement(query);
         ps.setLong(1, id);
         ps.executeUpdate();
     }
 
     public RecruitmentEvent getById(long id) throws SQLException {
-        checkConnection();
         String query = "SELECT * FROM recruitment_event WHERE id = ?";
-        PreparedStatement ps = connection.prepareStatement(query);
+        PreparedStatement ps = conn().prepareStatement(query);
         ps.setLong(1, id);
         ResultSet rs = ps.executeQuery();
         if (rs.next()) {
@@ -88,77 +75,59 @@ public class RecruitmentEventService {
     }
 
     public List<RecruitmentEvent> getAll() throws SQLException {
-        checkConnection();
         List<RecruitmentEvent> events = new ArrayList<>();
-        // LEFT JOIN so events are never dropped if recruiter profile is incomplete
         String query = "SELECT e.*, r.company_name, r.company_location, r.company_description " +
                        "FROM recruitment_event e LEFT JOIN recruiter r ON e.recruiter_id = r.id";
-        Statement st = connection.createStatement();
+        Statement st = conn().createStatement();
         ResultSet rs = st.executeQuery(query);
         while (rs.next()) {
-            RecruitmentEvent event = new RecruitmentEvent();
-            event.setId(rs.getLong("id"));
-            event.setRecruiterId(rs.getLong("recruiter_id"));
-            event.setTitle(rs.getString("title"));
-            event.setDescription(rs.getString("description"));
-            event.setEventType(rs.getString("event_type"));
-            event.setLocation(rs.getString("location"));
-            event.setEventDate(rs.getTimestamp("event_date").toLocalDateTime());
-            event.setCapacity(rs.getInt("capacity"));
-            event.setMeetLink(rs.getString("meet_link"));
-            event.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
-
+            RecruitmentEvent event = mapRow(rs);
             EventRecruiter recruiter = new EventRecruiter();
             recruiter.setId(rs.getLong("recruiter_id"));
             recruiter.setCompanyName(rs.getString("company_name"));
             recruiter.setCompanyLocation(rs.getString("company_location"));
             event.setRecruiter(recruiter);
-
             events.add(event);
         }
         return events;
     }
 
     public List<RecruitmentEvent> getByRecruiter(long recruiterId) throws SQLException {
-        checkConnection();
         List<RecruitmentEvent> events = new ArrayList<>();
         String query = "SELECT * FROM recruitment_event WHERE recruiter_id = ?";
-        PreparedStatement ps = connection.prepareStatement(query);
+        PreparedStatement ps = conn().prepareStatement(query);
         ps.setLong(1, recruiterId);
         ResultSet rs = ps.executeQuery();
-        while (rs.next()) {
-            RecruitmentEvent event = new RecruitmentEvent();
-            event.setId(rs.getLong("id"));
-            event.setRecruiterId(rs.getLong("recruiter_id"));
-            event.setTitle(rs.getString("title"));
-            event.setDescription(rs.getString("description"));
-            event.setEventType(rs.getString("event_type"));
-            event.setLocation(rs.getString("location"));
-            event.setEventDate(rs.getTimestamp("event_date").toLocalDateTime());
-            event.setCapacity(rs.getInt("capacity"));
-            try { event.setMeetLink(rs.getString("meet_link")); } catch (SQLException ignored) {}
-            event.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
-            events.add(event);
-        }
+        while (rs.next()) events.add(mapRow(rs));
         return events;
     }
 
     public boolean isEventPopular(long eventId) throws SQLException {
-        checkConnection();
         String query = "SELECT capacity FROM recruitment_event WHERE id = ?";
-        PreparedStatement ps = connection.prepareStatement(query);
+        PreparedStatement ps = conn().prepareStatement(query);
         ps.setLong(1, eventId);
         ResultSet rs = ps.executeQuery();
         if (rs.next()) {
             int capacity = rs.getInt("capacity");
             if (capacity <= 0) return false;
-
-            EventRegistrationService regService = new EventRegistrationService();
-            int confirmedCount = regService.getConfirmedCount(eventId);
-
-            double percentage = ((double) confirmedCount / capacity) * 100;
-            return percentage >= 70;
+            int confirmedCount = new EventRegistrationService().getConfirmedCount(eventId);
+            return ((double) confirmedCount / capacity) * 100 >= 70;
         }
         return false;
+    }
+
+    private RecruitmentEvent mapRow(ResultSet rs) throws SQLException {
+        RecruitmentEvent event = new RecruitmentEvent();
+        event.setId(rs.getLong("id"));
+        event.setRecruiterId(rs.getLong("recruiter_id"));
+        event.setTitle(rs.getString("title"));
+        event.setDescription(rs.getString("description"));
+        event.setEventType(rs.getString("event_type"));
+        event.setLocation(rs.getString("location"));
+        event.setEventDate(rs.getTimestamp("event_date").toLocalDateTime());
+        event.setCapacity(rs.getInt("capacity"));
+        try { event.setMeetLink(rs.getString("meet_link")); } catch (SQLException ignored) {}
+        try { event.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime()); } catch (SQLException ignored) {}
+        return event;
     }
 }

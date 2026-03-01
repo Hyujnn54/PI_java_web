@@ -63,29 +63,84 @@ public class JobOffersBrowseController {
     private void buildUI() {
         if (mainContainer == null) return;
         mainContainer.getChildren().clear();
-        mainContainer.setStyle("-fx-background-color: #F5F6F8; -fx-padding: 20;");
+        mainContainer.setStyle("-fx-background-color: #EBF0F8; -fx-padding: 20; -fx-spacing: 14;");
 
-        Label pageTitle = new Label("🔍 Rechercher une offre d'emploi");
-        pageTitle.setStyle("-fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: #2c3e50; -fx-padding: 0 0 15 0;");
-        mainContainer.getChildren().add(pageTitle);
+        // ── Header ──
+        HBox headerBox = new HBox(12);
+        headerBox.setAlignment(Pos.CENTER_LEFT);
+        VBox titleBox = new VBox(3);
+        HBox.setHgrow(titleBox, Priority.ALWAYS);
+        Label pageTitle = new Label("Offres d'emploi");
+        pageTitle.setStyle("-fx-font-size:24px; -fx-font-weight:700; -fx-text-fill:#2c3e50;");
+        Label pageSub = new Label("Parcourez les offres disponibles et postulez");
+        pageSub.setStyle("-fx-font-size:12px; -fx-text-fill:#8FA3B8;");
+        titleBox.getChildren().addAll(pageTitle, pageSub);
+        headerBox.getChildren().add(titleBox);
+        mainContainer.getChildren().add(headerBox);
 
-        VBox searchFilterBox = createSearchFilterBox();
-        mainContainer.getChildren().add(searchFilterBox);
-        mainContainer.getChildren().add(new Region() {{ setPrefHeight(20); }});
+        // ── Search/filter bar ──
+        mainContainer.getChildren().add(createSearchFilterBox());
 
-        HBox contentArea = new HBox(20);
-        VBox.setVgrow(contentArea, Priority.ALWAYS);
+        // ── SplitPane ──
+        javafx.scene.control.SplitPane split = new javafx.scene.control.SplitPane();
+        split.setDividerPositions(0.42);
+        VBox.setVgrow(split, Priority.ALWAYS);
+        split.setStyle("-fx-background-color: transparent; -fx-box-border: transparent; -fx-padding:0;");
 
-        VBox leftSide = createJobListPanel();
-        leftSide.setPrefWidth(420);
-        leftSide.setMinWidth(380);
-        leftSide.setMaxWidth(480);
+        // Left
+        javafx.scene.control.ScrollPane leftScroll = new javafx.scene.control.ScrollPane();
+        leftScroll.setFitToWidth(true);
+        leftScroll.setStyle("-fx-background: transparent; -fx-background-color: #EBF0F8;");
+        leftScroll.getStyleClass().add("transparent-scroll");
+        VBox leftContent = new VBox(10);
+        leftContent.setStyle("-fx-background-color: #EBF0F8;");
+        leftContent.setPadding(new javafx.geometry.Insets(4, 8, 16, 2));
 
-        VBox rightSide = createDetailPanel();
-        HBox.setHgrow(rightSide, Priority.ALWAYS);
+        HBox leftHeader = new HBox(8);
+        leftHeader.setAlignment(Pos.CENTER_LEFT);
+        leftHeader.setStyle("-fx-padding: 0 0 4 2;");
+        Label leftTitle = new Label("Offres disponibles");
+        leftTitle.setStyle("-fx-font-size:13px; -fx-font-weight:700; -fx-text-fill:#2c3e50;");
+        HBox.setHgrow(leftTitle, Priority.ALWAYS);
+        jobCountLabel = new Label("");
+        jobCountLabel.setStyle("-fx-font-size:11px; -fx-text-fill:#8FA3B8; " +
+                "-fx-background-color:#D4DCE8; -fx-background-radius:10; -fx-padding:2 8;");
+        leftHeader.getChildren().addAll(leftTitle, jobCountLabel);
 
-        contentArea.getChildren().addAll(leftSide, rightSide);
-        mainContainer.getChildren().add(contentArea);
+        jobListContainer = new VBox(8);
+        leftContent.getChildren().addAll(leftHeader, jobListContainer);
+        leftScroll.setContent(leftContent);
+
+        // Right
+        javafx.scene.control.ScrollPane rightScroll = new javafx.scene.control.ScrollPane();
+        rightScroll.setFitToWidth(true);
+        rightScroll.setStyle("-fx-background: transparent; -fx-background-color: #EBF0F8;");
+        rightScroll.getStyleClass().add("transparent-scroll");
+        VBox rightContent = new VBox(14);
+        rightContent.setStyle("-fx-background-color: #EBF0F8;");
+        rightContent.setPadding(new javafx.geometry.Insets(4, 4, 16, 8));
+
+        detailContainer = new VBox(14);
+        // Placeholder
+        VBox ph = new VBox(16);
+        ph.setAlignment(Pos.CENTER);
+        ph.setStyle("-fx-background-color:white; -fx-background-radius:14; -fx-padding:50 24;" +
+                "-fx-border-color:#E8EEF8; -fx-border-width:1; -fx-border-radius:14;" +
+                "-fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);");
+        Label phIcon = new Label("🔍"); phIcon.setStyle("-fx-font-size:40px;");
+        Label phTitle2 = new Label("Sélectionnez une offre");
+        phTitle2.setStyle("-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:#2c3e50;");
+        Label phSub = new Label("Cliquez sur une offre pour voir les détails et postuler");
+        phSub.setStyle("-fx-font-size:12px; -fx-text-fill:#8FA3B8; -fx-text-alignment:center;");
+        phSub.setWrapText(true);
+        ph.getChildren().addAll(phIcon, phTitle2, phSub);
+        detailContainer.getChildren().add(ph);
+
+        rightContent.getChildren().add(detailContainer);
+        rightScroll.setContent(rightContent);
+
+        split.getItems().addAll(leftScroll, rightScroll);
+        mainContainer.getChildren().add(split);
     }
 
     private VBox createSearchFilterBox() {
@@ -230,6 +285,7 @@ public class JobOffersBrowseController {
             }
 
             updateResultCount(jobs.size());
+            if (jobCountLabel != null) jobCountLabel.setText(jobs.size() + " offre(s)");
 
             if (jobs.isEmpty()) {
                 jobListContainer.getChildren().add(createEmptyState());
@@ -349,13 +405,22 @@ public class JobOffersBrowseController {
         };
     }
 
+    private Label jobCountLabel;
+
     private VBox createJobListPanel() {
         VBox panel = new VBox(15);
         panel.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20; " +
                       "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 2);");
 
+        HBox titleRow = new HBox(8);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
         Label title = new Label("📋 Offres disponibles");
         title.setStyle("-fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;");
+        HBox.setHgrow(title, Priority.ALWAYS);
+        jobCountLabel = new Label("");
+        jobCountLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #8FA3B8; " +
+                "-fx-background-color: #EBF0F8; -fx-background-radius: 10; -fx-padding: 2 8;");
+        titleRow.getChildren().addAll(title, jobCountLabel);
 
         ScrollPane scroll = new ScrollPane();
         scroll.setFitToWidth(true);
@@ -367,7 +432,7 @@ public class JobOffersBrowseController {
         jobListContainer.setStyle("-fx-padding: 5 5 5 0;");
         scroll.setContent(jobListContainer);
 
-        panel.getChildren().addAll(title, scroll);
+        panel.getChildren().addAll(titleRow, scroll);
         return panel;
     }
 
@@ -390,17 +455,21 @@ public class JobOffersBrowseController {
         detailContainer.setStyle("-fx-padding: 10 5 10 0;");
         scrollPane.setContent(detailContainer);
 
-        VBox selectMessage = new VBox(10);
+        VBox selectMessage = new VBox(14);
         selectMessage.setAlignment(Pos.CENTER);
-        selectMessage.setStyle("-fx-padding: 60;");
+        selectMessage.setStyle("-fx-padding: 60 24;");
 
-        Label icon = new Label("👈");
-        icon.setStyle("-fx-font-size: 36px;");
+        Label icon = new Label("🔍");
+        icon.setStyle("-fx-font-size: 40px;");
 
-        Label text = new Label("Sélectionnez une offre pour voir les détails");
-        text.setStyle("-fx-text-fill: #6c757d; -fx-font-size: 15px;");
+        Label phTitle = new Label("Sélectionnez une offre");
+        phTitle.setStyle("-fx-font-size:15px; -fx-font-weight:700; -fx-text-fill:#2c3e50;");
 
-        selectMessage.getChildren().addAll(icon, text);
+        Label text = new Label("Cliquez sur une offre à gauche pour voir les détails et postuler");
+        text.setStyle("-fx-font-size:12px; -fx-text-fill:#8FA3B8; -fx-text-alignment:center;");
+        text.setWrapText(true);
+
+        selectMessage.getChildren().addAll(icon, phTitle, text);
         detailContainer.getChildren().add(selectMessage);
 
         panel.getChildren().addAll(title, scrollPane);
@@ -414,6 +483,7 @@ public class JobOffersBrowseController {
         try {
             List<JobOffer> jobs = jobOfferService.getJobOffersByStatus(Status.OPEN);
             updateResultCount(jobs.size());
+            if (jobCountLabel != null) jobCountLabel.setText(jobs.size() + " offre(s)");
 
             if (jobs.isEmpty()) {
                 jobListContainer.getChildren().add(createEmptyState());

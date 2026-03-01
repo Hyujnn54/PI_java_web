@@ -8,30 +8,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RecruiterService {
-    private final Connection cnx = MyDatabase.getInstance().getConnection();
+    private Connection cnx() { return MyDatabase.getInstance().getConnection(); }
     private final UserService userService = new UserService();
 
     public void addRecruiter(Recruiter r) throws SQLException {
         String sql = "INSERT INTO recruiter (id, company_name, company_location) VALUES (?,?,?)";
-
+        Connection c = cnx();
         try {
-            cnx.setAutoCommit(false);
-
+            c.setAutoCommit(false);
             long userId = userService.addUser(r);
-
-            try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+            try (PreparedStatement ps = c.prepareStatement(sql)) {
                 ps.setLong(1, userId);
                 ps.setString(2, r.getCompanyName());
                 ps.setString(3, r.getCompanyLocation());
                 ps.executeUpdate();
             }
-
-            cnx.commit();
+            c.commit();
         } catch (SQLException e) {
-            cnx.rollback();
+            c.rollback();
             throw e;
         } finally {
-            cnx.setAutoCommit(true);
+            c.setAutoCommit(true);
         }
     }
 
@@ -43,20 +40,15 @@ public class RecruiterService {
             JOIN recruiter r ON r.id = u.id
             WHERE u.id=?
         """;
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
-
                 Recruiter r = new Recruiter(
-                        rs.getString("email"),
-                        rs.getString("password"),
-                        rs.getString("first_name"),
-                        rs.getString("last_name"),
-                        rs.getString("phone"),
-                        rs.getString("company_name"),
-                        rs.getString("company_location")
-                );
+                        rs.getString("email"), rs.getString("password"),
+                        rs.getString("first_name"), rs.getString("last_name"),
+                        rs.getString("phone"), rs.getString("company_name"),
+                        rs.getString("company_location"));
                 r.setId(rs.getLong("id"));
                 return r;
             }
@@ -72,18 +64,14 @@ public class RecruiterService {
             ORDER BY u.id DESC
         """;
         List<Recruiter> list = new ArrayList<>();
-        try (PreparedStatement ps = cnx.prepareStatement(sql);
+        try (PreparedStatement ps = cnx().prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Recruiter r = new Recruiter(
-                        rs.getString("email"),
-                        rs.getString("password"),
-                        rs.getString("first_name"),
-                        rs.getString("last_name"),
-                        rs.getString("phone"),
-                        rs.getString("company_name"),
-                        rs.getString("company_location")
-                );
+                        rs.getString("email"), rs.getString("password"),
+                        rs.getString("first_name"), rs.getString("last_name"),
+                        rs.getString("phone"), rs.getString("company_name"),
+                        rs.getString("company_location"));
                 r.setId(rs.getLong("id"));
                 list.add(r);
             }
@@ -92,25 +80,23 @@ public class RecruiterService {
     }
 
     public void updateRecruiter(Recruiter r) throws SQLException {
+        Connection c = cnx();
         try {
-            cnx.setAutoCommit(false);
-
+            c.setAutoCommit(false);
             userService.updateUser(r);
-
-            try (PreparedStatement ps = cnx.prepareStatement(
+            try (PreparedStatement ps = c.prepareStatement(
                     "UPDATE recruiter SET company_name=?, company_location=? WHERE id=?")) {
                 ps.setString(1, r.getCompanyName());
                 ps.setString(2, r.getCompanyLocation());
                 ps.setLong(3, r.getId());
                 ps.executeUpdate();
             }
-
-            cnx.commit();
+            c.commit();
         } catch (SQLException e) {
-            cnx.rollback();
+            c.rollback();
             throw e;
         } finally {
-            cnx.setAutoCommit(true);
+            c.setAutoCommit(true);
         }
     }
 

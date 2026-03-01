@@ -800,6 +800,20 @@ public class InterviewManagementController {
         if (isRecruiter) {
             if (!isPast) {
                 rightPanelContent.getChildren().add(buildEditSection(interview));
+                // Feedback only allowed after the interview has passed
+                VBox earlyNotice = new VBox(8);
+                earlyNotice.setStyle("-fx-background-color:#FFF3CD; -fx-background-radius:12; -fx-padding:14 18;"
+                        + "-fx-border-color:#FFE082; -fx-border-width:1; -fx-border-radius:12;");
+                Label earlyIcon = new Label("⏳");
+                earlyIcon.setStyle("-fx-font-size:20px;");
+                Label earlyTitle = new Label("Retour disponible après l'entretien");
+                earlyTitle.setStyle("-fx-font-size:13px; -fx-font-weight:700; -fx-text-fill:#7D5A00;");
+                earlyTitle.setWrapText(true);
+                Label earlySub = new Label("Vous pourrez rédiger le retour (feedback) une fois la date de l'entretien passée.");
+                earlySub.setStyle("-fx-font-size:12px; -fx-text-fill:#A07000;");
+                earlySub.setWrapText(true);
+                earlyNotice.getChildren().addAll(earlyIcon, earlyTitle, earlySub);
+                rightPanelContent.getChildren().add(earlyNotice);
             } else {
                 // Past: show a clear notice instead of the edit form
                 VBox pastNotice = new VBox(8);
@@ -815,8 +829,8 @@ public class InterviewManagementController {
                 sub.setWrapText(true);
                 pastNotice.getChildren().addAll(icon, title, sub);
                 rightPanelContent.getChildren().add(pastNotice);
+                rightPanelContent.getChildren().add(buildFeedbackSection(interview));
             }
-            rightPanelContent.getChildren().add(buildFeedbackSection(interview));
         }
 
         // Fade in animation

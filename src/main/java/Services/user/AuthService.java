@@ -9,7 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class AuthService {
-    private final Connection cnx = MyDatabase.getInstance().getConnection();
+    private Connection cnx() { return MyDatabase.getInstance().getConnection(); }
 
     public Models.user.User login(String email, String password) throws SQLException {
         String sql = """
@@ -17,7 +17,7 @@ public class AuthService {
                 FROM users
                 WHERE email=? AND is_active=1
                 """;
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -52,7 +52,7 @@ public class AuthService {
     private Models.user.Admin findAdmin(long id, String email, String password,
                                         String firstName, String lastName, String phone) throws SQLException {
         String sql = "SELECT assigned_area FROM admin WHERE id=?";
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -67,7 +67,7 @@ public class AuthService {
     private Models.user.Recruiter findRecruiter(long id, String email, String password,
                                                  String firstName, String lastName, String phone) throws SQLException {
         String sql = "SELECT company_name, company_location FROM recruiter WHERE id=?";
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -84,7 +84,7 @@ public class AuthService {
     private Models.user.Candidate findCandidate(long id, String email, String password,
                                                  String firstName, String lastName, String phone) throws SQLException {
         String sql = "SELECT location, education_level, experience_years, cv_path FROM candidate WHERE id=?";
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -106,7 +106,7 @@ public class AuthService {
                 FROM users
                 WHERE face_enabled=1 AND face_person_id=? AND is_active=1
             """;
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setString(1, personId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;

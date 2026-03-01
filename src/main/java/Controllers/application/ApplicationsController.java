@@ -125,6 +125,7 @@ public class ApplicationsController {
         }
     }
 
+    @FXML
     private void performSearch() {
         String searchCriteria = cbSearchCriteria.getValue();
         String searchText = txtSearch.getText();
@@ -170,6 +171,7 @@ public class ApplicationsController {
         displaySearchResults(searchResults);
     }
 
+    @FXML
     private void clearSearch() {
         if (cbSearchCriteria != null) {
             cbSearchCriteria.getSelectionModel().clearSelection();
@@ -234,18 +236,14 @@ public class ApplicationsController {
             List<Models.joboffers.JobOffer> recruiterOffers = JobOfferService.getByRecruiterId(recruiterId);
             System.out.println("[ApplicationsController] Recruiter job offers: " + recruiterOffers.size());
 
-            // If recruiter has job offers, filter by those. Otherwise show all (for demo/testing)
-            if (!recruiterOffers.isEmpty()) {
-                List<Long> offerIds = recruiterOffers.stream()
-                        .map(Models.joboffers.JobOffer::getId)
-                        .toList();
-                applications = applications.stream()
-                        .filter(app -> offerIds.contains(app.offerId()))
-                        .toList();
-                System.out.println("[ApplicationsController] After recruiter filter: " + applications.size());
-            } else {
-                System.out.println("[ApplicationsController] Recruiter has no job offers, showing all applications");
-            }
+            // Always filter by recruiter's own job offers - empty list if no offers
+            List<Long> offerIds = recruiterOffers.stream()
+                    .map(Models.joboffers.JobOffer::getId)
+                    .toList();
+            applications = applications.stream()
+                    .filter(app -> offerIds.contains(app.offerId()))
+                    .toList();
+            System.out.println("[ApplicationsController] After recruiter filter: " + applications.size());
         }
 
         // Hide archived applications for non-admins
@@ -263,6 +261,12 @@ public class ApplicationsController {
         if (candidateListContainer == null) return;
         candidateListContainer.getChildren().clear();
         selectedApplicationIds.clear();
+
+        // Update count badge
+        if (lblSubtitle != null) {
+            int cnt = applications == null ? 0 : applications.size();
+            lblSubtitle.setText(cnt + " candidature(s)");
+        }
 
         if (applications == null || applications.isEmpty()) {
             Label empty = new Label(showBulkPanel

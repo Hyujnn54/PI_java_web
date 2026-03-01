@@ -5,6 +5,7 @@ import Models.events.EventRegistration;
 import Models.events.RecruitmentEvent;
 import Models.events.EventUser;
 import Models.events.RoleEnum;
+import Models.user.User;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -20,6 +21,7 @@ import Services.events.EventRegistrationService;
 import Services.events.RecruitmentEventService;
 import Services.events.UserService;
 import Utils.SchemaFixer;
+import Utils.Session;
 
 import java.net.URL;
 import java.sql.SQLException;
@@ -115,67 +117,56 @@ public class CandidateDashboardController implements Initializable {
 
     private void loadCandidateData() {
         try {
-            // Use the actual logged-in user ID from UserContext
-            Long contextId = Utils.UserContext.getUserId();
-            long lookupId = (contextId != null) ? contextId : 5L;
-            currentCandidate = candidateService.getByUserId(lookupId);
-            if (currentCandidate == null) {
-                java.util.List<EventCandidate> all = candidateService.getAll();
-                if (!all.isEmpty()) {
-                    currentCandidate = all.get(0);
+            Long contextId = Utils.UserContext.getCandidateId();
+            if (contextId == null) {
+                System.err.println("[CandidateDashboard] No candidate in session.");
+                if (eventsHBox != null) {
+                    eventsHBox.getChildren().clear();
+                    Label msg = new Label("Veuillez vous connecter en tant que candidat.");
+                    msg.setStyle("-fx-font-size:13px; -fx-text-fill:#dc3545; -fx-padding:20;");
+                    eventsHBox.getChildren().add(msg);
                 }
+                return;
             }
+            currentCandidate = candidateService.getByUserId(contextId);
             if (currentCandidate == null) {
-                String testEmail = "candidat.test@talentbridge.com";
-                EventUser testUser = null;
-                for (EventUser u : userService.getAll()) {
-                    if (testEmail.equals(u.getEmail())) {
-                        testUser = u;
-                        break;
+                // Candidate profile row may not exist yet — create a minimal one
+                Models.user.User sessionUser = Utils.Session.getCurrentUser();
+                if (sessionUser instanceof Models.user.Candidate sc) {
+                    currentCandidate = new EventCandidate();
+                    currentCandidate.setId(contextId);
+                    currentCandidate.setLocation(sc.getLocation() != null ? sc.getLocation() : "");
+                    currentCandidate.setEducationLevel(sc.getEducationLevel() != null ? sc.getEducationLevel() : "");
+                    currentCandidate.setExperienceYears(sc.getExperienceYears() != null ? sc.getExperienceYears() : 0);
+                    try { candidateService.add(currentCandidate); } catch (Exception ignored) {
+                        currentCandidate = candidateService.getByUserId(contextId);
                     }
                 }
-                if (testUser != null) {
-                    testUser.setFirstName("Rayen");
-                    testUser.setLastName("EventCandidate");
-                    userService.update(testUser);
-                }
-                if (testUser == null) {
-                    testUser = new EventUser();
-                    testUser.setEmail(testEmail);
-                    testUser.setPassword("password123");
-                    testUser.setFirstName("Rayen");
-                    testUser.setLastName("EventCandidate");
-                    testUser.setRole(RoleEnum.CANDIDATE);
-                    testUser.setActive(true);
-                    userService.add(testUser);
-                }
-                currentCandidate = new EventCandidate();
-                currentCandidate.setId(testUser.getId());
-                currentCandidate.setLocation("Tunis");
-                currentCandidate.setEducationLevel("Master");
-                currentCandidate.setExperienceYears(2);
-                candidateService.add(currentCandidate);
             }
             if (currentCandidate != null) {
                 refreshEvents();
                 refreshRegistrations();
-
-                // Fetch EventUser details for top bar (only present in standalone dashboard, not embedded view)
-                try {
-                    EventUser user = userService.getById(currentCandidate.getId());
-                    if (user != null) {
-                        if (userNameLabel != null) userNameLabel.setText(user.getFirstName() + " " + user.getLastName());
-                        if (userRoleLabel != null) {
-                            userRoleLabel.setText("CANDIDAT");
-                            userRoleLabel.getStyleClass().add("badge-candidate");
-                        }
+                // Update top-bar labels if present
+                Models.user.User sessionUser = Utils.Session.getCurrentUser();
+                if (sessionUser != null) {
+                    String displayName = (sessionUser.getFirstName() != null ? sessionUser.getFirstName() : "")
+                            + (sessionUser.getLastName() != null ? " " + sessionUser.getLastName() : "");
+                    if (userNameLabel != null) userNameLabel.setText(displayName.trim());
+                    if (userRoleLabel != null) {
+                        userRoleLabel.setText("CANDIDAT");
+                        userRoleLabel.getStyleClass().add("badge-candidate");
                     }
-                } catch (SQLException e) {
-                    System.err.println("Error loading user name: " + e.getMessage());
+                }
+            } else {
+                if (eventsHBox != null) {
+                    eventsHBox.getChildren().clear();
+                    Label msg = new Label("Profil candidat introuvable.");
+                    msg.setStyle("-fx-font-size:13px; -fx-text-fill:#dc3545; -fx-padding:20;");
+                    eventsHBox.getChildren().add(msg);
                 }
             }
         } catch (SQLException e) {
-            showAlert("Erreur Initialisation", "Impossible de préparer le profil candidat test : " + e.getMessage());
+            System.err.println("[CandidateDashboard] loadCandidateData error: " + e.getMessage());
         }
     }
 

@@ -9,21 +9,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CandidateSkillService {
-    private final Connection cnx = MyDatabase.getInstance().getConnection();
+    private Connection cnx() { return MyDatabase.getInstance().getConnection(); }
 
     public List<CandidateSkill> getByCandidate(long candidateId) throws SQLException {
         String sql = "SELECT id, candidate_id, skill_name, level FROM candidate_skill WHERE candidate_id=? ORDER BY id";
         List<CandidateSkill> list = new ArrayList<>();
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, candidateId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     list.add(new CandidateSkill(
-                            rs.getLong("id"),
-                            rs.getLong("candidate_id"),
+                            rs.getLong("id"), rs.getLong("candidate_id"),
                             rs.getString("skill_name"),
-                            SkillLevel.valueOf(rs.getString("level"))
-                    ));
+                            SkillLevel.valueOf(rs.getString("level"))));
                 }
             }
         }
@@ -31,7 +29,7 @@ public class CandidateSkillService {
     }
 
     public void deleteAllForCandidate(long candidateId) throws SQLException {
-        try (PreparedStatement ps = cnx.prepareStatement("DELETE FROM candidate_skill WHERE candidate_id=?")) {
+        try (PreparedStatement ps = cnx().prepareStatement("DELETE FROM candidate_skill WHERE candidate_id=?")) {
             ps.setLong(1, candidateId);
             ps.executeUpdate();
         }
@@ -39,7 +37,7 @@ public class CandidateSkillService {
 
     public void insertSkill(long candidateId, String skillName, SkillLevel level) throws SQLException {
         String sql = "INSERT INTO candidate_skill(candidate_id, skill_name, level) VALUES(?,?,?)";
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, candidateId);
             ps.setString(2, skillName);
             ps.setString(3, level.name());
@@ -47,23 +45,20 @@ public class CandidateSkillService {
         }
     }
 
-    // ✅ Strong + simple: replace-all in one transaction
     public void replaceAll(long candidateId, List<CandidateSkill> skills) throws SQLException {
+        Connection conn = cnx();
         try {
-            cnx.setAutoCommit(false);
-
+            conn.setAutoCommit(false);
             deleteAllForCandidate(candidateId);
-
             for (CandidateSkill s : skills) {
                 insertSkill(candidateId, s.getSkillName(), s.getLevel());
             }
-
-            cnx.commit();
+            conn.commit();
         } catch (SQLException e) {
-            cnx.rollback();
+            conn.rollback();
             throw e;
         } finally {
-            cnx.setAutoCommit(true);
+            conn.setAutoCommit(true);
         }
     }
 }

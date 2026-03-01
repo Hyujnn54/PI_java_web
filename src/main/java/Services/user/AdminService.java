@@ -8,31 +8,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AdminService {
-    private final Connection cnx = MyDatabase.getInstance().getConnection();
+    private Connection cnx() { return MyDatabase.getInstance().getConnection(); }
     private final UserService userService = new UserService();
 
     // CREATE
     public void addAdmin(Admin a) throws SQLException {
         String sql = "INSERT INTO admin (id, assigned_area) VALUES (?,?)";
-
-
+        Connection conn = cnx();
         try {
-            cnx.setAutoCommit(false);
+            conn.setAutoCommit(false);
 
             long userId = userService.addUser(a);
 
-            try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setLong(1, userId);
                 ps.setString(2, a.getAssignedArea());
                 ps.executeUpdate();
             }
 
-            cnx.commit();
+            conn.commit();
         } catch (SQLException e) {
-            cnx.rollback();
+            conn.rollback();
             throw e;
         } finally {
-            cnx.setAutoCommit(true);
+            conn.setAutoCommit(true);
         }
     }
 
@@ -45,7 +44,7 @@ public class AdminService {
             JOIN admin a ON a.id = u.id
             WHERE u.id=?
         """;
-        try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
             ps.setLong(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -74,7 +73,7 @@ public class AdminService {
             ORDER BY u.id DESC
         """;
         List<Admin> list = new ArrayList<>();
-        try (PreparedStatement ps = cnx.prepareStatement(sql);
+        try (PreparedStatement ps = cnx().prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Admin a = new Admin(
@@ -94,23 +93,24 @@ public class AdminService {
 
     // UPDATE
     public void updateAdmin(Admin a) throws SQLException {
+        Connection conn = cnx();
         try {
-            cnx.setAutoCommit(false);
+            conn.setAutoCommit(false);
 
             userService.updateUser(a);
 
-            try (PreparedStatement ps = cnx.prepareStatement("UPDATE admin SET assigned_area=? WHERE id=?")) {
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE admin SET assigned_area=? WHERE id=?")) {
                 ps.setString(1, a.getAssignedArea());
                 ps.setLong(2, a.getId());
                 ps.executeUpdate();
             }
 
-            cnx.commit();
+            conn.commit();
         } catch (SQLException e) {
-            cnx.rollback();
+            conn.rollback();
             throw e;
         } finally {
-            cnx.setAutoCommit(true);
+            conn.setAutoCommit(true);
         }
     }
 

@@ -36,25 +36,15 @@ public class UserService {
         public Integer experienceYears() { return experienceYears; }
     }
 
-    private Connection connection;
+    private Connection conn() { return MyDatabase.getInstance().getConnection(); }
 
-    public UserService() {
-        connection = MyDatabase.getInstance().getConnection();
-    }
-
-    private void checkConnection() throws SQLException {
-        connection = MyDatabase.getInstance().getConnection();
-        if (connection == null) {
-            throw new SQLException("No database connection.");
-        }
-    }
+    public UserService() {}
 
     // ── Events-module methods ──────────────────────────────────────────────
 
     public void add(EventUser user) throws SQLException {
-        checkConnection();
         String query = "INSERT INTO users (email, password, first_name, last_name, phone, role, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+        PreparedStatement ps = conn().prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
         ps.setString(1, user.getEmail());
         ps.setString(2, user.getPassword());
         ps.setString(3, user.getFirstName());
@@ -69,9 +59,8 @@ public class UserService {
     }
 
     public EventUser login(String email, String password) throws SQLException {
-        checkConnection();
         String query = "SELECT * FROM users WHERE email = ? AND password = ? AND is_active = 1";
-        PreparedStatement ps = connection.prepareStatement(query);
+        PreparedStatement ps = conn().prepareStatement(query);
         ps.setString(1, email);
         ps.setString(2, password);
         ResultSet rs = ps.executeQuery();
@@ -80,9 +69,8 @@ public class UserService {
     }
 
     public EventUser getById(long id) throws SQLException {
-        checkConnection();
         String query = "SELECT * FROM users WHERE id = ?";
-        PreparedStatement ps = connection.prepareStatement(query);
+        PreparedStatement ps = conn().prepareStatement(query);
         ps.setLong(1, id);
         ResultSet rs = ps.executeQuery();
         if (rs.next()) { return mapUser(rs); }
@@ -90,18 +78,16 @@ public class UserService {
     }
 
     public List<EventUser> getAll() throws SQLException {
-        checkConnection();
         List<EventUser> users = new ArrayList<>();
-        Statement st = connection.createStatement();
+        Statement st = conn().createStatement();
         ResultSet rs = st.executeQuery("SELECT * FROM users");
         while (rs.next()) { users.add(mapUser(rs)); }
         return users;
     }
 
     public void update(EventUser user) throws SQLException {
-        checkConnection();
         String query = "UPDATE users SET email=?, first_name=?, last_name=?, phone=?, role=?, is_active=? WHERE id=?";
-        PreparedStatement ps = connection.prepareStatement(query);
+        PreparedStatement ps = conn().prepareStatement(query);
         ps.setString(1, user.getEmail());
         ps.setString(2, user.getFirstName());
         ps.setString(3, user.getLastName());
@@ -126,10 +112,11 @@ public class UserService {
         return user;
     }
 
-    // ── Original merge-2 static helper methods ────────────────────────────
+    // ── Static helper methods ─────────────────────────────────────────────
 
     public static UserInfo getUserInfo(Long userId) {
-        try (Connection conn = MyDatabase.getInstance().getConnection()) {
+        try {
+            Connection conn = MyDatabase.getInstance().getConnection();
             String query = "SELECT u.first_name, u.last_name, u.email, u.phone, " +
                           "c.education_level, c.experience_years " +
                           "FROM users u LEFT JOIN candidate c ON u.id = c.id " +
@@ -149,7 +136,8 @@ public class UserService {
     }
 
     public static String getRecruiterCompanyName(Long recruiterId) {
-        try (Connection conn = MyDatabase.getInstance().getConnection()) {
+        try {
+            Connection conn = MyDatabase.getInstance().getConnection();
             PreparedStatement stmt = conn.prepareStatement("SELECT company_name FROM recruiter WHERE id = ?");
             stmt.setLong(1, recruiterId);
             ResultSet rs = stmt.executeQuery();
@@ -160,7 +148,8 @@ public class UserService {
 
     public static java.util.List<String> getCandidateSkills(Long candidateId) {
         java.util.List<String> skills = new java.util.ArrayList<>();
-        try (Connection conn = MyDatabase.getInstance().getConnection()) {
+        try {
+            Connection conn = MyDatabase.getInstance().getConnection();
             PreparedStatement stmt = conn.prepareStatement(
                 "SELECT skill_name, level FROM candidate_skill WHERE candidate_id = ? ORDER BY level DESC, skill_name ASC");
             stmt.setLong(1, candidateId);

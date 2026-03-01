@@ -240,6 +240,9 @@ public class PastEventsController implements Initializable {
         loadReviewsSummary(ev.getId());
     }
 
+    // ── Fields for review editing ─────────────────────────────────────────────
+    private EventReview existingReview = null;
+
     // ── Review panel ─────────────────────────────────────────────────────────
 
     private void resetReviewPanel() {
@@ -251,6 +254,7 @@ public class PastEventsController implements Initializable {
         currentStarRating = 0;
         setStars(0);
         if (reviewCommentField != null) reviewCommentField.clear();
+        existingReview = null;
     }
 
     private void updateReviewPanel(RecruitmentEvent ev) {
@@ -269,13 +273,68 @@ public class PastEventsController implements Initializable {
                         : "Seuls les participants confirmes peuvent noter l'evenement.";
                 reviewNotEligibleLabel.setText(msg);
                 reviewNotEligibleLabel.setVisible(true); reviewNotEligibleLabel.setManaged(true);
-            } else if (reviewService.hasReviewed(ev.getId(), candidateId)) {
-                reviewAlreadyDoneLabel.setVisible(true); reviewAlreadyDoneLabel.setManaged(true);
             } else {
-                reviewInputBox.setVisible(true); reviewInputBox.setManaged(true);
+                // Check if already reviewed
+                List<EventReview> reviews = reviewService.getByEvent(ev.getId());
+                EventReview myReview = reviews.stream()
+                        .filter(r -> r.getCandidateId() == candidateId)
+                        .findFirst().orElse(null);
+
+                if (myReview != null) {
+                    // Already reviewed — show edit/delete options
+                    existingReview = myReview;
+                    showEditReviewPanel(myReview);
+                } else {
+                    // Not yet reviewed — show submit form
+                    reviewInputBox.setVisible(true); reviewInputBox.setManaged(true);
+                    if (btnSubmitReview != null) {
+                        btnSubmitReview.setText("Soumettre mon avis");
+                        btnSubmitReview.setStyle("-fx-background-color:#D97706; -fx-text-fill:white;"
+                                + "-fx-font-weight:700; -fx-background-radius:8; -fx-padding:9 22;");
+                    }
+                }
             }
         } catch (SQLException e) {
             System.err.println("Review eligibility check error: " + e.getMessage());
+        }
+    }
+
+    private void showEditReviewPanel(EventReview review) {
+        // Pre-fill the form with existing values
+        currentStarRating = review.getRating();
+        setStars(currentStarRating);
+        if (reviewCommentField != null) reviewCommentField.setText(review.getComment() != null ? review.getComment() : "");
+
+        reviewInputBox.setVisible(true); reviewInputBox.setManaged(true);
+
+        if (btnSubmitReview != null) {
+            btnSubmitReview.setText("💾  Mettre à jour mon avis");
+            btnSubmitReview.setStyle("-fx-background-color:#1565C0; -fx-text-fill:white;"
+                    + "-fx-font-weight:700; -fx-background-radius:8; -fx-padding:9 22;");
+        }
+
+        // Show a small info banner above the form
+        reviewAlreadyDoneLabel.setText("✏  Vous avez déjà soumis un avis — vous pouvez le modifier ou le supprimer ci-dessous.");
+        reviewAlreadyDoneLabel.setStyle("-fx-font-size:12px; -fx-text-fill:#1565C0;"
+                + "-fx-background-color:#E3F2FD; -fx-background-radius:8;"
+                + "-fx-padding:10 14; -fx-border-color:#BBDEFB;"
+                + "-fx-border-width:1; -fx-border-radius:8;");
+        reviewAlreadyDoneLabel.setVisible(true); reviewAlreadyDoneLabel.setManaged(true);
+
+        // Add a delete button dynamically if not already present
+        if (reviewInputBox != null) {
+            // Remove any existing delete button first
+            reviewInputBox.getChildren().removeIf(node ->
+                    node instanceof Button && "deleteReviewBtn".equals(node.getId()));
+
+            Button deleteBtn = new Button("🗑  Supprimer mon avis");
+            deleteBtn.setId("deleteReviewBtn");
+            deleteBtn.setMaxWidth(Double.MAX_VALUE);
+            deleteBtn.setStyle("-fx-background-color:#FFF0F0; -fx-text-fill:#E53935; -fx-font-size:12px;"
+                    + "-fx-font-weight:600; -fx-padding:9 0; -fx-background-radius:8; -fx-cursor:hand;"
+                    + "-fx-border-color:#FFCDD2; -fx-border-width:1; -fx-border-radius:8;");
+            deleteBtn.setOnAction(e -> handleDeleteReview());
+            reviewInputBox.getChildren().add(deleteBtn);
         }
     }
 
@@ -357,21 +416,68 @@ public class PastEventsController implements Initializable {
         }
         try {
             String comment = reviewCommentField != null ? reviewCommentField.getText().trim() : "";
-            EventReview review = new EventReview(selectedEvent.getId(), candidateId, currentStarRating, comment);
-            reviewService.add(review);
 
-            reviewInputBox.setVisible(false); reviewInputBox.setManaged(false);
-            reviewAlreadyDoneLabel.setVisible(true); reviewAlreadyDoneLabel.setManaged(true);
+            if (existingReview != null) {
+                // Update existing review via SQL directly through ReviewService
+                updateExistingReview(existingReview.getId(), currentStarRating, comment);
+            } else {
+                // Create new review
+                EventReview review = new EventReview(selectedEvent.getId(), candidateId, currentStarRating, comment);
+                reviewService.add(review);
+            }
 
-            // Refresh reviews summary and event card rating badge
+            // Refresh
+            existingReview = null;
+            resetReviewPanel();
+            updateReviewPanel(selectedEvent);
             loadReviewsSummary(selectedEvent.getId());
-            renderList(allPastEvents); // refresh cards to show updated avg
+            renderList(allPastEvents);
         } catch (SQLException e) {
             if (reviewErrorLabel != null) {
                 reviewErrorLabel.setText("Erreur : " + e.getMessage());
                 reviewErrorLabel.setVisible(true); reviewErrorLabel.setManaged(true);
             }
         }
+    }
+
+    private void updateExistingReview(long reviewId, int rating, String comment) throws SQLException {
+        String sql = "UPDATE event_review SET rating=?, comment=?, created_at=? WHERE id=?";
+        try (java.sql.PreparedStatement ps = Utils.MyDatabase.getInstance().getConnection().prepareStatement(sql)) {
+            ps.setInt(1, rating);
+            ps.setString(2, comment);
+            ps.setTimestamp(3, java.sql.Timestamp.valueOf(java.time.LocalDateTime.now()));
+            ps.setLong(4, reviewId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void handleDeleteReview() {
+        if (selectedEvent == null || existingReview == null) return;
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Supprimer l'avis");
+        confirm.setHeaderText(null);
+        confirm.setContentText("Voulez-vous vraiment supprimer votre avis ?");
+        confirm.showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                try {
+                    String sql = "DELETE FROM event_review WHERE id=?";
+                    try (java.sql.PreparedStatement ps = Utils.MyDatabase.getInstance().getConnection().prepareStatement(sql)) {
+                        ps.setLong(1, existingReview.getId());
+                        ps.executeUpdate();
+                    }
+                    existingReview = null;
+                    resetReviewPanel();
+                    updateReviewPanel(selectedEvent);
+                    loadReviewsSummary(selectedEvent.getId());
+                    renderList(allPastEvents);
+                } catch (SQLException e) {
+                    if (reviewErrorLabel != null) {
+                        reviewErrorLabel.setText("Erreur suppression : " + e.getMessage());
+                        reviewErrorLabel.setVisible(true); reviewErrorLabel.setManaged(true);
+                    }
+                }
+            }
+        });
     }
 
     // ── Search / Filter ──────────────────────────────────────────────────────

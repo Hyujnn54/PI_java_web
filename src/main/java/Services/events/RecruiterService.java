@@ -8,25 +8,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RecruiterService {
-    private Connection connection;
 
-    public RecruiterService() {
-        connection = MyDatabase.getInstance().getConnection();
-    }
+    private Connection conn() { return MyDatabase.getInstance().getConnection(); }
 
-    private void checkConnection() throws SQLException {
-        connection = MyDatabase.getInstance().getConnection();
-        if (connection == null) {
-            throw new SQLException("Pas de connexion à la base de données. Vérifiez db.properties.");
-        }
-    }
+    public RecruiterService() {}
 
     public void add(EventRecruiter recruiter) throws SQLException {
-        checkConnection();
         String sql = "INSERT INTO recruiter (id, user_id, company_name, company_location, company_description) VALUES (?, ?, ?, ?, ?)";
-        PreparedStatement ps = connection.prepareStatement(sql);
+        PreparedStatement ps = conn().prepareStatement(sql);
         ps.setLong(1, recruiter.getId());
-        ps.setLong(2, recruiter.getId()); // Shared PK pattern
+        ps.setLong(2, recruiter.getId());
         ps.setString(3, recruiter.getCompanyName());
         ps.setString(4, recruiter.getCompanyLocation());
         ps.setString(5, recruiter.getCompanyDescription());
@@ -34,9 +25,8 @@ public class RecruiterService {
     }
 
     public EventRecruiter getByUserId(long userId) throws SQLException {
-        checkConnection();
         String sql = "SELECT * FROM recruiter WHERE id = ?";
-        PreparedStatement ps = connection.prepareStatement(sql);
+        PreparedStatement ps = conn().prepareStatement(sql);
         ps.setLong(1, userId);
         ResultSet rs = ps.executeQuery();
         if (rs.next()) {
@@ -51,10 +41,9 @@ public class RecruiterService {
     }
 
     public List<EventRecruiter> getAll() throws SQLException {
-        checkConnection();
         String sql = "SELECT * FROM recruiter";
         List<EventRecruiter> list = new ArrayList<>();
-        Statement stmt = connection.createStatement();
+        Statement stmt = conn().createStatement();
         ResultSet rs = stmt.executeQuery(sql);
         while (rs.next()) {
             EventRecruiter r = new EventRecruiter();
