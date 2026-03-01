@@ -36,6 +36,7 @@ public class AdminDashboardController {
 
     // ✅ CHANGED: filter by String type (no Role enum)
     @FXML private ComboBox<String> roleFilter;
+    @FXML private Button btnAddUser;
 
     @FXML private TableView<UserRow> userTable;
     @FXML private TableColumn<UserRow, String> colName;
@@ -48,6 +49,8 @@ public class AdminDashboardController {
     @FXML private Button btnDelete;
 
     private final ObservableList<UserRow> rows = FXCollections.observableArrayList();
+    private boolean bigAdmin = false;
+
 
     private Connection cnx() {
         return MyDatabase.getInstance().getConnection();
@@ -62,6 +65,7 @@ public class AdminDashboardController {
         private final StringProperty type = new SimpleStringProperty(); // ADMIN / RECRUITER / CANDIDATE / USER
         private final StringProperty phone = new SimpleStringProperty();
         private final BooleanProperty active = new SimpleBooleanProperty();
+
 
         public UserRow(long id, String firstName, String lastName, String email, String type, String phone, boolean active) {
             this.id.set(id);
@@ -106,6 +110,14 @@ public class AdminDashboardController {
         roleFilter.setValue("ALL");
 
         refreshAll();
+
+        if (utils.Session.getCurrentUser() instanceof Models.Admin admin) {
+
+            String area = admin.getAssignedArea();
+
+            bigAdmin = area != null && area.trim().equalsIgnoreCase("SUPER ADMIN");
+            applyPermissions();
+        }
     }
 
     // ===== UI handlers =====
@@ -150,6 +162,11 @@ public class AdminDashboardController {
     // ===== Add Admin user (since your UI forces ADMIN) =====
     @FXML
     public void handleAddUser(ActionEvent e) {
+        if (!bigAdmin) {
+            new Alert(Alert.AlertType.WARNING,
+                    "Access denied. Only SUPER ADMIN can add other admins.")
+                    .showAndWait();
+        }
         UserForm form = showUserDialog("Add Admin", null);
         if (form == null) return;
 
@@ -195,6 +212,12 @@ public class AdminDashboardController {
 
     @FXML
     public void handleEdit(ActionEvent e) {
+        if (!bigAdmin) {
+            new Alert(Alert.AlertType.WARNING,
+                    "Access denied. You cannot modify users.")
+                    .showAndWait();
+            return;
+        }
         UserRow selected = userTable.getSelectionModel().getSelectedItem();
         if (selected == null) return;
 
@@ -248,6 +271,12 @@ public class AdminDashboardController {
 
     @FXML
     public void handleDelete(ActionEvent e) {
+        if (!bigAdmin) {
+            new Alert(Alert.AlertType.WARNING,
+                    "Access denied. You cannot delete users.")
+                    .showAndWait();
+            return;
+        }
         UserRow selected = userTable.getSelectionModel().getSelectedItem();
         if (selected == null) return;
 
@@ -417,8 +446,16 @@ public class AdminDashboardController {
         pfPass.setPromptText(existing == null ? "Password (required)" : "Leave blank to keep password");
         TextField tfPhone = new TextField(existing == null ? "" : existing.getPhone());
 
-        TextField tfAssignedArea = new TextField();
-        tfAssignedArea.setPromptText("Assigned area (optional)");
+        ComboBox<String> cbAdminType = new ComboBox<>(
+                FXCollections.observableArrayList("NORMAL ADMIN", "SUPER ADMIN")
+        );
+        cbAdminType.setValue("NORMAL ADMIN");
+        if (existing != null) {
+            String current = getAdminTypeFromDb(existing.getId()); // fetch assigned_area
+            if (current != null && !current.isBlank()) {
+                cbAdminType.setValue(current.trim().toUpperCase(Locale.ROOT).contains("SUPER") ? "SUPER ADMIN" : "NORMAL ADMIN");
+            }
+        }// default
 
         CheckBox cbActive = new CheckBox("Active");
         cbActive.setSelected(existing == null || existing.isActive());
@@ -432,7 +469,7 @@ public class AdminDashboardController {
         grid.addRow(2, new Label("Email:"), tfEmail);
         grid.addRow(3, new Label("Password:"), pfPass);
         grid.addRow(4, new Label("Phone:"), tfPhone);
-        grid.addRow(5, new Label("Assigned area:"), tfAssignedArea);
+        grid.addRow(5, new Label("Admin type:"), cbAdminType);
         grid.addRow(6, new Label(""), cbActive);
 
         dialog.getDialogPane().setContent(grid);
@@ -461,7 +498,40 @@ public class AdminDashboardController {
         form.password  = pfPass.getText(); // can be blank on update
         form.phone     = tfPhone.getText().trim();
         form.active    = cbActive.isSelected();
-        form.assignedArea = tfAssignedArea.getText().trim();
+        String choice = cbAdminType.getValue();     // "NORMAL ADMIN" or "SUPER ADMIN"
+        form.assignedArea = choice;                 // ✅ store exactly in DB
         return form;
+    }
+
+    private void applyPermissions() {
+
+        if (!bigAdmin) {
+
+            // Hide Add Admin button
+            // ⚠️ change fx:id if different in FXML
+            if (btnAddUser != null) {
+                btnAddUser.setVisible(false);
+                btnAddUser.setManaged(false);
+            }
+
+            // Disable edit & delete
+            btnEdit.setDisable(true);
+            btnDelete.setDisable(true);
+
+            statusLabel.setText("Normal Admin mode: limited permissions");
+        }
+    }
+
+    private String getAdminTypeFromDb(long id) {
+        try (PreparedStatement ps = cnx().prepareStatement("SELECT assigned_area FROM admin WHERE id=?")) {
+            ps.setLong(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return rs.getString("assigned_area");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
