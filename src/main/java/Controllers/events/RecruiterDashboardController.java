@@ -890,54 +890,103 @@ public class RecruiterDashboardController implements Initializable {
     }
 
     private String generateLocalEventDescription(String title, String type, String location) {
-        String t = title.toLowerCase();
-        String loc = (location != null && !location.trim().isEmpty()) ? location : null;
-        String locationPhrase = loc != null ? " à " + loc : "";
+        String prompt = "Tu es un recruteur expert en ressources humaines.\n" +
+               "Rédige une description professionnelle et attirante (3 à 5 phrases) pour un événement de recrutement de type : \"" + type + "\"\n" +
+               "Titre de l'événement : \"" + title + "\"\n" +
+               "Lieu de l'événement : \"" + (location != null && !location.trim().isEmpty() ? location : "À définir") + "\"\n\n" +
+               "IMPORTANT :\n" +
+               "- Ne génère QUE la description (sans titre, sans introduction, sans guillemets).\n" +
+               "- Le ton doit être professionnel, accueillant et dynamique.\n" +
+               "- Met en valeur l'intérêt pour les candidats de participer à cet événement.";
+               
+        try {
+            String result = callGeminiAPI(prompt);
+            if (result != null && !result.isBlank()) return result;
+        } catch (Exception e) {
+            System.err.println("Gemini failed for event description: " + e.getMessage());
+        }
+        
+        try {
+            String result = callGroqAPI(prompt);
+            if (result != null && !result.isBlank()) return result;
+        } catch (Exception e) {
+            System.err.println("Groq failed for event description: " + e.getMessage());
+        }
 
-        // Priority 1: Use the event type from the combo box
+        // Fallback to static text if all APIs fail
+        String locPhrase = (location != null && !location.trim().isEmpty()) ? " à " + location : "";
         if ("WEBINAIRE".equals(type)) {
-            return "Rejoignez-nous pour notre webinaire interactif : " + title + ". "
-                 + "Cet événement en ligne sera l'occasion d'échanger avec nos experts, d'explorer de nouvelles thématiques "
-                 + "et de découvrir nos opportunités depuis le confort de votre domicile. "
-                 + "Connectez-vous et participez à des discussions enrichissantes avec des professionnels du secteur.";
+            return "Rejoignez-nous pour notre webinaire interactif : " + title + ". Cet événement en ligne sera l'occasion d'échanger avec nos experts et de découvrir nos opportunités depuis le confort de votre domicile.";
+        } else if ("Job_Faire".equals(type)) {
+            return "Ne manquez pas notre prochain salon de l'emploi : " + title + locPhrase + " ! Venez découvrir notre culture d'entreprise et saisir les meilleures opportunités de carrière.";
+        } else if ("Interview day".equals(type)) {
+            return "Inscrivez-vous à notre journée d'entretiens : " + title + locPhrase + ". Démontrez vos compétences techniques et comportementales, et peut-être décrocherez-vous votre futur poste !";
         }
-        if ("Job_Faire".equals(type)) {
-            return "Ne manquez pas notre prochain salon de l'emploi : " + title
-                 + (loc != null ? ", qui se tiendra" + locationPhrase : "") + " ! "
-                 + "C'est une opportunité unique de rencontrer nos équipes RH en personne, de déposer votre CV "
-                 + "et de discuter des postes actuellement ouverts. Venez découvrir notre culture d'entreprise "
-                 + "et saisir les meilleures opportunités de carrière !";
-        }
-        if ("Interview day".equals(type)) {
-            return "Inscrivez-vous à notre journée d'entretiens : " + title
-                 + (loc != null ? ", qui aura lieu" + locationPhrase : "") + ". "
-                 + "Pendant cet événement, vous aurez la chance de passer des entretiens avec nos managers, "
-                 + "de démontrer vos compétences techniques et comportementales, et peut-être de décrocher votre futur poste ! "
-                 + "Préparez votre CV et venez avec votre meilleure motivation.";
-        }
+        return "Nous avons le plaisir de vous annoncer notre prochain événement : " + title + locPhrase + ". Venez nombreux découvrir nos opportunités.";
+    }
 
-        // Priority 2: Fallback to title-based detection
-        if (t.contains("webinaire") || t.contains("webinar") || t.contains("ligne")) {
-            return "Rejoignez-nous pour notre webinaire interactif dédié à : " + title + ". "
-                 + "Cet événement en ligne sera l'occasion d'échanger avec nos experts et de découvrir nos opportunités.";
+    private String callGeminiAPI(String prompt) throws Exception {
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyA40pYJkW9p7QYQerVUv_rmS4pNFo1T46o";
+        java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+        c.setRequestMethod("POST"); c.setRequestProperty("Content-Type", "application/json");
+        c.setDoOutput(true); c.setConnectTimeout(15000); c.setReadTimeout(60000);
+        String body = "{\"contents\":[{\"parts\":[{\"text\":\"" + prompt.replace("\"", "\\\"").replace("\n", "\\n") + "\"}]}]," +
+                "\"generationConfig\":{\"maxOutputTokens\":800,\"temperature\":0.7}}";
+        c.getOutputStream().write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        if (c.getResponseCode() != 200) throw new Exception("Gemini HTTP " + c.getResponseCode());
+        StringBuilder sb = new StringBuilder();
+        try (java.io.BufferedReader br = new java.io.BufferedReader(
+                new java.io.InputStreamReader(c.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+            String line; while ((line = br.readLine()) != null) sb.append(line);
         }
-        if (t.contains("hackathon") || t.contains("challenge") || t.contains("concours")) {
-            return "Prêt(e) à relever le défi ? Participez à notre : " + title
-                 + (loc != null ? locationPhrase : "") + ". "
-                 + "Venez démontrer votre talent en équipe, résoudre des problèmes complexes et innover avec nous. "
-                 + "Des prix exclusifs et des opportunités d'embauche seront à la clé !";
+        String json = sb.toString();
+        int s = json.indexOf("\"text\":"); if (s < 0) return null;
+        s = json.indexOf("\"", s + 7) + 1; int e = s;
+        for (int i = s; i < json.length(); i++) {
+            char ch = json.charAt(i);
+            if (ch == '\\' && i + 1 < json.length()) { i++; continue; }
+            if (ch == '"') { e = i; break; }
         }
-        if (t.contains("atelier") || t.contains("workshop") || t.contains("formation")) {
-            return "Développez vos compétences lors de notre : " + title
-                 + (loc != null ? locationPhrase : "") + ". "
-                 + "Nos experts animeront des sessions pratiques pour vous former sur les dernières technologies "
-                 + "et méthodes de travail. Une excellente occasion d'apprendre et de réseauter.";
-        }
+        return e > s ? json.substring(s, e).replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\").trim() : null;
+    }
 
-        return "Nous avons le plaisir de vous annoncer notre prochain événement : " + title
-             + (loc != null ? locationPhrase : "") + ". "
-             + "Ce sera une excellente occasion de rencontrer nos équipes, d'en apprendre davantage sur notre secteur "
-             + "et de découvrir les différentes opportunités que nous offrons. Venez nombreux !";
+    private String callGroqAPI(String prompt) throws Exception {
+        String[] MODELS = {"llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"};
+        String GROQ_KEY = "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";
+        String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+        for (String model : MODELS) {
+            try {
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(GROQ_URL).openConnection();
+                c.setRequestMethod("POST");
+                c.setRequestProperty("Content-Type", "application/json");
+                c.setRequestProperty("Authorization", "Bearer " + GROQ_KEY);
+                c.setDoOutput(true); c.setConnectTimeout(15000); c.setReadTimeout(30000);
+                String body = "{\"model\":\"" + model + "\",\"messages\":[" +
+                        "{\"role\":\"system\",\"content\":\"You are an expert HR recruiter.\"}," +
+                        "{\"role\":\"user\",\"content\":\"" + prompt.replace("\"", "\\\"").replace("\n", "\\n") + "\"}]," +
+                        "\"max_tokens\":600,\"temperature\":0.7}";
+                c.getOutputStream().write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                if (c.getResponseCode() != 200) continue;
+                StringBuilder sb = new StringBuilder();
+                try (java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(c.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                    String line; while ((line = br.readLine()) != null) sb.append(line);
+                }
+                String json = sb.toString();
+                int s = json.indexOf("\"content\":"); if (s < 0) continue;
+                s = json.indexOf("\"", s + 10) + 1;
+                int e = json.indexOf("\"", s);
+                while (e > 0 && json.charAt(e - 1) == '\\') e = json.indexOf("\"", e + 1);
+                if (s > 0 && e > s) {
+                    String content = json.substring(s, e)
+                            .replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\").trim();
+                    if (!content.isBlank()) return content;
+                }
+            } catch (Exception ex) {
+                System.err.println("Groq model " + model + " failed: " + ex.getMessage());
+            }
+        }
+        throw new Exception("All Groq models failed");
     }
 
     private void showAlert(String title, String content) {
