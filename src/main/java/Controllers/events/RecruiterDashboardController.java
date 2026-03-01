@@ -1,6 +1,7 @@
 package Controllers.events;
 
 import Models.events.*;
+import Services.EmailService;
 import Services.events.*;
 import Utils.SchemaFixer;
 import javafx.collections.FXCollections;
@@ -983,9 +984,15 @@ public class RecruiterDashboardController implements Initializable {
                 String eventLocation = evToUse != null && evToUse.getLocation() != null ? evToUse.getLocation() : "";
                 String eventType = evToUse != null && evToUse.getEventType() != null ? evToUse.getEventType() : "";
                 String meetLink = evToUse != null && evToUse.getMeetLink() != null ? evToUse.getMeetLink() : "";
-                new Thread(() -> Services.EmailService.sendEventStatusNotification(
-                        email, name, eventTitle, eventDate, eventLocation, newStatus.name(), null, eventType, meetLink),
-                        "event-status-email").start();
+                new Thread(() -> {
+                    try {
+                        EmailService.sendEventStatusNotification(
+                            email, name, eventTitle, eventDate, eventLocation,
+                            newStatus.name(), null, eventType, meetLink);
+                    } catch (Exception ex) {
+                        System.err.println("[RecruiterDashboard] Status email error: " + ex.getMessage());
+                    }
+                }, "event-status-email").start();
             }
 
             if (selectedEvent != null) refreshAttendees(selectedEvent.getId());
@@ -1042,12 +1049,20 @@ public class RecruiterDashboardController implements Initializable {
         String eventType = selectedEvent != null && selectedEvent.getEventType() != null
                 ? selectedEvent.getEventType() : "";
         new Thread(() -> {
-            boolean sent = Services.EmailService.sendEventRegistrationConfirmation(
-                    selected.getEmail(), name, eventTitle, eventDate, eventLocation, eventType);
+            boolean sent;
+            try {
+                EmailService.sendEventRegistrationConfirmation(
+                        selected.getEmail(), name, eventTitle, eventDate, eventLocation, eventType);
+                sent = true;
+            } catch (Exception ex) {
+                sent = false;
+                System.err.println("[RecruiterDashboard] Email error: " + ex.getMessage());
+            }
+            final boolean finalSent = sent;
             javafx.application.Platform.runLater(() ->
-                showAlert(sent ? "Email envoyé" : "Erreur",
-                          sent ? "Email de confirmation envoyé à " + selected.getEmail()
-                               : "Échec de l'envoi de l'email."));
+                showAlert(finalSent ? "Email envoyé" : "Erreur",
+                          finalSent ? "Email de confirmation envoyé à " + selected.getEmail()
+                                    : "Échec de l'envoi de l'email."));
         }, "event-manual-email").start();
     }
 

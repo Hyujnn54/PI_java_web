@@ -1,228 +1,86 @@
 package Utils;
 
-import java.sql.*;
+import Models.Admin;
+import Models.Candidate;
+import Models.Recruiter;
+import Models.User;
 
 /**
- * UserContext - manages the connected user's session.
- * Uses a singleton instance internally but exposes static methods for convenience.
+ * UserContext — bridges to Utils.Session for backward compatibility.
+ * All role/id lookups go through Session.getCurrentUser().
  */
 public class UserContext {
 
-    private static UserContext instance;
+    public enum Role { CANDIDATE, RECRUITER, ADMIN }
 
-    private Long userId;
-    private String userName;
-    private String userEmail;
-    private Role currentRole;
+    private UserContext() {}
 
-    // Cached DB IDs
-    private Long cachedRecruiterId = null;
-    private Long cachedCandidateId = null;
-    private Long cachedAdminId     = null;
-
-    public enum Role {
-        CANDIDATE("Candidat"),
-        RECRUITER("Recruteur"),
-        ADMIN("Administrateur");
-
-        private final String label;
-        Role(String label) { this.label = label; }
-        public String getLabel() { return label; }
+    public static Role getRole() {
+        User u = Session.getCurrentUser();
+        if (u instanceof Admin)     return Role.ADMIN;
+        if (u instanceof Recruiter) return Role.RECRUITER;
+        if (u instanceof Candidate) return Role.CANDIDATE;
+        return Role.CANDIDATE;
     }
 
-    private UserContext() {
-        this.currentRole = Role.RECRUITER;
-        this.userName    = "Utilisateur";
-        this.userEmail   = "";
-        this.userId      = null;
+    public static String getRoleLabel() {
+        Role r = getRole();
+        return switch (r) {
+            case ADMIN     -> "Admin";
+            case RECRUITER -> "Recruteur";
+            case CANDIDATE -> "Candidat";
+        };
     }
 
-    public static UserContext getInstance() {
-        if (instance == null) instance = new UserContext();
-        return instance;
+    public static Long getUserId() {
+        User u = Session.getCurrentUser();
+        return u == null ? null : u.getId();
     }
 
-    // -------------------------------------------------------------------------
-    // Login / Logout
-    // -------------------------------------------------------------------------
-
-    public static void login(Long userId, String userName, String email, Role role) {
-        UserContext ctx = getInstance();
-        ctx.userId      = userId;
-        ctx.userName    = userName;
-        ctx.userEmail   = email;
-        ctx.currentRole = role;
-        ctx.cachedRecruiterId = null;
-        ctx.cachedCandidateId = null;
-        ctx.cachedAdminId     = null;
+    public static String getUserName() {
+        User u = Session.getCurrentUser();
+        if (u == null) return null;
+        String name = (u.getFirstName() != null ? u.getFirstName() : "") +
+                      (u.getLastName()  != null ? " " + u.getLastName() : "");
+        return name.isBlank() ? u.getEmail() : name.trim();
     }
 
-    public static void logout() {
-        UserContext ctx = getInstance();
-        ctx.userId      = null;
-        ctx.userName    = null;
-        ctx.userEmail   = null;
-        ctx.currentRole = null;
+    public static String getUserEmail() {
+        User u = Session.getCurrentUser();
+        return u == null ? null : u.getEmail();
+    }
+
+    public static void setUserName(String name) {
+        // No-op — name lives in Session/User object
     }
 
     public static boolean isLoggedIn() {
-        return getInstance().userId != null && getInstance().currentRole != null;
+        return Session.isLoggedIn();
     }
 
-    // -------------------------------------------------------------------------
-    // Role helpers
-    // -------------------------------------------------------------------------
-
-    public static Role getRole()              { return getInstance().currentRole; }
-    public static String getRoleLabel()       { return getInstance().currentRole != null ? getInstance().currentRole.getLabel() : ""; }
-    public static boolean isAdmin()           { return getInstance().currentRole == Role.ADMIN; }
-    public static boolean isRecruiter()       { return getInstance().currentRole == Role.RECRUITER; }
-    public static boolean isCandidate()       { return getInstance().currentRole == Role.CANDIDATE; }
-    public static boolean hasRole(Role role)  { return getInstance().currentRole == role; }
-
-    public static void setCurrentRole(Role role) {
-        getInstance().currentRole = role;
-        getInstance().cachedRecruiterId = null;
-        getInstance().cachedCandidateId = null;
-        getInstance().cachedAdminId     = null;
-    }
-
-    public static void toggleRole() {
-        UserContext ctx = getInstance();
-        Role newRole = switch (ctx.currentRole) {
-            case RECRUITER -> Role.CANDIDATE;
-            case CANDIDATE -> Role.ADMIN;
-            case ADMIN     -> Role.RECRUITER;
-        };
-        ctx.currentRole = newRole;
-        ctx.cachedRecruiterId = null;
-        ctx.cachedCandidateId = null;
-        ctx.cachedAdminId     = null;
-
-        // Switch to a real DB user matching the new role
-        switchToRoleUser(ctx, newRole);
-    }
-
-    /**
-     * Looks up the first user for the given role in the DB and updates userId/userName/userEmail.
-     * Falls back to role-specific tables if no match found in users table.
-     */
-    private static void switchToRoleUser(UserContext ctx, Role newRole) {
-        String roleStr = newRole.name(); // "RECRUITER", "CANDIDATE", "ADMIN"
-        Long foundId = queryFirstId(
-            "SELECT id FROM users WHERE UPPER(role) = '" + roleStr + "' LIMIT 1", null);
-        if (foundId != null) {
-            ctx.userId = foundId;
-            ctx.userName = queryFirstString(
-                "SELECT CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')) FROM users WHERE id = " + foundId,
-                newRole.getLabel());
-            ctx.userEmail = queryFirstString(
-                "SELECT email FROM users WHERE id = " + foundId, "");
-        } else {
-            // Fallback: try role-specific table
-            String table = switch (newRole) {
-                case RECRUITER -> "recruiter";
-                case CANDIDATE -> "candidate";
-                case ADMIN     -> "admin";
-            };
-            Long tableId = queryFirstId("SELECT id FROM " + table + " LIMIT 1", null);
-            if (tableId != null) {
-                ctx.userId = tableId;
-            }
-        }
-    }
-
-    private static String queryFirstString(String sql, String fallback) {
-        try (Connection conn = MyDatabase.getInstance().getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs   = stmt.executeQuery(sql)) {
-            if (rs.next()) {
-                String val = rs.getString(1);
-                return (val != null && !val.isBlank()) ? val.trim() : fallback;
-            }
-        } catch (SQLException e) {
-            System.err.println("UserContext DB error: " + e.getMessage());
-        }
-        return fallback;
-    }
-
-    // -------------------------------------------------------------------------
-    // User info
-    // -------------------------------------------------------------------------
-
-    public static Long getUserId()              { return getInstance().userId; }
-    public static void setUserId(Long id)       { getInstance().userId = id; }
-    public static String getUserName()          { return getInstance().userName; }
-    public static void setUserName(String n)    { getInstance().userName = n; }
-    public static String getUserEmail()         { return getInstance().userEmail; }
-    public static void setUserEmail(String e)   { getInstance().userEmail = e; }
-
-    // -------------------------------------------------------------------------
-    // DB-backed ID resolvers
-    // -------------------------------------------------------------------------
+    public static boolean isAdmin()     { return getRole() == Role.ADMIN; }
+    public static boolean isRecruiter() { return getRole() == Role.RECRUITER; }
+    public static boolean isCandidate() { return getRole() == Role.CANDIDATE; }
 
     public static Long getRecruiterId() {
-        UserContext ctx = getInstance();
-        if (ctx.currentRole == Role.RECRUITER && ctx.userId != null) {
-            // recruiter.id == users.id (same PK, no separate user_id column)
-            Long rid = queryFirstId("SELECT id FROM recruiter WHERE id = " + ctx.userId, null);
-            if (rid != null) return rid;
-            // userId is valid but no recruiter row yet — return userId directly
-            return ctx.userId;
-        }
-        if (ctx.cachedRecruiterId == null) {
-            ctx.cachedRecruiterId = queryFirstId(
-                "SELECT id FROM users WHERE UPPER(role) = 'RECRUITER' LIMIT 1", null);
-            if (ctx.cachedRecruiterId == null)
-                ctx.cachedRecruiterId = queryFirstId("SELECT id FROM recruiter LIMIT 1", 1L);
-        }
-        return ctx.cachedRecruiterId;
+        User u = Session.getCurrentUser();
+        return (u instanceof Recruiter) ? u.getId() : null;
     }
 
     public static Long getCandidateId() {
-        UserContext ctx = getInstance();
-        if (ctx.currentRole == Role.CANDIDATE && ctx.userId != null) {
-            // candidate.id == users.id (same PK, no separate user_id column)
-            Long cid = queryFirstId("SELECT id FROM candidate WHERE id = " + ctx.userId, null);
-            if (cid != null) return cid;
-            // userId is valid but no candidate row yet — return userId directly
-            return ctx.userId;
-        }
-        if (ctx.cachedCandidateId == null) {
-            ctx.cachedCandidateId = queryFirstId(
-                "SELECT id FROM users WHERE UPPER(role) = 'CANDIDATE' LIMIT 1", null);
-            if (ctx.cachedCandidateId == null)
-                ctx.cachedCandidateId = queryFirstId("SELECT id FROM candidate LIMIT 1", 1L);
-        }
-        return ctx.cachedCandidateId;
+        User u = Session.getCurrentUser();
+        return (u instanceof Candidate) ? u.getId() : null;
     }
 
     public static Long getAdminId() {
-        UserContext ctx = getInstance();
-        if (ctx.currentRole == Role.ADMIN && ctx.userId != null) return ctx.userId;
-        if (ctx.cachedAdminId == null) {
-            ctx.cachedAdminId = queryFirstId("SELECT id FROM users WHERE UPPER(role) = 'ADMIN' LIMIT 1", null);
-            if (ctx.cachedAdminId == null) {
-                ctx.cachedAdminId = queryFirstId("SELECT id FROM admin LIMIT 1", 1L);
-            }
-        }
-        return ctx.cachedAdminId;
+        User u = Session.getCurrentUser();
+        return (u instanceof Admin) ? u.getId() : null;
     }
 
-    private static Long queryFirstId(String sql, Long fallback) {
-        try (Connection conn = MyDatabase.getInstance().getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs   = stmt.executeQuery(sql)) {
-            if (rs.next()) return rs.getLong("id");
-        } catch (SQLException e) {
-            System.err.println("UserContext DB error: " + e.getMessage());
-        }
-        return fallback;
-    }
-
-    @Override
-    public String toString() {
-        return "UserContext{userId=" + userId + ", userName='" + userName
-                + "', role=" + currentRole + '}';
-    }
+    /** Kept for FXML/legacy compatibility — no-op */
+    public static void login(Long userId, String userName, String email, Role role) {}
+    public static void logout() { Session.clear(); }
+    public static void toggleRole() {}
+    public static void setCurrentRole(Role role) {}
+    public static boolean hasRole(Role role) { return getRole() == role; }
 }

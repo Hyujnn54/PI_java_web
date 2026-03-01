@@ -1,0 +1,33 @@
+package Utils;
+
+import Models.User;
+
+public class Session {
+    private static User currentUser;
+
+    private Session() {}
+
+    public static void start(User user) {
+        currentUser = user;
+    }
+
+    public static void clear() {
+        currentUser = null;
+    }
+
+    public static boolean isLoggedIn() {
+        return currentUser != null;
+    }
+
+    public static User getCurrentUser() {
+        return currentUser;
+    }
+
+    public static Long getUserId() {
+        return currentUser == null ? null : currentUser.getId();
+    }
+
+    public static String getEmail() {
+        return currentUser == null ? null : currentUser.getEmail();
+    }
+}

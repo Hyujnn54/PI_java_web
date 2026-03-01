@@ -1,0 +1,62 @@
+package Utils;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.regex.Pattern;
+
+public class InputValidator {
+
+    private static final Pattern NAME = Pattern.compile("^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\\s'\\-]{1,49}$");
+    private static final Pattern PHONE_8_DIGITS = Pattern.compile("^\\d{8}$");
+    private static final Pattern EMAIL = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    // 8+ chars, 1 maj, 1 min, 1 chiffre, 1 special
+    private static final Pattern STRONG_PASSWORD =
+            Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$");
+
+    private InputValidator() {}
+
+    public static String validateName(String value, String fieldName) {
+        value = value == null ? "" : value.trim();
+        if (value.isEmpty()) return fieldName + " est obligatoire.";
+        if (!NAME.matcher(value).matches()) return fieldName + " invalide (lettres seulement, 2-50).";
+        return null;
+    }
+
+    public static String validateEmail(String email) {
+        email = email == null ? "" : email.trim();
+        if (email.isEmpty()) return "Email est obligatoire.";
+        if (!EMAIL.matcher(email).matches()) return "Email invalide.";
+        return null;
+    }
+
+    public static String validatePhone8(String phone) {
+        phone = phone == null ? "" : phone.trim();
+        if (phone.isEmpty()) return null; // si tu veux phone obligatoire => return "Phone obligatoire"
+        if (!PHONE_8_DIGITS.matcher(phone).matches()) return "Téléphone doit contenir exactement 8 chiffres.";
+        return null;
+    }
+
+    public static String validateStrongPassword(String pass) {
+        pass = pass == null ? "" : pass;
+        if (pass.isEmpty()) return "Mot de passe est obligatoire.";
+        if (!STRONG_PASSWORD.matcher(pass).matches())
+            return "Mot de passe faible (min 8, maj+min+chiffre+symbole).";
+        return null;
+    }
+
+    public static String validateCvPath(String path) {
+        path = path == null ? "" : path.trim();
+        if (path.isEmpty()) return null; // si CV obligatoire => message obligatoire
+        String low = path.toLowerCase();
+        if (!(low.endsWith(".pdf") || low.endsWith(".doc") || low.endsWith(".docx")))
+            return "CV doit être un fichier PDF/DOC/DOCX.";
+
+        // Optionnel: vérifier que le fichier existe sur PC
+        try {
+            if (!Files.exists(Path.of(path))) return "Chemin CV introuvable.";
+        } catch (Exception e) {
+            return "Chemin CV invalide.";
+        }
+        return null;
+    }
+}

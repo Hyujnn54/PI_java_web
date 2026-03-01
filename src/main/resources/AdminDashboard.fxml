@@ -106,8 +106,9 @@
                     <Label fx:id="lblRecordCount" text="Records: 0" style="-fx-text-fill: #6c757d; -fx-font-size: 11px;"/>
                 </VBox>
 
-                <Button fx:id="btnAddUser" text="+ Add User" styleClass="btn-primary" onAction="#handleAddUser"/>
-            </HBox>
+                <Button fx:id="btnAddUser"
+                        text="Add Admin"
+                        onAction="#handleAddUser" />            </HBox>
 
             <!-- Search and Filter Bar -->
             <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">

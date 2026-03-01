@@ -15,7 +15,7 @@ import java.nio.file.Files;
 import Services.LuxandFaceService;
 import Services.UserService;
 
-import utils.CameraUtil;
+import Utils.CameraUtil;
 
 public class LoginController {
 
@@ -48,7 +48,7 @@ public class LoginController {
                         ex.printStackTrace();
                     }
                 }).start();
-                utils.Session.start(logged);
+                Utils.Session.start(logged);
 
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));
                 Stage stage = (Stage) txtEmail.getScene().getWindow();
@@ -122,7 +122,7 @@ public class LoginController {
             }
 
             // ✅ login success
-            utils.Session.start(user);
+            Utils.Session.start(user);
 
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));
             Stage stage = (Stage) txtEmail.getScene().getWindow();
@@ -138,7 +138,7 @@ public class LoginController {
     private void handleLoginWithCamera(ActionEvent event) {
         try {
             // 1) Capture multiple shots
-            java.util.List<byte[]> shots = utils.CameraUtil.captureMultipleJpegsWithPreview(
+            java.util.List<byte[]> shots = Utils.CameraUtil.captureMultipleJpegsWithPreview(
                     txtEmail.getScene().getWindow(),
                     5,      // capture 5 shots (more stable)
                     250     // 250ms between shots
@@ -210,7 +210,7 @@ public class LoginController {
                     System.out.println("LIVENESS ACCEPTED score=" + bestLive.score);
 
                     // 5) Crop face using rectangle
-                    byte[] faceOnly = utils.CameraUtil.cropToFace(
+                    byte[] faceOnly = Utils.CameraUtil.cropToFace(
                             bestBytes,
                             bestLive.left,
                             bestLive.top,
@@ -256,7 +256,7 @@ public class LoginController {
                     // 8) SUCCESS LOGIN
                     javafx.application.Platform.runLater(() -> {
                         try {
-                            utils.Session.start(user);
+                            Utils.Session.start(user);
 
                             FXMLLoader loader = new FXMLLoader(
                                     getClass().getResource("/MainShell.fxml")

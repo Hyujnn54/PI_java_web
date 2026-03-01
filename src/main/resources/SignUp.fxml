@@ -38,10 +38,17 @@
                     VBox.vgrow="ALWAYS">
             <VBox spacing="18" style="-fx-padding: 10 5 10 0;">
 
-                <!-- Full Name -->
+                <!-- First Name -->
                 <VBox spacing="8">
-                    <Label text="Full Name *" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                    <TextField fx:id="txtFullName" promptText="Enter your full name"
+                    <Label text="First Name *" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
+                    <TextField fx:id="txtFirstName" promptText="Enter your first name"
+                               style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
+                </VBox>
+
+                <!-- Last Name -->
+                <VBox spacing="8">
+                    <Label text="Last Name *" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
+                    <TextField fx:id="txtLastName" promptText="Enter your last name"
                                style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
                 </VBox>
 
@@ -87,7 +94,13 @@
                 <VBox fx:id="recruiterBlock" spacing="10" visible="false" managed="false">
                     <Label text="Recruiter Information"/>
                     <TextField fx:id="txtCompanyName" promptText="Company Name"/>
-                    <TextField fx:id="txtCompanyLocation" promptText="Company Location"/>
+                    <Label text="Company location:"/>
+                    <TextField fx:id="txtCompanyLocation" promptText="Type a city/address..."/>
+
+                    <ListView fx:id="lvLocationSuggestions" visible="false" managed="false" maxHeight="120"/>
+
+                    <Button text="📍 Pick" onAction="#handlePickRecruiterLocation"
+                            style="-fx-background-color:#2d8cff; -fx-text-fill:white; -fx-font-weight:bold;"/>
                 </VBox>
 
                 <VBox fx:id="candidateBlock" spacing="10" visible="false" managed="false">

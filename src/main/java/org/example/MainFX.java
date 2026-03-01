@@ -2,7 +2,6 @@ package org.example;
 
 import Services.interview.InterviewReminderScheduler;
 import Utils.SceneManager;
-import Utils.UserContext;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -26,18 +25,12 @@ public class MainFX extends Application {
         primaryStage = stage;
 
         try {
-            // Initialize default user context (Recruiter with ID 1)
-            UserContext.login(1L, "Recruteur Démo", "recruteur@talentbridge.com", UserContext.Role.RECRUITER);
-            System.out.println("Contexte utilisateur initialisé : " + UserContext.getRoleLabel() + " (ID: " + UserContext.getUserId() + ")");
-
-            System.out.println("Loading MainShell.fxml...");
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/MainShell.fxml"));
+            System.out.println("Loading Login.fxml...");
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/Login.fxml"));
             Parent root = fxmlLoader.load();
-            System.out.println("MainShell page loaded successfully");
 
             Scene scene = new Scene(root, WINDOWED_WIDTH, WINDOWED_HEIGHT);
 
-            // Add global CSS styling with error handling
             try {
                 String cssPath = getClass().getResource("/styles.css").toExternalForm();
                 scene.getStylesheets().add(cssPath);
@@ -46,15 +39,13 @@ public class MainFX extends Application {
                 System.err.println("Warning: Could not load styles.css: " + e.getMessage());
             }
 
-            // Initialize centralized navigation
             SceneManager.init(stage, scene);
 
-            stage.setTitle("Talent Bridge - Application Management");
+            stage.setTitle("Talent Bridge");
             stage.setScene(scene);
             stage.setResizable(false);
             stage.centerOnScreen();
 
-            // Start background reminder scheduler (email + SMS, checks every 5 min)
             InterviewReminderScheduler.start();
             stage.setOnCloseRequest(e -> InterviewReminderScheduler.stop());
 

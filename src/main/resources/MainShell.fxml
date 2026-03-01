@@ -4,151 +4,84 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.image.*?>
-<?import javafx.scene.shape.*?>
 
 <BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="Controllers.MainShellController"
-            fx:id="rootPane"
-            style="-fx-background-color: #EBF0F8;"
-            stylesheets="@styles.css, @dark-theme.css">
+            stylesheets="@styles.css">
 
-    <!-- ═══════════════════════════════ TOP BAR ═══════════════════════════════ -->
+    <!-- TOP BAR -->
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="16" styleClass="top-bar">
-
-            <!-- Logo + Brand -->
-            <HBox alignment="CENTER_LEFT" spacing="10">
+        <HBox alignment="CENTER_LEFT" spacing="20" styleClass="top-bar">
+            <HBox alignment="CENTER_LEFT" spacing="12">
                 <ImageView fitHeight="36" fitWidth="36" preserveRatio="true">
                     <image><Image url="@images/logo.jpg"/></image>
                 </ImageView>
-                <VBox spacing="0" alignment="CENTER_LEFT">
-                    <Label text="Talent Bridge" styleClass="logo-text"/>
-                    <Label text="Plateforme RH" style="-fx-font-size:10px; -fx-text-fill:#A0B0C0; -fx-font-weight:500;"/>
-                </VBox>
+                <Label text="Talent Bridge" styleClass="logo-text"/>
             </HBox>
-
             <Region HBox.hgrow="ALWAYS"/>
-
-            <!-- Right controls -->
             <HBox alignment="CENTER_RIGHT" spacing="14">
-                <Button fx:id="btnThemeToggle" text="🌙"
-                        style="-fx-background-color:#F0F4FA; -fx-font-size:16px; -fx-cursor:hand;
-                               -fx-background-radius:22; -fx-min-width:40; -fx-min-height:40;
-                               -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:22;"
-                        onAction="#handleThemeToggle"/>
-
-                <Button fx:id="btnNotifications" text="🔔"
-                        style="-fx-background-color:#F0F4FA; -fx-font-size:16px; -fx-cursor:hand;
-                               -fx-background-radius:22; -fx-min-width:40; -fx-min-height:40;
-                               -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:22;"
-                        onAction="#handleNotifications"/>
-
-                <Separator orientation="VERTICAL"
-                           style="-fx-background-color:#E4EBF5; -fx-pref-width:1; -fx-pref-height:30;"/>
-
-                <VBox alignment="CENTER_RIGHT" spacing="1">
-                    <Label fx:id="lblUserName" text="Utilisateur" styleClass="user-name"/>
-                    <Label fx:id="lblUserRole" text="Recruteur"   styleClass="user-role"/>
+                <VBox alignment="CENTER_RIGHT" spacing="2">
+                    <Label fx:id="lblUserName" text="" styleClass="user-name"/>
+                    <Label fx:id="lblUserRole" text="" styleClass="user-role"/>
                 </VBox>
-                <Button fx:id="btnUserProfile"  text="👤" styleClass="profile-button"    onAction="#handleUserProfile"/>
-                <Button fx:id="btnDisconnect"   text="Deconnexion" styleClass="disconnect-button" onAction="#handleDisconnect"/>
+                <Button fx:id="btnUserProfile" text="👤 Profile"
+                        styleClass="profile-button" onAction="#handleUserProfile"/>
+                <Button fx:id="btnDisconnect" text="⏻ Disconnect"
+                        styleClass="disconnect-button" onAction="#handleDisconnect"/>
             </HBox>
         </HBox>
     </top>
 
-    <!-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ -->
+    <!-- LEFT SIDEBAR -->
     <left>
-        <VBox prefWidth="255" minWidth="255" maxWidth="255" styleClass="sidebar" style="-fx-padding:0;">
-
-            <!-- ── Navigation section ── -->
-            <VBox spacing="4" style="-fx-padding: 24 12 12 12;">
+        <VBox prefWidth="220" spacing="0" styleClass="sidebar">
+            <VBox spacing="2" style="-fx-padding: 20 10 10 10;">
                 <Label text="NAVIGATION" styleClass="sidebar-section-label"/>
 
                 <Button fx:id="btnApplications" onAction="#handleApplicationsNav"
-                        text="📋   Candidatures"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity">
+                        text="📋  Applications"
+                        styleClass="sidebar-button" maxWidth="Infinity">
                     <VBox.margin><Insets top="6"/></VBox.margin>
                 </Button>
 
-                <Button fx:id="btnInterviews" onAction="#handleInterviewsNav"
-                        text="📅   Entretiens"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity"/>
-
                 <Button fx:id="btnJobOffers" onAction="#handleJobOffersNav"
-                        text="💼   Offres d'emploi"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity"/>
+                        text="💼  Job Offers"
+                        styleClass="sidebar-button" maxWidth="Infinity"/>
+
+                <Button fx:id="btnInterviews" onAction="#handleInterviewsNav"
+                        text="📅  Interviews"
+                        styleClass="sidebar-button" maxWidth="Infinity"/>
 
                 <Button fx:id="btnEvents" onAction="#handleEventsNav"
-                        text="🎪   Événements"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity"/>
+                        text="🎯  Events"
+                        styleClass="sidebar-button" maxWidth="Infinity"
+                        visible="true" managed="true"/>
 
                 <Button fx:id="btnPastEvents" onAction="#handlePastEventsNav"
-                        text="📋   Mes événements passés"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity"
+                        text="📆  Past Events"
+                        styleClass="sidebar-button" maxWidth="Infinity"
                         visible="false" managed="false"/>
 
-                <Button fx:id="btnCalendar" onAction="#handleCalendarNav"
-                        text="🗓   Calendrier"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity"/>
-
-                <Button fx:id="btnStatistics" onAction="#handleStatistics"
-                        text="📊   Statistiques"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity"/>
-
-                <!-- Admin-only -->
                 <Button fx:id="btnDashboard" onAction="#handleDashboardNav"
-                        text="👨   Tableau de Bord"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity"
-                        visible="false" managed="false"/>
-
-                <Button fx:id="btnAdminStats" onAction="#handleAdminStatsNav"
-                        text="📊   Statistiques"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity"
-                        visible="false" managed="false"/>
-
-                <Button fx:id="btnAdminApplications" onAction="#handleAdminApplicationsNav"
-                        text="📋   Toutes les Candidatures"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity"
+                        text="🛡  Admin Dashboard"
+                        styleClass="sidebar-button" maxWidth="Infinity"
                         visible="false" managed="false"/>
             </VBox>
 
             <Region VBox.vgrow="ALWAYS"/>
 
-            <!-- ── Bottom section ── -->
-            <VBox spacing="6" style="-fx-padding: 0 12 20 12;">
+            <VBox spacing="6" style="-fx-padding: 10 10 20 10;">
                 <Separator styleClass="sidebar-separator"/>
-
                 <Button fx:id="btnFullscreenToggle" onAction="#handleFullscreenToggle"
-                        text="🖥   Changer Vue"
-                        styleClass="sidebar-nav-btn" maxWidth="Infinity">
-                    <VBox.margin><Insets top="6"/></VBox.margin>
-                </Button>
-
-                <!-- User mini-card -->
-                <HBox spacing="10" alignment="CENTER_LEFT"
-                      style="-fx-background-color:#F7FAFF; -fx-background-radius:12;
-                             -fx-padding:12 14; -fx-border-color:#E4EBF5;
-                             -fx-border-width:1; -fx-border-radius:12; -fx-cursor:hand;"
-                      onMouseClicked="#handleUserProfile">
-                    <Label text="👤"
-                           style="-fx-font-size:22px; -fx-background-color:#DCEEFB;
-                                  -fx-background-radius:22; -fx-padding:4 6;"/>
-                    <VBox spacing="2">
-                        <Label fx:id="lblSidebarUserName" text="Utilisateur"
-                               style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#2c3e50;"/>
-                        <Label fx:id="lblSidebarUserRole" text="Recruteur"
-                               style="-fx-font-size:10px; -fx-text-fill:#8FA3B8;"/>
-                    </VBox>
-                </HBox>
+                        text="⛶  Fullscreen"
+                        styleClass="sidebar-bottom-button" maxWidth="Infinity"/>
             </VBox>
-
         </VBox>
     </left>
 
-    <!-- ═══════════════════════════════ CONTENT ═══════════════════════════════ -->
+    <!-- CONTENT AREA -->
     <center>
-        <StackPane fx:id="contentArea"
-                   style="-fx-background-color:#EBF0F8; -fx-padding:24;"/>
+        <StackPane fx:id="contentArea" style="-fx-background-color: #F5F6F8; -fx-padding: 24;"/>
     </center>
 
 </BorderPane>
