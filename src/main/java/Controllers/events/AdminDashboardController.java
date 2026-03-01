@@ -22,20 +22,17 @@ public class AdminDashboardController implements Initializable {
     @FXML private TableView<User> usersTable;
     @FXML private TableView<Candidate> candidatesTable;
     @FXML private TableView<Recruiter> recruitersTable;
-    @FXML private TableView<RecruitmentEvent> eventsTable;
     @FXML private TableView<EventRegistration> registrationsTable;
 
     private UserService userService;
     private CandidateService candidateService;
     private RecruiterService recruiterService;
-    private RecruitmentEventService eventService;
     private EventRegistrationService registrationService;
 
     public AdminDashboardController() {
         userService = new UserService();
         candidateService = new CandidateService();
         recruiterService = new RecruiterService();
-        eventService = new RecruitmentEventService();
         registrationService = new EventRegistrationService();
     }
 
@@ -44,7 +41,6 @@ public class AdminDashboardController implements Initializable {
         setupUsersTable();
         setupCandidatesTable();
         setupRecruitersTable();
-        setupEventsTable();
         setupRegistrationsTable();
         loadAllData();
     }
@@ -85,18 +81,6 @@ public class AdminDashboardController implements Initializable {
         recruitersTable.getColumns().addAll(idCol, companyCol);
     }
 
-    private void setupEventsTable() {
-        TableColumn<RecruitmentEvent, Long> idCol = new TableColumn<>("ID");
-        idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
-        
-        TableColumn<RecruitmentEvent, String> titleCol = new TableColumn<>("Titre");
-        titleCol.setCellValueFactory(new PropertyValueFactory<>("title"));
-        
-        TableColumn<RecruitmentEvent, String> typeCol = new TableColumn<>("Type");
-        typeCol.setCellValueFactory(new PropertyValueFactory<>("eventType"));
-
-        eventsTable.getColumns().addAll(idCol, titleCol, typeCol);
-    }
 
     private void setupRegistrationsTable() {
         TableColumn<EventRegistration, Long> idCol = new TableColumn<>("ID");
@@ -116,7 +100,6 @@ public class AdminDashboardController implements Initializable {
             usersTable.setItems(FXCollections.observableArrayList(userService.getAll()));
             candidatesTable.setItems(FXCollections.observableArrayList(candidateService.getAll()));
             recruitersTable.setItems(FXCollections.observableArrayList(recruiterService.getAll()));
-            eventsTable.setItems(FXCollections.observableArrayList(eventService.getAll()));
             registrationsTable.setItems(FXCollections.observableArrayList(registrationService.getAll()));
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des données: " + e.getMessage());

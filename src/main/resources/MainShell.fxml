@@ -82,6 +82,11 @@
                         text="🎪   Événements"
                         styleClass="sidebar-nav-btn" maxWidth="Infinity"/>
 
+                <Button fx:id="btnPastEvents" onAction="#handlePastEventsNav"
+                        text="📋   Mes événements passés"
+                        styleClass="sidebar-nav-btn" maxWidth="Infinity"
+                        visible="false" managed="false"/>
+
                 <Button fx:id="btnCalendar" onAction="#handleCalendarNav"
                         text="🗓   Calendrier"
                         styleClass="sidebar-nav-btn" maxWidth="Infinity"/>

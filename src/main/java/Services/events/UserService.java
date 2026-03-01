@@ -43,9 +43,7 @@ public class UserService {
     }
 
     private void checkConnection() throws SQLException {
-        if (connection == null || connection.isClosed()) {
-            connection = MyDatabase.getInstance().getConnection();
-        }
+        connection = MyDatabase.getInstance().getConnection();
         if (connection == null) {
             throw new SQLException("No database connection.");
         }

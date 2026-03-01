@@ -15,6 +15,7 @@ public class CandidateService {
     }
 
     private void checkConnection() throws SQLException {
+        connection = MyDatabase.getInstance().getConnection();
         if (connection == null) {
             throw new SQLException("Pas de connexion à la base de données.");
         }

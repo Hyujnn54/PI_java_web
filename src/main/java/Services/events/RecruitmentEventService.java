@@ -17,6 +17,7 @@ public class RecruitmentEventService {
     }
 
     private void checkConnection() throws SQLException {
+        connection = MyDatabase.getInstance().getConnection();
         if (connection == null) {
             throw new SQLException("Pas de connexion à la base de données. Vérifiez db.properties.");
         }
@@ -56,6 +57,7 @@ public class RecruitmentEventService {
     }
 
     public void delete(long id) throws SQLException {
+        checkConnection();
         String query = "DELETE FROM recruitment_event WHERE id=?";
         PreparedStatement ps = connection.prepareStatement(query);
         ps.setLong(1, id);
@@ -86,8 +88,11 @@ public class RecruitmentEventService {
     }
 
     public List<RecruitmentEvent> getAll() throws SQLException {
+        checkConnection();
         List<RecruitmentEvent> events = new ArrayList<>();
-        String query = "SELECT e.*, r.company_name, r.company_location, r.company_description FROM recruitment_event e JOIN recruiter r ON e.recruiter_id = r.id";
+        // LEFT JOIN so events are never dropped if recruiter profile is incomplete
+        String query = "SELECT e.*, r.company_name, r.company_location, r.company_description " +
+                       "FROM recruitment_event e LEFT JOIN recruiter r ON e.recruiter_id = r.id";
         Statement st = connection.createStatement();
         ResultSet rs = st.executeQuery(query);
         while (rs.next()) {
@@ -115,6 +120,7 @@ public class RecruitmentEventService {
     }
 
     public List<RecruitmentEvent> getByRecruiter(long recruiterId) throws SQLException {
+        checkConnection();
         List<RecruitmentEvent> events = new ArrayList<>();
         String query = "SELECT * FROM recruitment_event WHERE recruiter_id = ?";
         PreparedStatement ps = connection.prepareStatement(query);

@@ -15,12 +15,14 @@ public class RecruiterService {
     }
 
     private void checkConnection() throws SQLException {
+        connection = MyDatabase.getInstance().getConnection();
         if (connection == null) {
             throw new SQLException("Pas de connexion à la base de données. Vérifiez db.properties.");
         }
     }
 
     public void add(Recruiter recruiter) throws SQLException {
+        checkConnection();
         String sql = "INSERT INTO recruiter (id, user_id, company_name, company_location, company_description) VALUES (?, ?, ?, ?, ?)";
         PreparedStatement ps = connection.prepareStatement(sql);
         ps.setLong(1, recruiter.getId());
@@ -49,6 +51,7 @@ public class RecruiterService {
     }
 
     public List<Recruiter> getAll() throws SQLException {
+        checkConnection();
         String sql = "SELECT * FROM recruiter";
         List<Recruiter> list = new ArrayList<>();
         Statement stmt = connection.createStatement();

@@ -62,6 +62,39 @@ public class SchemaFixer {
             }
 
             System.out.println("Schema check/fix completed.");
+
+            // Create event_review table if it doesn't exist
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate(
+                    "CREATE TABLE IF NOT EXISTS event_review (" +
+                    "  id BIGINT AUTO_INCREMENT PRIMARY KEY," +
+                    "  event_id BIGINT NOT NULL," +
+                    "  candidate_id BIGINT NOT NULL," +
+                    "  rating INT NOT NULL," +
+                    "  comment TEXT," +
+                    "  created_at DATETIME NOT NULL," +
+                    "  UNIQUE KEY uq_review (event_id, candidate_id)" +
+                    ")"
+                );
+                System.out.println("event_review table ready.");
+            } catch (SQLException e) {
+                System.out.println("Note: Could not create event_review table: " + e.getMessage());
+            }
+
+            // Auto-cancel PENDING registrations for events that have already passed
+            try (Statement stmt = conn.createStatement()) {
+                int updated = stmt.executeUpdate(
+                    "UPDATE event_registration er " +
+                    "JOIN recruitment_event re ON er.event_id = re.id " +
+                    "SET er.attendance_status = 'CANCELLED' " +
+                    "WHERE er.attendance_status IN ('PENDING','REGISTERED') " +
+                    "AND re.event_date < NOW()"
+                );
+                if (updated > 0)
+                    System.out.println("Auto-cancelled " + updated + " pending registration(s) for past events.");
+            } catch (SQLException e) {
+                System.out.println("Note: Could not auto-cancel past pending registrations: " + e.getMessage());
+            }
         } catch (SQLException e) {
             System.err.println("Database error: " + e.getMessage());
             e.printStackTrace();

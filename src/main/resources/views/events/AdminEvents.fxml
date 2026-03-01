@@ -22,7 +22,7 @@
                        style="-fx-font-size:22px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
                 <HBox.margin><Insets/></HBox.margin>
             </HBox>
-            <Label text="Gestion complète des utilisateurs, candidats, recruteurs, événements et inscriptions."
+            <Label text="Gestion complète des utilisateurs, candidats, recruteurs et inscriptions."
                    style="-fx-font-size:13px; -fx-text-fill:#64748B; -fx-padding:4 0 0 0;"/>
         </VBox>
     </top>
@@ -55,15 +55,6 @@
                         <content>
                             <VBox style="-fx-padding:16;">
                                 <TableView fx:id="recruitersTable" VBox.vgrow="ALWAYS" prefHeight="500"
-                                           style="-fx-background-radius:8; -fx-border-color:#E4EBF5;
-                                                  -fx-border-width:1; -fx-border-radius:8;"/>
-                            </VBox>
-                        </content>
-                    </Tab>
-                    <Tab text="🎪  Événements">
-                        <content>
-                            <VBox style="-fx-padding:16;">
-                                <TableView fx:id="eventsTable" VBox.vgrow="ALWAYS" prefHeight="500"
                                            style="-fx-background-radius:8; -fx-border-color:#E4EBF5;
                                                   -fx-border-width:1; -fx-border-radius:8;"/>
                             </VBox>

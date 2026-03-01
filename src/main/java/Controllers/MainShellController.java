@@ -30,6 +30,7 @@ public class MainShellController {
     @FXML private Button btnApplications;
     @FXML private Button btnJobOffers;
     @FXML private Button btnEvents;
+    @FXML private Button btnPastEvents;
     @FXML private Button btnCalendar;
     @FXML private Button btnStatistics;
     @FXML private Button btnDashboard;
@@ -67,7 +68,7 @@ public class MainShellController {
 
         // Animate sidebar nav buttons in with staggered fade+slide
         Button[] navBtns = {btnApplications, btnInterviews, btnJobOffers,
-                            btnEvents, btnCalendar, btnStatistics, btnAdminStats,
+                            btnEvents, btnPastEvents, btnCalendar, btnStatistics, btnAdminStats,
                             btnAdminApplications, btnFullscreenToggle};
         for (int i = 0; i < navBtns.length; i++) {
             Button btn = navBtns[i];
@@ -129,11 +130,17 @@ public class MainShellController {
         if (role == Utils.UserContext.Role.RECRUITER) {
             activePage = "/views/events/RecruiterEvents.fxml";
         } else {
-            // Candidate and Admin both use the rich EventsViewController
             activePage = "/views/events/Events.fxml";
         }
         loadContentView(activePage);
         highlightActiveButton(btnEvents);
+    }
+
+    @FXML
+    private void handlePastEventsNav() {
+        activePage = "/views/events/PastEvents.fxml";
+        loadContentView(activePage);
+        highlightActiveButton(btnPastEvents);
     }
 
     @FXML
@@ -408,6 +415,12 @@ public class MainShellController {
             }
         } catch (IOException e) {
             System.err.println("Error loading view: " + fxmlFile + " — " + e.getMessage());
+            Throwable cause = e.getCause();
+            while (cause != null) {
+                System.err.println("  Caused by: " + cause.getClass().getName() + ": " + cause.getMessage());
+                cause = cause.getCause();
+            }
+            e.printStackTrace();
         }
     }
 
@@ -576,8 +589,12 @@ public class MainShellController {
             btnJobOffers.setManaged(true);
         }
         if (btnEvents != null) {
-            btnEvents.setVisible(true);
-            btnEvents.setManaged(true);
+            btnEvents.setVisible(!isAdmin);
+            btnEvents.setManaged(!isAdmin);
+        }
+        if (btnPastEvents != null) {
+            btnPastEvents.setVisible(isCandidate);
+            btnPastEvents.setManaged(isCandidate);
         }
         if (btnCalendar != null) {
             btnCalendar.setVisible(!isAdmin);

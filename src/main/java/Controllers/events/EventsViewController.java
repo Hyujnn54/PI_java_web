@@ -15,6 +15,7 @@ import javafx.util.Duration;
 
 import java.net.URL;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,7 @@ public class EventsViewController implements Initializable {
     @FXML private Button btnApply;
     @FXML private Button btnCancel;
     @FXML private Button btnAnalyze;
-    
+
     @FXML private VBox aiAnalysisContainer;
     @FXML private Label aiLoadingLabel;
     @FXML private VBox aiContentBox;
@@ -80,7 +81,30 @@ public class EventsViewController implements Initializable {
 
     private void loadEvents() {
         try {
-            allEvents = eventService.getAll();
+            List<RecruitmentEvent> all = eventService.getAll();
+            allEvents = new ArrayList<>();
+            LocalDateTime now = LocalDateTime.now();
+            for (RecruitmentEvent ev : all) {
+                boolean isPast = ev.getEventDate() != null && ev.getEventDate().isBefore(now);
+                // Recruiters and admins see everything; candidates only see future, non-full events
+                if (isRecruiter || isAdmin) {
+                    allEvents.add(ev);
+                } else {
+                    if (!isPast) {
+                        // Check capacity
+                        try {
+                            int confirmed = registrationService.getConfirmedCount(ev.getId());
+                            if (ev.getCapacity() <= 0 || confirmed < ev.getCapacity()) {
+                                allEvents.add(ev);
+                            }
+                            // else: full — skip
+                        } catch (SQLException e) {
+                            allEvents.add(ev); // show if we can't check
+                        }
+                    }
+                    // past events: skip from list (candidate can access review from a separate past-events view)
+                }
+            }
         } catch (SQLException e) {
             allEvents = new ArrayList<>();
             System.err.println("Error loading events: " + e.getMessage());
@@ -258,45 +282,57 @@ public class EventsViewController implements Initializable {
         detailDate.setText(ev.getEventDate() != null ? ev.getEventDate().format(FMT) : "");
         detailCapacity.setText(ev.getCapacity() + " places disponibles");
 
-        // Meet link — NEVER show to candidates; they only receive it via email on CONFIRMED status
         if (detailMeetLinkRow != null) {
             detailMeetLinkRow.setVisible(false);
             detailMeetLinkRow.setManaged(false);
         }
-
-        // Hide status message
         lblRegistrationStatus.setVisible(false);
         lblRegistrationStatus.setManaged(false);
 
-        if (isAdmin) {
-            // Admin: read-only view
+        if (isAdmin || isRecruiter) {
             btnApply.setVisible(false); btnApply.setManaged(false);
             btnCancel.setVisible(false); btnCancel.setManaged(false);
-            if(btnAnalyze != null) { btnAnalyze.setVisible(false); btnAnalyze.setManaged(false); }
-        } else if (isRecruiter) {
-            // Recruiter: also read-only in main shell view
-            btnApply.setVisible(false); btnApply.setManaged(false);
-            btnCancel.setVisible(false); btnCancel.setManaged(false);
-            if(btnAnalyze != null) { btnAnalyze.setVisible(false); btnAnalyze.setManaged(false); }
+            if (btnAnalyze != null) { btnAnalyze.setVisible(false); btnAnalyze.setManaged(false); }
         } else {
-            // Candidate: check if already registered
+            // Candidate — only future events shown here
             btnApply.setVisible(true); btnApply.setManaged(true);
-            if(btnAnalyze != null) { btnAnalyze.setVisible(true); btnAnalyze.setManaged(true); }
+            if (btnAnalyze != null) { btnAnalyze.setVisible(true); btnAnalyze.setManaged(true); }
             if (currentCandidateId > 0) {
                 try {
-                    boolean already = registrationService.isAlreadyRegistered(ev.getId(), currentCandidateId);
-                    if (already) {
-                        btnApply.setDisable(true);
-                        btnApply.setText("✅  Déjà inscrit");
-                        btnApply.setStyle(btnApply.getStyle().replace(
-                                "-fx-background-color: #1565C0;", "-fx-background-color: #9CA3AF;"));
-                        btnCancel.setVisible(true); btnCancel.setManaged(true);
-                    } else {
-                        btnApply.setDisable(false);
-                        btnApply.setText("✅  S'inscrire");
-                        btnApply.setStyle(btnApply.getStyle().replace(
-                                "-fx-background-color: #9CA3AF;", "-fx-background-color: #1565C0;"));
+                    AttendanceStatusEnum status = registrationService.getRegistrationStatus(ev.getId(), currentCandidateId);
+                    if (status == null) {
+                        btnApply.setDisable(false); btnApply.setText("S'inscrire");
+                        btnApply.setStyle(btnApply.getStyle().replace("-fx-background-color: #9CA3AF;", "-fx-background-color: #1565C0;"));
                         btnCancel.setVisible(false); btnCancel.setManaged(false);
+                        lblRegistrationStatus.setVisible(false); lblRegistrationStatus.setManaged(false);
+                    } else if (status == AttendanceStatusEnum.CANCELLED) {
+                        btnApply.setDisable(false); btnApply.setText("Se réinscrire");
+                        btnApply.setStyle(btnApply.getStyle().replace("-fx-background-color: #9CA3AF;", "-fx-background-color: #1565C0;"));
+                        btnCancel.setVisible(false); btnCancel.setManaged(false);
+                        lblRegistrationStatus.setText("Vous avez annulé votre inscription. Vous pouvez vous réinscrire.");
+                        lblRegistrationStatus.setStyle("-fx-background-color: #FEE2E2; -fx-text-fill: #991B1B; -fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");
+                        lblRegistrationStatus.setVisible(true); lblRegistrationStatus.setManaged(true);
+                    } else if (status == AttendanceStatusEnum.REJECTED) {
+                        btnApply.setDisable(false); btnApply.setText("Postuler à nouveau");
+                        btnApply.setStyle(btnApply.getStyle().replace("-fx-background-color: #9CA3AF;", "-fx-background-color: #1565C0;"));
+                        btnCancel.setVisible(false); btnCancel.setManaged(false);
+                        lblRegistrationStatus.setText("Votre inscription a été refusée par le recruteur.");
+                        lblRegistrationStatus.setStyle("-fx-background-color: #FFEDD5; -fx-text-fill: #9A3412; -fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");
+                        lblRegistrationStatus.setVisible(true); lblRegistrationStatus.setManaged(true);
+                    } else if (status == AttendanceStatusEnum.CONFIRMED) {
+                        btnApply.setDisable(true); btnApply.setText("Déjà inscrit");
+                        btnApply.setStyle(btnApply.getStyle().replace("-fx-background-color: #1565C0;", "-fx-background-color: #9CA3AF;"));
+                        btnCancel.setVisible(true); btnCancel.setManaged(true);
+                        lblRegistrationStatus.setText("Votre inscription est CONFIRMÉE.");
+                        lblRegistrationStatus.setStyle("-fx-background-color: #DCFCE7; -fx-text-fill: #166534; -fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");
+                        lblRegistrationStatus.setVisible(true); lblRegistrationStatus.setManaged(true);
+                    } else {
+                        btnApply.setDisable(true); btnApply.setText("Déjà inscrit");
+                        btnApply.setStyle(btnApply.getStyle().replace("-fx-background-color: #1565C0;", "-fx-background-color: #9CA3AF;"));
+                        btnCancel.setVisible(true); btnCancel.setManaged(true);
+                        lblRegistrationStatus.setText("Inscription en attente de confirmation.");
+                        lblRegistrationStatus.setStyle("-fx-background-color: #FEF9C3; -fx-text-fill: #854D0E; -fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");
+                        lblRegistrationStatus.setVisible(true); lblRegistrationStatus.setManaged(true);
                     }
                 } catch (SQLException e) {
                     System.err.println("Error checking registration: " + e.getMessage());
@@ -369,13 +405,15 @@ public class EventsViewController implements Initializable {
             reg.setCandidateId(currentCandidateId);
             registrationService.apply(reg);
 
-            lblRegistrationStatus.setText("✅  Inscription confirmée pour : " + selectedEvent.getTitle());
-            lblRegistrationStatus.setStyle("-fx-background-color: #D4EDDA; -fx-text-fill: #155724;" +
+            lblRegistrationStatus.setText("Inscription envoyée pour : " + selectedEvent.getTitle() + ". En attente de confirmation.");
+            lblRegistrationStatus.setStyle("-fx-background-color: #DCFCE7; -fx-text-fill: #166534;" +
                     "-fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");
             lblRegistrationStatus.setVisible(true); lblRegistrationStatus.setManaged(true);
 
             btnApply.setDisable(true);
-            btnApply.setText("✅  Déjà inscrit");
+            btnApply.setText("Déjà inscrit");
+            btnApply.setStyle(btnApply.getStyle()
+                    .replace("-fx-background-color: #1565C0;", "-fx-background-color: #9CA3AF;"));
             btnCancel.setVisible(true); btnCancel.setManaged(true);
 
             // Send confirmation email in background
@@ -399,7 +437,7 @@ public class EventsViewController implements Initializable {
             }, "event-email").start();
 
         } catch (java.sql.SQLException e) {
-            lblRegistrationStatus.setText("⚠️  " + e.getMessage());
+            lblRegistrationStatus.setText("Erreur : " + e.getMessage());
             lblRegistrationStatus.setStyle("-fx-background-color: #FFF3CD; -fx-text-fill: #856404;" +
                     "-fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");
             lblRegistrationStatus.setVisible(true); lblRegistrationStatus.setManaged(true);
@@ -410,28 +448,37 @@ public class EventsViewController implements Initializable {
     private void handleCancelRegistration() {
         if (selectedEvent == null || currentCandidateId < 0) return;
         try {
-            // Find the registration id and delete it
-            List<EventRegistration> regs = registrationService.getByCandidate(currentCandidateId);
-            for (EventRegistration r : regs) {
-                if (r.getEventId() == selectedEvent.getId()) {
-                    registrationService.delete(r.getId());
-                    break;
-                }
-            }
-            lblRegistrationStatus.setText("❌  Inscription annulée.");
-            lblRegistrationStatus.setStyle("-fx-background-color: #F8D7DA; -fx-text-fill: #721C24;" +
+            // Mark as CANCELLED — keeps the row so the recruiter can see the candidate cancelled
+            registrationService.cancelByCandidate(selectedEvent.getId(), currentCandidateId);
+
+            lblRegistrationStatus.setText("Inscription annulée. Vous pouvez vous réinscrire si vous changez d'avis.");
+            lblRegistrationStatus.setStyle("-fx-background-color: #FEE2E2; -fx-text-fill: #991B1B;" +
                     "-fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");
             lblRegistrationStatus.setVisible(true); lblRegistrationStatus.setManaged(true);
 
             btnApply.setDisable(false);
-            btnApply.setText("✅  S'inscrire");
+            btnApply.setText("Se réinscrire");
+            btnApply.setStyle(btnApply.getStyle()
+                    .replace("-fx-background-color: #9CA3AF;", "-fx-background-color: #1565C0;"));
             btnCancel.setVisible(false); btnCancel.setManaged(false);
 
         } catch (SQLException e) {
-            lblRegistrationStatus.setText("⚠️  Erreur : " + e.getMessage());
+            lblRegistrationStatus.setText("Erreur : " + e.getMessage());
             lblRegistrationStatus.setStyle("-fx-background-color: #FFF3CD; -fx-text-fill: #856404;" +
                     "-fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");
             lblRegistrationStatus.setVisible(true); lblRegistrationStatus.setManaged(true);
+        }
+    }
+
+    // ─── AI ANALYSIS ────────────────────────────────────────────────────────
+
+    private void hideAIAnalysis() {
+        if (aiAnalysisContainer != null) {
+            aiAnalysisContainer.setVisible(false);
+            aiAnalysisContainer.setManaged(false);
+            aiProsLabel.setText("");
+            aiConsLabel.setText("");
+            lastAnalyzedEventId = null;
         }
     }
 
@@ -599,4 +646,6 @@ public class EventsViewController implements Initializable {
         throw new Exception("All Groq models failed");
     }
 }
+
+
 

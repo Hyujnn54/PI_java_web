@@ -5,7 +5,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class MyDatabase {
-    private final String URL = "jdbc:mysql://localhost:3306/rh?autoReconnect=true&useSSL=false";
+    private final String URL = "jdbc:mysql://localhost:3306/rh"
+            + "?autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true"
+            + "&connectTimeout=5000&socketTimeout=30000";
     private final String USERNAME = "root";
     private final String PASSWORD = "";
     private Connection connection;
@@ -20,13 +22,22 @@ public class MyDatabase {
 
     public Connection getConnection() {
         try {
-            // Check if connection is valid, if not, reconnect
-            if (connection == null || connection.isClosed() || !connection.isValid(2)) {
-                System.out.println("Connection is closed or invalid, reconnecting...");
+            if (connection == null) {
                 connect();
+            } else {
+                // isValid() itself can throw if the connection is in a broken state
+                boolean valid = false;
+                try { valid = !connection.isClosed() && connection.isValid(2); }
+                catch (Exception ignored) { valid = false; }
+                if (!valid) {
+                    System.out.println("Connection stale, reconnecting...");
+                    try { connection.close(); } catch (Exception ignored) {}
+                    connect();
+                }
             }
-        } catch (SQLException e) {
-            System.err.println("Error checking connection validity: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error checking connection: " + e.getMessage());
+            try { connection.close(); } catch (Exception ignored) {}
             connect();
         }
         return connection;
