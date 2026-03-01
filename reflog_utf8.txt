@@ -1,0 +1,12 @@
+﻿f4992bc HEAD@{0}: pull --ff --recurse-submodules --progress origin: Fast-forward
+8c33c8d HEAD@{1}: pull --ff --recurse-submodules --progress origin: Fast-forward
+bd0a27d HEAD@{2}: pull --ff --recurse-submodules --progress origin: Fast-forward
+9bf5b0b HEAD@{3}: checkout: moving from events to merge-3
+39dfd70 HEAD@{4}: checkout: moving from merge-3 to events
+9bf5b0b HEAD@{5}: checkout: moving from events to merge-3
+39dfd70 HEAD@{6}: reset: moving to HEAD
+39dfd70 HEAD@{7}: commit: ajout des api et metiers
+e37d9e2 HEAD@{8}: commit: CRUD+INTERFACE
+d0997ee HEAD@{9}: commit: update
+11946e1 HEAD@{10}: checkout: moving from main to events
+11946e1 HEAD@{11}: clone: from https://github.com/Hyujnn54/PI_java_web.git

@@ -202,13 +202,10 @@ public class EventsViewController implements Initializable {
         detailDate.setText(ev.getEventDate() != null ? ev.getEventDate().format(FMT) : "");
         detailCapacity.setText(ev.getCapacity() + " places disponibles");
 
-        // Meet link
-        if (detailMeetLinkRow != null && detailMeetLink != null) {
-            String link = ev.getMeetLink();
-            boolean hasLink = link != null && !link.isBlank();
-            detailMeetLinkRow.setVisible(hasLink);
-            detailMeetLinkRow.setManaged(hasLink);
-            if (hasLink) detailMeetLink.setText(link);
+        // Meet link — NEVER show to candidates; they only receive it via email on CONFIRMED status
+        if (detailMeetLinkRow != null) {
+            detailMeetLinkRow.setVisible(false);
+            detailMeetLinkRow.setManaged(false);
         }
 
         // Hide status message

@@ -79,6 +79,82 @@ public class GrokAIService {
         return prompt.toString();
     }
 
+    /**
+     * Generates an attractive recruitment event description using the Groq API.
+     */
+    public static String generateEventDescription(String title, String type, String location, String capacity) {
+        String prompt = "Tu es un assistant RH expert en marketing de recrutement. "
+                + "Rédige une description très attrayante et professionnelle de 3 ou 4 phrases pour un événement de recrutement. "
+                + "L'événement s'appelle '" + title + "', c'est un événement de type '" + type + "'. "
+                + "Il se déroulera ici : '" + location + "'. Capacité maximum : " + capacity + " personnes.\n"
+                + "Sois enthousiaste, utilise un ton engageant, et encourage les candidats à s'inscrire. "
+                + "Ne mets pas de salutations (comme 'Bonjour'), donne directement la description.";
+
+        for (String model : MODELS) {
+            try {
+                String response = callGroq(model, prompt);
+                if (response != null && !response.trim().isEmpty()) {
+                    return cleanContent(response);
+                }
+            } catch (Exception e) {
+                System.err.println("Groq AI API failed for event description with model " + model + ": " + e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Analyzes a recruitment event for a specific candidate profile,
+     * returning personalized pros and cons based on their background.
+     */
+    public static String analyzeEventForCandidate(
+            String eventTitle, String eventType, String eventDescription,
+            String eventLocation, String eventDate,
+            String candidateName, String educationLevel,
+            Integer experienceYears, java.util.List<String> skills) {
+
+        StringBuilder profileSb = new StringBuilder();
+        profileSb.append("Profil du candidat :\n");
+        profileSb.append("- Nom : ").append(candidateName != null ? candidateName : "Non renseigné").append("\n");
+        profileSb.append("- Niveau d'études : ").append(educationLevel != null ? educationLevel : "Non renseigné").append("\n");
+        profileSb.append("- Années d'expérience : ").append(experienceYears != null ? experienceYears : "Non renseigné").append("\n");
+        if (skills != null && !skills.isEmpty()) {
+            profileSb.append("- Compétences : ").append(String.join(", ", skills)).append("\n");
+        }
+
+        String prompt = "Tu es un conseiller en orientation professionnelle expert. "
+                + "Analyse cet événement de recrutement pour ce candidat spécifique et donne une analyse PERSONNALISÉE.\n\n"
+                + "Événement : " + eventTitle + "\n"
+                + "Type : " + eventType + "\n"
+                + "Description : " + (eventDescription != null ? eventDescription : "Non disponible") + "\n"
+                + "Lieu : " + (eventLocation != null ? eventLocation : "Non disponible") + "\n"
+                + "Date : " + (eventDate != null ? eventDate : "Non disponible") + "\n\n"
+                + profileSb
+                + "\nRéponds en français avec ce format EXACT (utilise ces emojis et titres) :\n"
+                + "✅ POUR (3 arguments positifs sur pourquoi cet événement correspond bien à ce candidat)\n"
+                + "• [avantage 1]\n"
+                + "• [avantage 2]\n"
+                + "• [avantage 3]\n\n"
+                + "❌ CONTRE (2 points à considérer ou inconvénients)\n"
+                + "• [inconvénient 1]\n"
+                + "• [inconvénient 2]\n\n"
+                + "💡 VERDICT (une courte phrase de conclusion)\n"
+                + "[verdict]\n\n"
+                + "Sois très précis et personnalisé, référence les compétences et l'expérience du candidat dans ta réponse.";
+
+        for (String model : MODELS) {
+            try {
+                String response = callGroq(model, prompt);
+                if (response != null && !response.trim().isEmpty()) {
+                    return cleanContent(response);
+                }
+            } catch (Exception e) {
+                System.err.println("Groq AI analysis failed with model " + model + ": " + e.getMessage());
+            }
+        }
+        return null;
+    }
+
     private static String callGroq(String model, String prompt) throws Exception {
         URL url = new URL(GROQ_URL);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();

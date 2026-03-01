@@ -14,6 +14,7 @@
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.FlowPane?>
 
 <BorderPane xmlns="http://javafx.com/javafx/8.0.171"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -34,10 +35,28 @@
                             style="-fx-background-color:#F8FAFF; -fx-text-fill:#475569; -fx-background-radius:8; -fx-padding:8 16; -fx-cursor:hand; -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:8;"/>
                 </HBox>
 
-                <ScrollPane fitToHeight="true" minHeight="200" prefHeight="220" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
-                            style="-fx-background-color:transparent; -fx-background:transparent; -fx-border-color:transparent;" VBox.vgrow="NEVER">
+                <!-- Search + Filter bar -->
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="recruiterSearchField"
+                               promptText="🔍  Rechercher par titre..."
+                               onKeyReleased="#handleRecruiterSearch"
+                               HBox.hgrow="ALWAYS"
+                               style="-fx-background-color: white; -fx-background-radius: 10;
+                                      -fx-border-color: #E4EBF5; -fx-border-width: 1; -fx-border-radius: 10;
+                                      -fx-padding: 10 14; -fx-font-size: 13px;"/>
+                    <ComboBox fx:id="recruiterTypeFilter"
+                              promptText="Tous les types"
+                              onAction="#handleRecruiterSearch"
+                              prefWidth="170"
+                              style="-fx-background-color: white; -fx-background-radius: 10;
+                                     -fx-border-color: #E4EBF5; -fx-border-width: 1; -fx-border-radius: 10;
+                                     -fx-padding: 6 10; -fx-font-size: 13px;"/>
+                </HBox>
+
+                <ScrollPane fitToHeight="true" minHeight="250" prefHeight="280" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                            style="-fx-background-color:transparent; -fx-background:transparent; -fx-border-color:transparent;" VBox.vgrow="ALWAYS">
                     <content>
-                        <HBox fx:id="eventsHBox" spacing="18" style="-fx-padding:8 4 12 4;" alignment="CENTER_LEFT"/>
+                        <HBox fx:id="eventsHBox" spacing="18" style="-fx-padding:8 4 12 4;"/>
                     </content>
                 </ScrollPane>
 
@@ -56,11 +75,14 @@
                     </HBox>
                     <HBox spacing="12">
                         <VBox HBox.hgrow="ALWAYS" spacing="3">
-                            <TextField fx:id="locationField" promptText="Lieu" style="-fx-background-radius:8; -fx-border-radius:8; -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-padding:8 12; -fx-font-size:13px;"/>
+                            <HBox spacing="5" alignment="CENTER_LEFT">
+                                <TextField fx:id="locationField" promptText="Lieu" style="-fx-background-radius:8; -fx-border-radius:8; -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-padding:8 12; -fx-font-size:13px;" HBox.hgrow="ALWAYS" />
+                                <Button text="🗺️ Carte" onAction="#handlePickLocation" style="-fx-background-color:#2196F3; -fx-text-fill:white; -fx-padding:6 10; -fx-background-radius:6; -fx-cursor:hand;" />
+                            </HBox>
                             <Label fx:id="locationErrorLabel" style="-fx-font-size:11px; -fx-text-fill:#DC2626;" managed="true" minHeight="0"/>
                         </VBox>
                         <VBox spacing="3">
-                            <DatePicker fx:id="dateField" promptText="Date" style="-fx-background-radius:8; -fx-border-radius:8; -fx-border-color:#E4EBF5; -fx-font-size:13px;"/>
+                            <DatePicker fx:id="dateField" promptText="Date" onAction="#handleDateValidation" style="-fx-background-radius:8; -fx-border-radius:8; -fx-border-color:#E4EBF5; -fx-font-size:13px;"/>
                             <Label fx:id="dateErrorLabel" style="-fx-font-size:11px; -fx-text-fill:#DC2626;" managed="true" minHeight="0"/>
                         </VBox>
                         <VBox spacing="3">
@@ -68,9 +90,17 @@
                             <Label fx:id="capacityErrorLabel" style="-fx-font-size:11px; -fx-text-fill:#DC2626;" managed="true" minHeight="0"/>
                         </VBox>
                     </HBox>
-                    <TextField fx:id="meetLinkField" promptText="🔗  Lien de réunion en ligne (optionnel)" style="-fx-background-radius:8; -fx-border-radius:8; -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-padding:8 12; -fx-font-size:13px;"/>
                     <VBox spacing="3">
-                        <TextArea fx:id="descriptionField" prefHeight="68" promptText="Description..." style="-fx-background-radius:8; -fx-border-radius:8; -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-font-size:13px; -fx-padding:8 12;" wrapText="true"/>
+                        <TextField fx:id="meetLinkField" promptText="🔗  Lien de réunion en ligne (ex: https://meet.google.com/...)" visible="false" managed="false" style="-fx-background-radius:8; -fx-border-radius:8; -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-padding:8 12; -fx-font-size:13px;"/>
+                        <Label fx:id="meetLinkErrorLabel" style="-fx-font-size:11px; -fx-text-fill:#DC2626;" managed="false" visible="false" minHeight="0"/>
+                    </VBox>
+                    <VBox spacing="3">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label text="Description de l'événement" style="-fx-font-size:13px; -fx-font-weight:600; -fx-text-fill:#334155;"/>
+                            <Pane HBox.hgrow="ALWAYS"/>
+                            <Button text="✨ Autocomplétion IA" onAction="#handleGenerateDescriptionAI" style="-fx-background-color:#6f42c1; -fx-text-fill:white; -fx-font-size:11px; -fx-padding:6 12; -fx-background-radius:6; -fx-cursor:hand;"/>
+                        </HBox>
+                        <TextArea fx:id="descriptionField" prefHeight="140" promptText="Description..." style="-fx-background-radius:8; -fx-border-radius:8; -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-font-size:13px; -fx-padding:8 12;" wrapText="true"/>
                         <Label fx:id="descriptionErrorLabel" style="-fx-font-size:11px; -fx-text-fill:#DC2626;" managed="true" minHeight="0"/>
                     </VBox>
                     <HBox spacing="10" alignment="CENTER_RIGHT">
@@ -95,6 +125,48 @@
                             style="-fx-background-color:#F8FAFF; -fx-text-fill:#475569; -fx-background-radius:8; -fx-padding:8 16; -fx-cursor:hand; -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:8;"/>
                 </HBox>
 
+                <!-- Live Statistics Dashboard -->
+                <HBox fx:id="statsContainer" spacing="20.0" style="-fx-padding: 0 0 15 0;">
+                    <children>
+                        <VBox style="-fx-background-color: #EBF3FE; -fx-background-radius: 12; -fx-padding: 15; -fx-border-color: #5BA3F5; -fx-border-width: 1.5; -fx-border-radius: 12;" HBox.hgrow="ALWAYS">
+                            <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                <VBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="totalStatsLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: #1565C0;" />
+                                    <Label text="Total Postulants" style="-fx-font-size: 13px; -fx-text-fill: #475569;" />
+                                </VBox>
+                                <Label text="👥" style="-fx-font-size: 24px;" />
+                            </HBox>
+                        </VBox>
+                        <VBox style="-fx-background-color: #E8F5E9; -fx-background-radius: 12; -fx-padding: 15; -fx-border-color: #4CAF50; -fx-border-width: 1.5; -fx-border-radius: 12;" HBox.hgrow="ALWAYS">
+                            <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                <VBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="confirmedStatsLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: #2E7D32;" />
+                                    <Label text="Confirmés" style="-fx-font-size: 13px; -fx-text-fill: #475569;" />
+                                </VBox>
+                                <Label text="✅" style="-fx-font-size: 24px;" />
+                            </HBox>
+                        </VBox>
+                        <VBox style="-fx-background-color: #FFF8E1; -fx-background-radius: 12; -fx-padding: 15; -fx-border-color: #FFC107; -fx-border-width: 1.5; -fx-border-radius: 12;" HBox.hgrow="ALWAYS">
+                            <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                <VBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="pendingStatsLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: #FF8F00;" />
+                                    <Label text="En Attente" style="-fx-font-size: 13px; -fx-text-fill: #475569;" />
+                                </VBox>
+                                <Label text="⏳" style="-fx-font-size: 24px;" />
+                            </HBox>
+                        </VBox>
+                        <VBox style="-fx-background-color: #FFEBEE; -fx-background-radius: 12; -fx-padding: 15; -fx-border-color: #F44336; -fx-border-width: 1.5; -fx-border-radius: 12;" HBox.hgrow="ALWAYS">
+                            <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                <VBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="cancelledStatsLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: #C62828;" />
+                                    <Label text="Annulés" style="-fx-font-size: 13px; -fx-text-fill: #475569;" />
+                                </VBox>
+                                <Label text="❌" style="-fx-font-size: 24px;" />
+                            </HBox>
+                        </VBox>
+                    </children>
+                </HBox>
+
                 <TableView fx:id="attendeesTable" VBox.vgrow="ALWAYS"
                            style="-fx-background-color:white; -fx-background-radius:12; -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:12;">
                     <columns>
@@ -114,9 +186,6 @@
                     <ComboBox fx:id="registrationStatusCombo" prefWidth="155" promptText="Nouveau statut"/>
                     <Button onAction="#handleUpdateRegistrationStatus" text="✔  Mettre à jour"
                             style="-fx-background-color:#1565C0; -fx-text-fill:white; -fx-font-weight:700; -fx-background-radius:8; -fx-padding:8 18; -fx-cursor:hand;"/>
-                    <Pane HBox.hgrow="ALWAYS"/>
-                    <Button onAction="#handleSendEmail" text="✉  Envoyer email"
-                            style="-fx-background-color:#059669; -fx-text-fill:white; -fx-font-weight:700; -fx-background-radius:8; -fx-padding:8 18; -fx-cursor:hand;"/>
                 </HBox>
             </VBox>
 

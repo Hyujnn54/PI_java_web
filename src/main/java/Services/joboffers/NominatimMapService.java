@@ -66,7 +66,7 @@ public class NominatimMapService {
         try {
             String encodedQuery = URLEncoder.encode(query.trim(), StandardCharsets.UTF_8.toString());
             String urlStr = NOMINATIM_SEARCH_URL + "?q=" + encodedQuery +
-                           "&format=json&limit=5&addressdetails=1";
+                           "&format=json&limit=5&addressdetails=1&accept-language=ar";
 
             HttpURLConnection conn = createConnection(urlStr);
 
@@ -89,7 +89,7 @@ public class NominatimMapService {
     public GeoLocation reverseGeocode(double latitude, double longitude) {
         try {
             String urlStr = NOMINATIM_REVERSE_URL + "?lat=" + latitude + "&lon=" + longitude +
-                           "&format=json&addressdetails=1";
+                           "&format=json&addressdetails=1&accept-language=ar";
 
             HttpURLConnection conn = createConnection(urlStr);
 
@@ -263,7 +263,7 @@ public class NominatimMapService {
                     }
 
                     function reverseGeocode(lat, lon) {
-                        fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lon + '&format=json')
+                        fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lon + '&format=json&accept-language=ar')
                             .then(response => response.json())
                             .then(data => {
                                 var address = data.display_name || 'Localisation inconnue';
@@ -291,7 +291,7 @@ public class NominatimMapService {
                         }
                         
                         searchTimeout = setTimeout(function() {
-                            fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) + '&format=json&limit=5')
+                            fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) + '&format=json&limit=5&accept-language=ar')
                                 .then(response => response.json())
                                 .then(data => {
                                     var html = '';
@@ -473,7 +473,7 @@ public class NominatimMapService {
 
     private String readResponse(HttpURLConnection conn) throws Exception {
         StringBuilder response = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 response.append(line);

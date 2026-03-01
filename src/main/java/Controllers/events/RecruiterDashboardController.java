@@ -55,6 +55,17 @@ public class RecruiterDashboardController implements Initializable {
     @FXML private Label dateErrorLabel;
     @FXML private Label capacityErrorLabel;
     @FXML private Label descriptionErrorLabel;
+    @FXML private Label meetLinkErrorLabel;
+    
+    // Search fields
+    @FXML private TextField recruiterSearchField;
+    @FXML private ComboBox<String> recruiterTypeFilter;
+    
+    // Statistics Labels
+    @FXML private Label totalStatsLabel;
+    @FXML private Label confirmedStatsLabel;
+    @FXML private Label pendingStatsLabel;
+    @FXML private Label cancelledStatsLabel;
 
     @FXML
     private VBox eventsView;
@@ -99,6 +110,24 @@ public class RecruiterDashboardController implements Initializable {
     private void setupComboBoxes() {
         typeCombo.setItems(FXCollections.observableArrayList("Job_Faire", "WEBINAIRE", "Interview day"));
         registrationStatusCombo.setItems(FXCollections.observableArrayList(AttendanceStatusEnum.values()));
+        
+        // Show/hide meet link field when event type changes
+        typeCombo.setOnAction(e -> {
+            if (meetLinkField != null) {
+                boolean isWebinaire = "WEBINAIRE".equals(typeCombo.getValue());
+                meetLinkField.setVisible(isWebinaire);
+                meetLinkField.setManaged(isWebinaire);
+                if (meetLinkErrorLabel != null) {
+                    meetLinkErrorLabel.setVisible(isWebinaire);
+                    meetLinkErrorLabel.setManaged(isWebinaire);
+                }
+            }
+        });
+        
+        if (recruiterTypeFilter != null) {
+            recruiterTypeFilter.setItems(FXCollections.observableArrayList("Tous les types", "Job_Faire", "WEBINAIRE", "Interview day"));
+            recruiterTypeFilter.setValue("Tous les types");
+        }
     }
 
     private void setupAttendeesTable() {
@@ -120,11 +149,49 @@ public class RecruiterDashboardController implements Initializable {
         });
         if (regDateCol != null) regDateCol.setCellValueFactory(new PropertyValueFactory<>("registeredAt"));
 
-        if (attendeesTable != null) attendeesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null && registrationStatusCombo != null) {
-                registrationStatusCombo.setValue(newVal.getAttendanceStatus());
-            }
-        });
+        if (attendeesTable != null) {
+            attendeesTable.setRowFactory(tv -> new TableRow<EventRegistration>() {
+                @Override
+                protected void updateItem(EventRegistration item, boolean empty) {
+                    super.updateItem(item, empty);
+                    getStyleClass().removeAll("urgent-row", "overdue-row");
+                    setTooltip(null);
+                    setStyle("");
+
+                    if (item == null || empty || item.getEvent() == null
+                            || item.getAttendanceStatus() != AttendanceStatusEnum.PENDING
+                            || item.getEvent().getEventDate() == null) {
+                        applyCellStyle("", this);
+                        return;
+                    }
+
+                    long hoursUntil = java.time.temporal.ChronoUnit.HOURS
+                            .between(LocalDateTime.now(), item.getEvent().getEventDate());
+
+                    if (hoursUntil >= 0 && hoursUntil <= 48) {
+                        // Imminent - event within 48h still PENDING → yellow
+                        String style = "-fx-background-color: #fff3cd;";
+                        setStyle(style);
+                        applyCellStyle(style, this);
+                        setTooltip(new Tooltip("\u26a0\ufe0f \u00c9v\u00e9nement imminent (dans " + hoursUntil + "h) - Statut toujours en attente!"));
+                    } else if (hoursUntil < 0) {
+                        // Overdue - event passed still PENDING → red
+                        String style = "-fx-background-color: #f8d7da;";
+                        setStyle(style);
+                        applyCellStyle(style, this);
+                        setTooltip(new Tooltip("\u274c Date d\u00e9pass\u00e9e - Candidat toujours en attente!"));
+                    } else {
+                        applyCellStyle("", this);
+                    }
+                }
+            });
+
+            attendeesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && registrationStatusCombo != null) {
+                    registrationStatusCombo.setValue(newVal.getAttendanceStatus());
+                }
+            });
+        }
     }
 
     private void setupTable() {
@@ -137,6 +204,8 @@ public class RecruiterDashboardController implements Initializable {
             ObservableList<EventRegistration> list = FXCollections
                     .observableArrayList(registrationService.getByRecruiter(currentRecruiter.getId()));
             attendeesTable.setItems(list);
+            updateStatistics();
+            checkForUrgentRegistrations();
         } catch (SQLException e) {
             showAlert("Erreur Participants", e.getMessage());
         }
@@ -147,8 +216,73 @@ public class RecruiterDashboardController implements Initializable {
             ObservableList<EventRegistration> list = FXCollections
                     .observableArrayList(registrationService.getByEvent(eventId));
             attendeesTable.setItems(list);
+            updateStatistics();
+            checkForUrgentRegistrations();
         } catch (SQLException e) {
             showAlert("Erreur Participants", e.getMessage());
+        }
+    }
+
+    private void updateStatistics() {
+        if (attendeesTable == null || attendeesTable.getItems() == null) return;
+        ObservableList<EventRegistration> items = attendeesTable.getItems();
+        
+        long total = items.size();
+        long confirmed = items.stream().filter(r -> r.getAttendanceStatus() == AttendanceStatusEnum.CONFIRMED).count();
+        long pending = items.stream().filter(r -> r.getAttendanceStatus() == AttendanceStatusEnum.PENDING || r.getAttendanceStatus() == AttendanceStatusEnum.REGISTERED).count();
+        long cancelled = items.stream().filter(r -> r.getAttendanceStatus() == AttendanceStatusEnum.CANCELLED).count();
+        
+        if (totalStatsLabel != null) totalStatsLabel.setText(String.valueOf(total));
+        if (confirmedStatsLabel != null) confirmedStatsLabel.setText(String.valueOf(confirmed));
+        if (pendingStatsLabel != null) pendingStatsLabel.setText(String.valueOf(pending));
+        if (cancelledStatsLabel != null) cancelledStatsLabel.setText(String.valueOf(cancelled));
+    }
+
+    private boolean isUrgent(EventRegistration registration) {
+        if (registration == null || registration.getEvent() == null) return false;
+        
+        boolean isPending = registration.getAttendanceStatus() == AttendanceStatusEnum.PENDING || 
+                           registration.getAttendanceStatus() == AttendanceStatusEnum.REGISTERED;
+        
+        if (!isPending) return false;
+        
+        LocalDateTime eventDate = registration.getEvent().getEventDate();
+        if (eventDate == null) return false;
+        
+        LocalDateTime now = LocalDateTime.now();
+        // Urgent if event starts within 48 hours and hasn't passed yet
+        return eventDate.isAfter(now) && eventDate.isBefore(now.plusHours(48));
+    }
+
+    private void checkForUrgentRegistrations() {
+        if (attendeesTable == null || attendeesTable.getItems() == null) return;
+
+        long imminentCount = attendeesTable.getItems().stream()
+                .filter(r -> r.getAttendanceStatus() == AttendanceStatusEnum.PENDING
+                          && r.getEvent() != null
+                          && r.getEvent().getEventDate() != null)
+                .filter(r -> {
+                    long h = java.time.temporal.ChronoUnit.HOURS
+                            .between(LocalDateTime.now(), r.getEvent().getEventDate());
+                    return h >= 0 && h <= 48;
+                })
+                .count();
+
+        long overdueCount = attendeesTable.getItems().stream()
+                .filter(r -> r.getAttendanceStatus() == AttendanceStatusEnum.PENDING
+                          && r.getEvent() != null
+                          && r.getEvent().getEventDate() != null
+                          && r.getEvent().getEventDate().isBefore(LocalDateTime.now()))
+                .count();
+
+        if (overdueCount > 0) {
+            Services.joboffers.NotificationService.showWarning(
+                "\u26a0\ufe0f Inscriptions en retard",
+                overdueCount + " candidat(s) en attente pour des \u00e9v\u00e9nements d\u00e9j\u00e0 pass\u00e9s !");
+        } else if (imminentCount > 0) {
+            Services.joboffers.NotificationService.showWarning(
+                "\u26a0\ufe0f \u00c9v\u00e9nements imminents",
+                imminentCount + " inscription(s) PENDING pour des \u00e9v\u00e9nements dans moins de 48h !");
         }
     }
 
@@ -244,49 +378,116 @@ public class RecruiterDashboardController implements Initializable {
     }
 
     private Node createEventCard(RecruitmentEvent event) {
-        VBox card = new VBox(15);
-        card.getStyleClass().add("event-card");
+        VBox card = new VBox(10);
         card.setAlignment(Pos.TOP_LEFT);
-        
+        card.setPrefWidth(200);
+        card.setMinWidth(200);
+        card.setMaxWidth(220);
+        card.setMinHeight(220);
+
+        // Check popularity upfront — used for border color
+        boolean popularCheck = false;
+        try {
+            popularCheck = eventService.isEventPopular(event.getId());
+        } catch (SQLException ex) {
+            System.err.println("Error checking popularity: " + ex.getMessage());
+        }
+        final boolean isPopular = popularCheck;
+
+        String borderColor = isPopular ? "#F97316" : "#E4EBF5";
+        String borderWidth = isPopular ? "2" : "1";
+        card.setStyle(
+            "-fx-background-color: white;" +
+            "-fx-background-radius: 14;" +
+            "-fx-border-color: " + borderColor + ";" +
+            "-fx-border-width: " + borderWidth + ";" +
+            "-fx-border-radius: 14;" +
+            "-fx-padding: 16 16 16 16;" +
+            "-fx-effect: dropshadow(gaussian, rgba(100,150,220,0.10), 10, 0, 0, 3);" +
+            "-fx-cursor: hand;"
+        );
+
+        // Title
         Label titleLabel = new Label(event.getTitle());
-        titleLabel.getStyleClass().add("event-card-title");
-        
+        titleLabel.setWrapText(true);
+        titleLabel.setMaxWidth(180);
+        titleLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #1E293B;");
+
+        // Type badge
+        String typeColor = switch (event.getEventType() != null ? event.getEventType() : "") {
+            case "WEBINAIRE"     -> "#EBF3FF;-fx-text-fill:#1565C0";
+            case "Interview day" -> "#F0FDF4;-fx-text-fill:#15803D";
+            default              -> "#FFF7ED;-fx-text-fill:#C2410C"; // Job_Faire
+        };
         Label typeLabel = new Label(event.getEventType());
-        typeLabel.getStyleClass().add("event-card-type");
-        
+        typeLabel.setStyle(
+            "-fx-background-color: " + typeColor + ";" +
+            "-fx-font-size: 11px; -fx-font-weight: 600;" +
+            "-fx-background-radius: 20; -fx-padding: 3 10;"
+        );
+
+        // Description
         Label descriptionLabel = new Label(event.getDescription());
-        descriptionLabel.getStyleClass().add("event-card-description");
         descriptionLabel.setWrapText(true);
-        descriptionLabel.setMaxHeight(60);
-        
-        VBox infoBox = new VBox(8);
-        infoBox.getStyleClass().add("event-card-info-box");
-        
-        Label locationLabel = new Label("📍 " + event.getLocation());
-        locationLabel.getStyleClass().add("event-card-info");
-        
-        Label dateLabel = new Label("📅 " + (event.getEventDate() != null ? event.getEventDate().toString().replace("T", " ") : "N/A"));
-        dateLabel.getStyleClass().add("event-card-info");
-        
-        Label capacityLabel = new Label("👥 " + event.getCapacity() + " places");
-        capacityLabel.getStyleClass().add("event-card-info");
-        
-        infoBox.getChildren().addAll(locationLabel, dateLabel, capacityLabel);
-        
+        descriptionLabel.setMaxHeight(55);
+        descriptionLabel.setMaxWidth(180);
+        descriptionLabel.setEllipsisString("...");
+        descriptionLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #64748B;");
+
+        // Info section
+        Label locationLabel = new Label("\uD83D\uDCCD " + event.getLocation());
+        locationLabel.setMaxWidth(180);
+        locationLabel.setEllipsisString("...");
+        locationLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #475569;");
+
+        String dateStr = event.getEventDate() != null
+            ? event.getEventDate().toString().replace("T", " ") : "N/A";
+        Label dateLabel = new Label("\uD83D\uDCC5 " + dateStr);
+        dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #475569;");
+
+        Label capacityLabel = new Label("\uD83D\uDC65 " + event.getCapacity() + " places");
+        capacityLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #475569;");
+
+        VBox infoBox = new VBox(5, locationLabel, dateLabel, capacityLabel);
+        infoBox.setStyle("-fx-padding: 8 0 0 0;");
+
         card.getChildren().addAll(titleLabel, typeLabel, descriptionLabel, infoBox);
-        
+
+        // Popular badge (added at top)
+        if (isPopular) {
+            Label popularBadge = new Label("\uD83D\uDD25 Populaire");
+            popularBadge.setStyle(
+                "-fx-background-color: #FFF3CD; -fx-text-fill: #F97316;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-padding: 4 8; -fx-background-radius: 12;"
+            );
+            card.getChildren().add(0, popularBadge);
+        }
+
+        // Hover & selection styling
+        String defaultStyle = card.getStyle();
+        card.setOnMouseEntered(e -> card.setStyle(defaultStyle +
+            "-fx-effect: dropshadow(gaussian, rgba(100,150,220,0.22), 16, 0, 0, 5);" +
+            "-fx-border-color: " + (isPopular ? "#EA580C" : "#BBDEFB") + ";"
+        ));
+        card.setOnMouseExited(e -> {
+            if (!card.getStyleClass().contains("event-card-selected")) {
+                card.setStyle(defaultStyle);
+            }
+        });
+
         card.setOnMouseClicked(e -> {
-            // Remove previous selection styling
-            eventsHBox.getChildren().forEach(node -> node.getStyleClass().remove("event-card-selected"));
-            // Add selection styling
+            eventsHBox.getChildren().forEach(node -> {
+                node.getStyleClass().remove("event-card-selected");
+            });
+            card.setStyle(defaultStyle +
+                "-fx-border-color: #1565C0; -fx-border-width: 2;" +
+                "-fx-effect: dropshadow(gaussian, rgba(21,101,192,0.25), 16, 0, 0, 5);"
+            );
             card.getStyleClass().add("event-card-selected");
-            
+
             populateForm(event);
             refreshAttendees(event.getId());
-            
-            // Store selected event for update/delete
-            // We can use a property or just rely on populateForm and a local variable if needed
-            // But let's add a field for convenience
             selectedEvent = event;
         });
         
@@ -398,6 +599,30 @@ public class RecruiterDashboardController implements Initializable {
         refreshTable();
     }
 
+    @FXML
+    private void handleRecruiterSearch() {
+        String query = recruiterSearchField != null ? recruiterSearchField.getText().toLowerCase() : "";
+        String typeFilter = recruiterTypeFilter != null ? recruiterTypeFilter.getValue() : "Tous les types";
+
+        if (currentRecruiter == null) return;
+        
+        try {
+            java.util.List<RecruitmentEvent> allEvents = eventService.getByRecruiter(currentRecruiter.getId());
+            eventsHBox.getChildren().clear();
+
+            for (RecruitmentEvent event : allEvents) {
+                boolean matchesTitle = query.isEmpty() || event.getTitle().toLowerCase().contains(query);
+                boolean matchesType = "Tous les types".equals(typeFilter) || event.getEventType().equals(typeFilter);
+
+                if (matchesTitle && matchesType) {
+                    eventsHBox.getChildren().add(createEventCard(event));
+                }
+            }
+        } catch (SQLException e) {
+            showAlert("Erreur Chargement", e.getMessage());
+        }
+    }
+
     private void switchView(boolean isEvents) {
         if (eventsView != null) { eventsView.setVisible(isEvents); eventsView.setManaged(isEvents); }
         if (interviewsView != null) { interviewsView.setVisible(!isEvents); interviewsView.setManaged(!isEvents); }
@@ -436,13 +661,18 @@ public class RecruiterDashboardController implements Initializable {
                         ? selectedEvent.getEventDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "";
                 String eventLocation = selectedEvent != null && selectedEvent.getLocation() != null
                         ? selectedEvent.getLocation() : "";
+                String eventType = selectedEvent != null && selectedEvent.getEventType() != null
+                        ? selectedEvent.getEventType() : "";
+                String meetLink = selectedEvent != null && selectedEvent.getMeetLink() != null
+                        ? selectedEvent.getMeetLink() : "";
                 new Thread(() -> Services.EmailService.sendEventStatusNotification(
-                        email, name, eventTitle, eventDate, eventLocation, newStatus.name(), null),
+                        email, name, eventTitle, eventDate, eventLocation, newStatus.name(), null, eventType, meetLink),
                         "event-status-email").start();
             }
 
             if (selectedEvent != null) refreshAttendees(selectedEvent.getId());
             else refreshAllAttendees();
+            updateStatistics();
         } catch (SQLException e) {
             showAlert("Erreur Mise à jour", e.getMessage());
         }
@@ -511,7 +741,16 @@ public class RecruiterDashboardController implements Initializable {
         locationField.setText(event.getLocation());
         capacityField.setText(String.valueOf(event.getCapacity()));
         if (event.getEventDate() != null) dateField.setValue(event.getEventDate().toLocalDate());
-        if (meetLinkField != null) meetLinkField.setText(event.getMeetLink() != null ? event.getMeetLink() : "");
+        if (meetLinkField != null) {
+            boolean isWebinaire = "WEBINAIRE".equals(event.getEventType());
+            meetLinkField.setVisible(isWebinaire);
+            meetLinkField.setManaged(isWebinaire);
+            meetLinkField.setText(event.getMeetLink() != null ? event.getMeetLink() : "");
+            if (meetLinkErrorLabel != null) {
+                meetLinkErrorLabel.setVisible(isWebinaire);
+                meetLinkErrorLabel.setManaged(isWebinaire);
+            }
+        }
     }
 
     private void clearForm() {
@@ -522,13 +761,18 @@ public class RecruiterDashboardController implements Initializable {
         locationField.clear();
         capacityField.clear();
         dateField.setValue(null);
-        if (meetLinkField != null) meetLinkField.clear();
+        if (meetLinkField != null) {
+            meetLinkField.clear();
+            meetLinkField.setVisible(false);
+            meetLinkField.setManaged(false);
+        }
         if (titleErrorLabel != null) titleErrorLabel.setText("");
         if (typeErrorLabel != null) typeErrorLabel.setText("");
         if (locationErrorLabel != null) locationErrorLabel.setText("");
         if (dateErrorLabel != null) dateErrorLabel.setText("");
         if (capacityErrorLabel != null) capacityErrorLabel.setText("");
         if (descriptionErrorLabel != null) descriptionErrorLabel.setText("");
+        if (meetLinkErrorLabel != null) { meetLinkErrorLabel.setText(""); meetLinkErrorLabel.setVisible(false); meetLinkErrorLabel.setManaged(false); }
     }
 
     private boolean validateForm() {
@@ -541,6 +785,7 @@ public class RecruiterDashboardController implements Initializable {
         dateErrorLabel.setText("");
         capacityErrorLabel.setText("");
         descriptionErrorLabel.setText("");
+        if (meetLinkErrorLabel != null) meetLinkErrorLabel.setText("");
 
         if (titleField.getText() == null || titleField.getText().trim().length() < 3) {
             titleErrorLabel.setText("Minimum 3 caractères requis.");
@@ -581,7 +826,109 @@ public class RecruiterDashboardController implements Initializable {
             hasError = true;
         }
 
+        // Validate meet link when WEBINAIRE is selected
+        if ("WEBINAIRE".equals(typeCombo.getValue())) {
+            String link = meetLinkField != null ? meetLinkField.getText() : null;
+            if (link == null || link.trim().isEmpty()) {
+                if (meetLinkErrorLabel != null) meetLinkErrorLabel.setText("Le lien de réunion est obligatoire pour un webinaire.");
+                hasError = true;
+            }
+        }
+
         return !hasError;
+    }
+
+    @FXML
+    private void handleDateValidation() {
+        if (dateField.getValue() != null && dateField.getValue().isBefore(java.time.LocalDate.now())) {
+            if (dateErrorLabel != null) {
+                dateErrorLabel.setText("La date ne peut pas être passée.");
+            }
+        } else {
+            if (dateErrorLabel != null) {
+                dateErrorLabel.setText("");
+            }
+        }
+        // Show/hide meet link field based on type
+        if (typeCombo != null && meetLinkField != null) {
+            boolean isWebinaire = "WEBINAIRE".equals(typeCombo.getValue());
+            meetLinkField.setVisible(isWebinaire);
+            meetLinkField.setManaged(isWebinaire);
+        }
+    }
+
+    @FXML
+    private void handlePickLocation() {
+        Controllers.joboffers.LocationPickerController.pickLocation((lat, lng, address) -> {
+            javafx.application.Platform.runLater(() -> {
+                locationField.setText(address);
+            });
+        });
+    }
+
+    @FXML
+    private void handleGenerateDescriptionAI() {
+        String title = titleField.getText();
+        if (title == null || title.trim().isEmpty()) {
+            showAlert("Information manquante", "Veuillez remplir le titre pour générer une description.");
+            return;
+        }
+
+        String type = typeCombo.getValue();
+        String location = locationField.getText();
+        String generatedDescription = generateLocalEventDescription(title, type, location);
+        descriptionField.setText(generatedDescription);
+    }
+
+    private String generateLocalEventDescription(String title, String type, String location) {
+        String t = title.toLowerCase();
+        String loc = (location != null && !location.trim().isEmpty()) ? location : null;
+        String locationPhrase = loc != null ? " à " + loc : "";
+
+        // Priority 1: Use the event type from the combo box
+        if ("WEBINAIRE".equals(type)) {
+            return "Rejoignez-nous pour notre webinaire interactif : " + title + ". "
+                 + "Cet événement en ligne sera l'occasion d'échanger avec nos experts, d'explorer de nouvelles thématiques "
+                 + "et de découvrir nos opportunités depuis le confort de votre domicile. "
+                 + "Connectez-vous et participez à des discussions enrichissantes avec des professionnels du secteur.";
+        }
+        if ("Job_Faire".equals(type)) {
+            return "Ne manquez pas notre prochain salon de l'emploi : " + title
+                 + (loc != null ? ", qui se tiendra" + locationPhrase : "") + " ! "
+                 + "C'est une opportunité unique de rencontrer nos équipes RH en personne, de déposer votre CV "
+                 + "et de discuter des postes actuellement ouverts. Venez découvrir notre culture d'entreprise "
+                 + "et saisir les meilleures opportunités de carrière !";
+        }
+        if ("Interview day".equals(type)) {
+            return "Inscrivez-vous à notre journée d'entretiens : " + title
+                 + (loc != null ? ", qui aura lieu" + locationPhrase : "") + ". "
+                 + "Pendant cet événement, vous aurez la chance de passer des entretiens avec nos managers, "
+                 + "de démontrer vos compétences techniques et comportementales, et peut-être de décrocher votre futur poste ! "
+                 + "Préparez votre CV et venez avec votre meilleure motivation.";
+        }
+
+        // Priority 2: Fallback to title-based detection
+        if (t.contains("webinaire") || t.contains("webinar") || t.contains("ligne")) {
+            return "Rejoignez-nous pour notre webinaire interactif dédié à : " + title + ". "
+                 + "Cet événement en ligne sera l'occasion d'échanger avec nos experts et de découvrir nos opportunités.";
+        }
+        if (t.contains("hackathon") || t.contains("challenge") || t.contains("concours")) {
+            return "Prêt(e) à relever le défi ? Participez à notre : " + title
+                 + (loc != null ? locationPhrase : "") + ". "
+                 + "Venez démontrer votre talent en équipe, résoudre des problèmes complexes et innover avec nous. "
+                 + "Des prix exclusifs et des opportunités d'embauche seront à la clé !";
+        }
+        if (t.contains("atelier") || t.contains("workshop") || t.contains("formation")) {
+            return "Développez vos compétences lors de notre : " + title
+                 + (loc != null ? locationPhrase : "") + ". "
+                 + "Nos experts animeront des sessions pratiques pour vous former sur les dernières technologies "
+                 + "et méthodes de travail. Une excellente occasion d'apprendre et de réseauter.";
+        }
+
+        return "Nous avons le plaisir de vous annoncer notre prochain événement : " + title
+             + (loc != null ? locationPhrase : "") + ". "
+             + "Ce sera une excellente occasion de rencontrer nos équipes, d'en apprendre davantage sur notre secteur "
+             + "et de découvrir les différentes opportunités que nous offrons. Venez nombreux !";
     }
 
     private void showAlert(String title, String content) {
@@ -589,6 +936,19 @@ public class RecruiterDashboardController implements Initializable {
         alert.setTitle(title);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    /**
+     * JavaFX workaround: setStyle() on a TableRow is often overridden by the
+     * table's own CSS. Applying the style to each TableCell inside the row
+     * ensures the color actually shows up regardless of the stylesheet.
+     */
+    private void applyCellStyle(String style, TableRow<?> row) {
+        for (javafx.scene.Node node : row.getChildrenUnmodifiable()) {
+            if (node instanceof TableCell) {
+                node.setStyle(style);
+            }
+        }
     }
 }
 

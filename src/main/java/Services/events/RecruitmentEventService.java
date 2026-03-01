@@ -62,6 +62,29 @@ public class RecruitmentEventService {
         ps.executeUpdate();
     }
 
+    public RecruitmentEvent getById(long id) throws SQLException {
+        checkConnection();
+        String query = "SELECT * FROM recruitment_event WHERE id = ?";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setLong(1, id);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            RecruitmentEvent event = new RecruitmentEvent();
+            event.setId(rs.getLong("id"));
+            event.setRecruiterId(rs.getLong("recruiter_id"));
+            event.setTitle(rs.getString("title"));
+            event.setDescription(rs.getString("description"));
+            event.setEventType(rs.getString("event_type"));
+            event.setLocation(rs.getString("location"));
+            event.setEventDate(rs.getTimestamp("event_date").toLocalDateTime());
+            event.setCapacity(rs.getInt("capacity"));
+            try { event.setMeetLink(rs.getString("meet_link")); } catch (SQLException ignored) {}
+            event.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+            return event;
+        }
+        return null;
+    }
+
     public List<RecruitmentEvent> getAll() throws SQLException {
         List<RecruitmentEvent> events = new ArrayList<>();
         String query = "SELECT e.*, r.company_name, r.company_location, r.company_description FROM recruitment_event e JOIN recruiter r ON e.recruiter_id = r.id";
@@ -112,5 +135,24 @@ public class RecruitmentEventService {
             events.add(event);
         }
         return events;
+    }
+
+    public boolean isEventPopular(long eventId) throws SQLException {
+        checkConnection();
+        String query = "SELECT capacity FROM recruitment_event WHERE id = ?";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setLong(1, eventId);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            int capacity = rs.getInt("capacity");
+            if (capacity <= 0) return false;
+
+            EventRegistrationService regService = new EventRegistrationService();
+            int confirmedCount = regService.getConfirmedCount(eventId);
+
+            double percentage = ((double) confirmedCount / capacity) * 100;
+            return percentage >= 70;
+        }
+        return false;
     }
 }

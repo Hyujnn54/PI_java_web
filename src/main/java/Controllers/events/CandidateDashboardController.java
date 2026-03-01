@@ -45,6 +45,9 @@ public class CandidateDashboardController implements Initializable {
     private TableColumn<EventRegistration, String> regStatusCol;
 
     @FXML
+    private ComboBox<String> statusFilterCombo;
+
+    @FXML
     private Button eventsBtn;
     @FXML
     private Button interviewsBtn;
@@ -59,6 +62,7 @@ public class CandidateDashboardController implements Initializable {
     private CandidateService candidateService;
     private UserService userService;
     private Candidate currentCandidate;
+    private java.util.List<String> recommendedTypes = new java.util.ArrayList<>();
 
     public CandidateDashboardController() {
         eventService = new RecruitmentEventService();
@@ -92,6 +96,21 @@ public class CandidateDashboardController implements Initializable {
         });
         if (regDateCol != null) regDateCol.setCellValueFactory(new PropertyValueFactory<>("registeredAt"));
         if (regStatusCol != null) regStatusCol.setCellValueFactory(new PropertyValueFactory<>("attendanceStatus"));
+        
+        if (statusFilterCombo != null) {
+            ObservableList<String> filterOptions = FXCollections.observableArrayList(
+                "Tous les statuts",
+                Models.events.AttendanceStatusEnum.PENDING.name(),
+                Models.events.AttendanceStatusEnum.REGISTERED.name(),
+                Models.events.AttendanceStatusEnum.CONFIRMED.name(),
+                Models.events.AttendanceStatusEnum.ATTENDED.name(),
+                Models.events.AttendanceStatusEnum.ABSENT.name(),
+                Models.events.AttendanceStatusEnum.CANCELLED.name()
+            );
+            statusFilterCombo.setItems(filterOptions);
+            statusFilterCombo.setValue("Tous les statuts");
+            statusFilterCombo.setOnAction(e -> refreshRegistrations());
+        }
     }
 
     private void loadCandidateData() {
@@ -164,7 +183,28 @@ public class CandidateDashboardController implements Initializable {
         try {
             java.util.List<RecruitmentEvent> events = eventService.getAll();
             eventsHBox.getChildren().clear();
-            
+
+            // Load recommended types for the current candidate
+            recommendedTypes.clear();
+            if (currentCandidate != null) {
+                try {
+                    recommendedTypes = registrationService.getEventTypesForCandidate(currentCandidate.getId());
+                } catch (SQLException ex) {
+                    System.err.println("Could not load recommended types: " + ex.getMessage());
+                }
+            }
+
+            // Sort: recommended events first
+            if (!recommendedTypes.isEmpty()) {
+                events.sort((a, b) -> {
+                    boolean aRec = recommendedTypes.contains(a.getEventType());
+                    boolean bRec = recommendedTypes.contains(b.getEventType());
+                    if (aRec && !bRec) return -1;
+                    if (!aRec && bRec) return 1;
+                    return 0;
+                });
+            }
+
             for (RecruitmentEvent event : events) {
                 eventsHBox.getChildren().add(createEventCard(event));
             }
@@ -174,57 +214,147 @@ public class CandidateDashboardController implements Initializable {
     }
 
     private Node createEventCard(RecruitmentEvent event) {
-        VBox card = new VBox(15);
-        card.getStyleClass().add("event-card");
+        VBox card = new VBox(10);
         card.setAlignment(Pos.TOP_LEFT);
-        
+        card.setPrefWidth(200);
+        card.setMinWidth(200);
+        card.setMaxWidth(220);
+        card.setMinHeight(220);
+
+        // Check popularity for orange border
+        boolean popularCheck = false;
+        try {
+            popularCheck = eventService.isEventPopular(event.getId());
+        } catch (SQLException ex) {
+            System.err.println("Error checking popularity: " + ex.getMessage());
+        }
+        final boolean isPopular = popularCheck;
+
+        String borderColor = isPopular ? "#F97316" : "#E4EBF5";
+        String borderWidth = isPopular ? "2" : "1";
+        card.setStyle(
+            "-fx-background-color: white;" +
+            "-fx-background-radius: 14;" +
+            "-fx-border-color: " + borderColor + ";" +
+            "-fx-border-width: " + borderWidth + ";" +
+            "-fx-border-radius: 14;" +
+            "-fx-padding: 16;" +
+            "-fx-effect: dropshadow(gaussian, rgba(100,150,220,0.10), 10, 0, 0, 3);" +
+            "-fx-cursor: hand;"
+        );
+
+        // Title
         Label titleLabel = new Label(event.getTitle());
-        titleLabel.getStyleClass().add("event-card-title");
-        
+        titleLabel.setWrapText(true);
+        titleLabel.setMaxWidth(180);
+        titleLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #1E293B;");
+
+        // Type badge
+        String typeColor = switch (event.getEventType() != null ? event.getEventType() : "") {
+            case "WEBINAIRE"     -> "#EBF3FF;-fx-text-fill:#1565C0";
+            case "Interview day" -> "#F0FDF4;-fx-text-fill:#15803D";
+            default              -> "#FFF7ED;-fx-text-fill:#C2410C";
+        };
         Label typeLabel = new Label(event.getEventType());
-        typeLabel.getStyleClass().add("event-card-type");
-        
+        typeLabel.setStyle(
+            "-fx-background-color: " + typeColor + ";" +
+            "-fx-font-size: 11px; -fx-font-weight: 600;" +
+            "-fx-background-radius: 20; -fx-padding: 3 10;"
+        );
+
+        // Description
         Label descriptionLabel = new Label(event.getDescription());
-        descriptionLabel.getStyleClass().add("event-card-description");
         descriptionLabel.setWrapText(true);
-        descriptionLabel.setMaxHeight(60);
-        
-        VBox infoBox = new VBox(8);
-        infoBox.getStyleClass().add("event-card-info-box");
-        
-        Label locationLabel = new Label("📍 " + event.getLocation());
-        locationLabel.getStyleClass().add("event-card-info");
-        
-        Label dateLabel = new Label("📅 " + (event.getEventDate() != null ? event.getEventDate().toString().replace("T", " ") : "N/A"));
-        dateLabel.getStyleClass().add("event-card-info");
-        
-        Label capacityLabel = new Label("👥 " + event.getCapacity() + " places");
-        capacityLabel.getStyleClass().add("event-card-info");
-        
-        infoBox.getChildren().addAll(locationLabel, dateLabel, capacityLabel);
-        
+        descriptionLabel.setMaxHeight(55);
+        descriptionLabel.setMaxWidth(180);
+        descriptionLabel.setEllipsisString("...");
+        descriptionLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #64748B;");
+
+        // Info section
+        Label locationLabel = new Label("\uD83D\uDCCD " + event.getLocation());
+        locationLabel.setMaxWidth(180);
+        locationLabel.setEllipsisString("...");
+        locationLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #475569;");
+
+        String dateStr = event.getEventDate() != null
+            ? event.getEventDate().toString().replace("T", " ") : "N/A";
+        Label dateLabel = new Label("\uD83D\uDCC5 " + dateStr);
+        dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #475569;");
+
+        Label capacityLabel = new Label("\uD83D\uDC65 " + event.getCapacity() + " places");
+        capacityLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #475569;");
+
+        VBox infoBox = new VBox(5, locationLabel, dateLabel, capacityLabel);
+        infoBox.setStyle("-fx-padding: 8 0 0 0;");
+
         card.getChildren().addAll(titleLabel, typeLabel, descriptionLabel, infoBox);
-        
+
+        // Recommendation badge — match candidate's past registrations
+        boolean isRecommended = recommendedTypes.contains(event.getEventType());
+        if (isRecommended) {
+            Label recBadge = new Label("\u2B50 Recommandé pour vous");
+            recBadge.setStyle(
+                "-fx-background-color: #EBF3FF; -fx-text-fill: #1565C0;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-padding: 4 8; -fx-background-radius: 12;"
+            );
+            card.getChildren().add(0, recBadge);
+        }
+
+        // Popular badge
+        if (isPopular) {
+            Label popularBadge = new Label("\uD83D\uDD25 Populaire");
+            popularBadge.setStyle(
+                "-fx-background-color: #FFF3CD; -fx-text-fill: #F97316;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-padding: 4 8; -fx-background-radius: 12;"
+            );
+            card.getChildren().add(isRecommended ? 1 : 0, popularBadge);
+        }
+
+        // Hover & selection
+        String defaultStyle = card.getStyle();
+        card.setOnMouseEntered(e -> card.setStyle(defaultStyle +
+            "-fx-effect: dropshadow(gaussian, rgba(100,150,220,0.22), 16, 0, 0, 5);" +
+            "-fx-border-color: " + (isPopular ? "#EA580C" : "#BBDEFB") + ";"
+        ));
+        card.setOnMouseExited(e -> {
+            if (!card.getStyleClass().contains("event-card-selected")) {
+                card.setStyle(defaultStyle);
+            }
+        });
+
         card.setOnMouseClicked(e -> {
-            // Remove previous selection styling
             eventsHBox.getChildren().forEach(node -> node.getStyleClass().remove("event-card-selected"));
-            // Add selection styling
+            card.setStyle(defaultStyle +
+                "-fx-border-color: #1565C0; -fx-border-width: 2;" +
+                "-fx-effect: dropshadow(gaussian, rgba(21,101,192,0.25), 16, 0, 0, 5);"
+            );
             card.getStyleClass().add("event-card-selected");
-            
             selectedEvent = event;
         });
-        
+
         return card;
     }
 
     private RecruitmentEvent selectedEvent;
 
     private void refreshRegistrations() {
-        if (currentCandidate == null)
+        if (currentCandidate == null || myRegistrationsTable == null)
             return;
         try {
-            ObservableList<EventRegistration> list = FXCollections
-                    .observableArrayList(registrationService.getByCandidate(currentCandidate.getId()));
+            java.util.List<EventRegistration> allRegs = registrationService.getByCandidate(currentCandidate.getId());
+            
+            // Apply filter
+            String selectedFilter = (statusFilterCombo != null) ? statusFilterCombo.getValue() : "Tous les statuts";
+            if (selectedFilter != null && !"Tous les statuts".equals(selectedFilter)) {
+                allRegs = allRegs.stream()
+                        .filter(reg -> reg.getAttendanceStatus() != null && 
+                                       reg.getAttendanceStatus().name().equals(selectedFilter))
+                        .collect(java.util.stream.Collectors.toList());
+            }
+            
+            ObservableList<EventRegistration> list = FXCollections.observableArrayList(allRegs);
             myRegistrationsTable.setItems(list);
         } catch (SQLException e) {
             showAlert("Erreur", e.getMessage());

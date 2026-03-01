@@ -37,6 +37,9 @@ public class LocationPickerController {
     private Label lblAddress;
     private TextField txtSearch;
 
+    // Bridge for JS
+    private JavaBridge javaBridge = new JavaBridge();
+
     public LocationPickerController() {
         this.mapService = new NominatimMapService();
     }
@@ -188,7 +191,7 @@ public class LocationPickerController {
             if (newState == Worker.State.SUCCEEDED) {
                 // Créer un pont Java-JavaScript pour recevoir les clics
                 JSObject window = (JSObject) webEngine.executeScript("window");
-                window.setMember("javaApp", new JavaBridge());
+                window.setMember("javaApp", javaBridge);
             }
         });
 
@@ -208,6 +211,29 @@ public class LocationPickerController {
 
                 // Reverse geocoding pour obtenir l'adresse
                 reverseGeocode(lat, lng);
+            });
+        }
+
+        public void onMapDoubleClick(double lat, double lng) {
+            Platform.runLater(() -> {
+                selectedLatitude = lat;
+                selectedLongitude = lng;
+                // Auto-confirm when double-clicking
+                new Thread(() -> {
+                    try {
+                        NominatimMapService.GeoLocation location = mapService.reverseGeocode(lat, lng);
+                        Platform.runLater(() -> {
+                            if (location != null) {
+                                selectedAddress = location.getFullLocation();
+                            } else {
+                                selectedAddress = String.format("%.4f, %.4f", lat, lng);
+                            }
+                            confirmSelection(); // Automatically close and pass value back
+                        });
+                    } catch (Exception e) {
+                        Platform.runLater(LocationPickerController.this::confirmSelection);
+                    }
+                }).start();
             });
         }
     }
@@ -366,24 +392,34 @@ public class LocationPickerController {
                         iconAnchor: [10, 10]
                     });
                     
+                    function placeMarker(lat, lng) {
+                        if (currentMarker) map.removeLayer(currentMarker);
+                        currentMarker = L.marker([lat, lng], {icon: redIcon}).addTo(map);
+                        currentMarker.bindPopup('<b>Position sélectionnée</b><br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6)).openPopup();
+                    }
+
                     // Gestionnaire de clic sur la carte
                     map.on('click', function(e) {
                         var lat = e.latlng.lat;
                         var lng = e.latlng.lng;
-                        
-                        // Supprimer l'ancien marqueur
-                        if (currentMarker) {
-                            map.removeLayer(currentMarker);
-                        }
-                        
-                        // Ajouter un nouveau marqueur
-                        currentMarker = L.marker([lat, lng], {icon: redIcon}).addTo(map);
-                        currentMarker.bindPopup('<b>Position sélectionnée</b><br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6)).openPopup();
-                        
-                        // Envoyer les coordonnées à Java
-                        if (window.javaApp) {
-                            window.javaApp.onMapClick(lat, lng);
-                        }
+                        placeMarker(lat, lng);
+                        if (window.javaApp) window.javaApp.onMapClick(lat, lng);
+                    });
+
+                    // Aussi réagir au mousedown pour plus de réactivité dans JavaFX WebView
+                    map.on('mousedown', function(e) {
+                        var lat = e.latlng.lat;
+                        var lng = e.latlng.lng;
+                        placeMarker(lat, lng);
+                        if (window.javaApp) window.javaApp.onMapClick(lat, lng);
+                    });
+
+                    // Autoconfirmation sur double-clic
+                    map.on('dblclick', function(e) {
+                        var lat = e.latlng.lat;
+                        var lng = e.latlng.lng;
+                        placeMarker(lat, lng);
+                        if (window.javaApp) window.javaApp.onMapDoubleClick(lat, lng);
                     });
                     
                     // Fonction pour centrer la carte et placer un marqueur (appelée depuis Java)

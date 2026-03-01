@@ -68,6 +68,18 @@ public class EventRegistrationService {
         ps.executeUpdate();
     }
 
+    public int getConfirmedCount(long eventId) throws SQLException {
+        checkConnection();
+        String query = "SELECT COUNT(*) FROM event_registration WHERE event_id = ? AND attendance_status = 'CONFIRMED'";
+        PreparedStatement ps = connection.prepareStatement(query);
+        ps.setLong(1, eventId);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return rs.getInt(1);
+        }
+        return 0;
+    }
+
     public List<EventRegistration> getAll() throws SQLException {
         checkConnection();
         List<EventRegistration> registrations = new ArrayList<>();
@@ -125,7 +137,7 @@ public class EventRegistrationService {
         checkConnection();
         List<EventRegistration> registrations = new ArrayList<>();
         // Using LEFT JOINs to be more robust if candidate profile is incomplete
-        String query = "SELECT er.*, u.first_name, u.last_name, u.email, re.title as event_title FROM event_registration er " +
+        String query = "SELECT er.*, u.first_name, u.last_name, u.email, re.title as event_title, re.event_date FROM event_registration er " +
                 "JOIN recruitment_event re ON er.event_id = re.id " +
                 "LEFT JOIN candidate c ON er.candidate_id = c.id " +
                 "JOIN users u ON (er.candidate_id = u.id OR c.user_id = u.id) " +
@@ -142,7 +154,7 @@ public class EventRegistrationService {
     public List<EventRegistration> getByRecruiter(long recruiterId) throws SQLException {
         checkConnection();
         List<EventRegistration> registrations = new ArrayList<>();
-        String query = "SELECT er.*, u.first_name, u.last_name, u.email, re.title as event_title FROM event_registration er " +
+        String query = "SELECT er.*, u.first_name, u.last_name, u.email, re.title as event_title, re.event_date FROM event_registration er " +
                 "JOIN recruitment_event re ON er.event_id = re.id " +
                 "LEFT JOIN candidate c ON er.candidate_id = c.id " +
                 "JOIN users u ON (er.candidate_id = u.id OR c.user_id = u.id) " +
@@ -177,6 +189,11 @@ public class EventRegistrationService {
             RecruitmentEvent event = new RecruitmentEvent();
             event.setId(reg.getEventId());
             event.setTitle(rs.getString("event_title"));
+            try {
+                if (rs.getTimestamp("event_date") != null) {
+                    event.setEventDate(rs.getTimestamp("event_date").toLocalDateTime());
+                }
+            } catch (SQLException ignored) {}
             reg.setEvent(event);
         } catch (SQLException ignored) {}
 
@@ -194,5 +211,24 @@ public class EventRegistrationService {
         } catch (IllegalArgumentException e) {
             return AttendanceStatusEnum.PENDING;
         }
+    }
+
+    /**
+     * Get the distinct event types that a candidate has registered for in the past.
+     * Used for the recommendation system.
+     */
+    public java.util.List<String> getEventTypesForCandidate(long candidateId) throws SQLException {
+        java.util.List<String> types = new java.util.ArrayList<>();
+        String sql = "SELECT DISTINCT re.event_type FROM event_registration er "
+                   + "JOIN recruitment_event re ON er.event_id = re.id "
+                   + "WHERE er.candidate_id = ?";
+        PreparedStatement ps = connection.prepareStatement(sql);
+        ps.setLong(1, candidateId);
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()) {
+            String t = rs.getString("event_type");
+            if (t != null && !t.isBlank()) types.add(t);
+        }
+        return types;
     }
 }

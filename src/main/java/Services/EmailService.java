@@ -670,46 +670,177 @@ public class EmailService {
 
     /**
      * Send a broadcast/notification email from recruiter to a candidate about event status change.
+     * When CONFIRMED: includes meet link for WEBINAIRE, or QR code for Job_Faire/Interview day.
      */
     public static boolean sendEventStatusNotification(String toEmail, String candidateName,
                                                        String eventTitle, String eventDate,
                                                        String eventLocation, String newStatus,
-                                                       String recruiterMessage) {
+                                                       String recruiterMessage, String eventType,
+                                                       String meetLink) {
         String effective = resolveRecipient(toEmail);
         String subject = "Mise à jour de votre inscription — " + eventTitle + " | Talent Bridge";
         String statusColor = newStatus.equals("CONFIRMED") ? "#16A34A" :
                              newStatus.equals("CANCELLED") ? "#DC2626" : "#1565C0";
+
+        // Build the extra section for CONFIRMED status
+        String confirmExtra = "";
+        if ("CONFIRMED".equals(newStatus)) {
+            if ("WEBINAIRE".equals(eventType) && meetLink != null && !meetLink.isBlank()) {
+                // Include meet link button for WEBINAIRE
+                confirmExtra = "<div style='text-align:center;margin:24px 0;'>"
+                    + "<p style='color:#1565C0;font-weight:700;font-size:14px;margin-bottom:12px'>🔗 Lien de la réunion en ligne :</p>"
+                    + "<a href='" + escapeHtml(meetLink) + "' style='display:inline-block;background:linear-gradient(135deg,#1565C0,#1E88E5);color:#fff;"
+                    + "text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:50px;'>Rejoindre le Webinaire</a>"
+                    + "<p style='color:#64748B;font-size:12px;margin-top:10px'>" + escapeHtml(meetLink) + "</p>"
+                    + "</div>";
+            } else {
+                // Generate QR code for Job_Faire / Interview day
+                String qrData = "Talent Bridge - " + eventTitle + "\nDate: " + eventDate + "\nLieu: " + eventLocation;
+                String qrImgTag = generateQrCodeImgTag(qrData, 200);
+                confirmExtra = "<div style='text-align:center;margin:24px 0;'>"
+                    + "<p style='color:#1565C0;font-weight:700;font-size:14px;margin-bottom:12px'>📱 Votre QR Code d'accès :</p>"
+                    + qrImgTag
+                    + "<p style='color:#64748B;font-size:12px;margin-top:10px'>Présentez ce QR code à l'entrée de l'événement</p>"
+                    + "</div>";
+            }
+        }
+
         String text = "Bonjour " + candidateName + ",\n\nVotre statut pour l'événement \"" + eventTitle
                 + "\" a été mis à jour : " + newStatus
+                + "\n\nDétails de l'événement :"
+                + "\n  Titre    : " + eventTitle
+                + "\n  Type     : " + (eventType != null ? eventType : "N/A")
+                + "\n  Date     : " + (eventDate != null && !eventDate.isBlank() ? eventDate : "N/A")
+                + "\n  Lieu     : " + (eventLocation != null && !eventLocation.isBlank() ? eventLocation : "N/A")
+                + ("CONFIRMED".equals(newStatus) && "WEBINAIRE".equals(eventType) && meetLink != null && !meetLink.isBlank()
+                    ? "\n\nLien du webinaire : " + meetLink : "")
                 + (recruiterMessage != null && !recruiterMessage.isBlank() ? "\n\nMessage du recruteur : " + recruiterMessage : "")
-                + "\n\nTalent Bridge";
-        String html = "<div style='font-family:Inter,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)'>"
-                + "<div style='background:linear-gradient(135deg,#1565C0,#1E88E5);padding:32px 36px;'>"
-                + "<h1 style='color:#fff;margin:0;font-size:22px'>📋 Mise à jour d'inscription</h1>"
-                + "<p style='color:rgba(255,255,255,.85);margin:6px 0 0'>Talent Bridge — Événements</p></div>"
+                + "\n\nCordialement,\nL'équipe Talent Bridge";
+
+        // Build event type badge color
+        String typeBadgeColor = "WEBINAIRE".equals(eventType) ? "#1565C0" :
+                                "Job_Faire".equals(eventType) ? "#C2410C" : "#15803D";
+
+        String html = "<div style='font-family:Inter,Arial,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)'>"
+                // Header
+                + "<div style='background:linear-gradient(135deg,#1565C0,#1E88E5);padding:36px 36px 28px;'>"
+                + "<h1 style='color:#fff;margin:0;font-size:22px;font-weight:800'>📋 Mise à jour d'inscription</h1>"
+                + "<p style='color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px'>Talent Bridge — Événements de Recrutement</p></div>"
+                // Body
                 + "<div style='padding:32px 36px'>"
-                + "<p style='font-size:16px;color:#1E293B'>Bonjour <strong>" + escapeHtml(candidateName) + "</strong>,</p>"
-                + "<p style='color:#475569'>Votre statut pour l'événement <strong>" + escapeHtml(eventTitle) + "</strong> a été mis à jour :</p>"
-                + "<div style='text-align:center;margin:24px 0'>"
-                + "<span style='background:" + statusColor + ";color:#fff;font-weight:700;font-size:16px;padding:10px 28px;border-radius:24px'>"
+                + "<p style='font-size:16px;color:#1E293B;margin:0 0 16px'>Bonjour <strong>" + escapeHtml(candidateName) + "</strong>,</p>"
+                + "<p style='color:#475569;font-size:14px;line-height:1.6;margin:0 0 20px'>Votre statut pour l'événement ci-dessous a été mis à jour :</p>"
+                // Status badge
+                + "<div style='text-align:center;margin:20px 0'>"
+                + "<span style='background:" + statusColor + ";color:#fff;font-weight:700;font-size:16px;padding:10px 32px;border-radius:24px;display:inline-block'>"
                 + escapeHtml(newStatus) + "</span></div>"
-                + "<div style='background:#F8FAFF;border-radius:8px;padding:16px 20px;margin:16px 0'>"
-                + "<p style='margin:4px 0;color:#334155'>📅 " + escapeHtml(eventDate) + "</p>"
-                + "<p style='margin:4px 0;color:#334155'>📍 " + escapeHtml(eventLocation) + "</p>"
+                // Event details card
+                + "<div style='background:#F7FAFF;border:1px solid #DCEEFB;border-radius:12px;overflow:hidden;margin:24px 0'>"
+                + "<div style='background:linear-gradient(to right,#1565C0,#1E88E5);padding:14px 20px'>"
+                + "<span style='color:white;font-size:13px;font-weight:700;letter-spacing:1px'>DÉTAILS DE L'ÉVÉNEMENT</span></div>"
+                // Title row
+                + "<div style='padding:16px 20px;border-bottom:1px solid #EBF3FF'>"
+                + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>Titre</div>"
+                + "<div style='font-size:15px;color:#1E293B;font-weight:700'>" + escapeHtml(eventTitle) + "</div></div>"
+                // Type row
+                + "<div style='padding:12px 20px;border-bottom:1px solid #EBF3FF'>"
+                + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>Type d'événement</div>"
+                + "<span style='background:" + typeBadgeColor + ";color:#fff;font-size:12px;font-weight:600;padding:3px 12px;border-radius:12px'>"
+                + escapeHtml(eventType != null ? eventType : "N/A") + "</span></div>"
+                // Date row
+                + "<div style='padding:12px 20px;border-bottom:1px solid #EBF3FF'>"
+                + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>📅 Date et heure</div>"
+                + "<div style='font-size:14px;color:#1E293B;font-weight:600'>"
+                + escapeHtml(eventDate != null && !eventDate.isBlank() ? eventDate : "À confirmer") + "</div></div>"
+                // Location row
+                + "<div style='padding:12px 20px'>"
+                + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>📍 Lieu</div>"
+                + "<div style='font-size:14px;color:#1E293B;font-weight:600'>"
+                + escapeHtml(eventLocation != null && !eventLocation.isBlank() ? eventLocation : "À confirmer") + "</div></div>"
                 + "</div>"
+                // Confirmation extras (meet link or QR code)
+                + confirmExtra
+                // Recruiter message
                 + (recruiterMessage != null && !recruiterMessage.isBlank()
                     ? "<div style='background:#FFF7ED;border-left:4px solid #F59E0B;border-radius:8px;padding:14px 18px;margin-top:16px'>"
                       + "<p style='color:#92400E;margin:0;font-size:13px'><strong>Message du recruteur :</strong> " + escapeHtml(recruiterMessage) + "</p></div>"
                     : "")
-                + "<p style='color:#94A3B8;font-size:12px;margin-top:24px'>Cet email a été envoyé automatiquement par Talent Bridge.</p>"
+                // Footer
+                + "<p style='color:#475569;font-size:13px;margin-top:28px'>Bonne chance !<br><strong>L'équipe Talent Bridge</strong></p>"
+                + "<p style='color:#94A3B8;font-size:11px;margin-top:20px;border-top:1px solid #E4EBF5;padding-top:16px'>Cet email a été envoyé automatiquement par Talent Bridge. Merci de ne pas y répondre directement.</p>"
                 + "</div></div>";
+
+        // Send via tunisiatour SMTP (using EmailServiceApplication's SMTP setup)
         try {
-            sendViaBrevo(effective, candidateName, subject, text, html);
-            System.out.println("[EmailService] Event status notification sent to: " + effective);
+            sendViaTunisiatourSmtp(effective, candidateName, subject, text, html);
+            System.out.println("[EmailService] Event status notification sent via SMTP to: " + effective);
             return true;
         } catch (Exception e) {
-            System.err.println("[EmailService] Failed to send event status email: " + e.getMessage());
-            return false;
+            System.err.println("[EmailService] SMTP failed, trying Brevo fallback: " + e.getMessage());
+            try {
+                sendViaBrevo(effective, candidateName, subject, text, html);
+                System.out.println("[EmailService] Event status notification sent via Brevo to: " + effective);
+                return true;
+            } catch (Exception e2) {
+                System.err.println("[EmailService] Failed to send event status email: " + e2.getMessage());
+                return false;
+            }
         }
+    }
+
+    /**
+     * Generate a QR code image tag using the free api.qrserver.com API.
+     * Returns an HTML img tag pointing directly to the API URL.
+     */
+    private static String generateQrCodeImgTag(String data, int size) {
+        try {
+            String encoded = java.net.URLEncoder.encode(data, "UTF-8");
+            String url = "https://api.qrserver.com/v1/create-qr-code/?size=" + size + "x" + size + "&data=" + encoded;
+            return "<img src='" + escapeHtml(url) + "' alt='QR Code' width='" + size + "' height='" + size
+                    + "' style='border:1px solid #E4EBF5;border-radius:8px;' />";
+        } catch (Exception e) {
+            System.err.println("[EmailService] QR code generation error: " + e.getMessage());
+            return "<p style='color:#DC2626;'>QR code indisponible</p>";
+        }
+    }
+
+    /**
+     * Send email via tunisiatour Gmail SMTP (same credentials as EmailServiceApplication).
+     */
+    private static void sendViaTunisiatourSmtp(String toEmail, String toName,
+                                                String subject, String textBody, String htmlBody) throws Exception {
+        String smtpUser = "tunisiatour0@gmail.com";
+        String smtpPass = "etnbvnqqdejttdsc";
+        String displayName = "Équipe Recrutement – Talent Bridge";
+
+        java.util.Properties props = new java.util.Properties();
+        props.put("mail.smtp.host", "smtp.gmail.com");
+        props.put("mail.smtp.port", "587");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+
+        javax.mail.Session session = javax.mail.Session.getInstance(props, new javax.mail.Authenticator() {
+            @Override
+            protected javax.mail.PasswordAuthentication getPasswordAuthentication() {
+                return new javax.mail.PasswordAuthentication(smtpUser, smtpPass);
+            }
+        });
+
+        javax.mail.internet.MimeMessage message = new javax.mail.internet.MimeMessage(session);
+        message.setFrom(new javax.mail.internet.InternetAddress(smtpUser, displayName));
+        message.setRecipients(javax.mail.Message.RecipientType.TO, javax.mail.internet.InternetAddress.parse(toEmail));
+        message.setSubject(subject);
+
+        javax.mail.internet.MimeMultipart multipart = new javax.mail.internet.MimeMultipart("alternative");
+        javax.mail.internet.MimeBodyPart textPart = new javax.mail.internet.MimeBodyPart();
+        textPart.setContent(textBody, "text/plain; charset=UTF-8");
+        javax.mail.internet.MimeBodyPart htmlPart = new javax.mail.internet.MimeBodyPart();
+        htmlPart.setContent(htmlBody, "text/html; charset=UTF-8");
+        multipart.addBodyPart(textPart);
+        multipart.addBodyPart(htmlPart);
+        message.setContent(multipart);
+
+        javax.mail.Transport.send(message);
     }
 }

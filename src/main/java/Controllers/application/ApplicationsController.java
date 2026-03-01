@@ -1880,7 +1880,7 @@ public class ApplicationsController {
         new Thread(() -> {
             try {
                 // Look up candidate contact info
-                Services.events.UserService.UserInfo info = Services.events.UserService.getUserInfo(app.candidateId());
+                UserService.UserInfo info = UserService.getUserInfo(app.candidateId());
                 if (info == null || info.email() == null || info.email().isBlank()) {
                     System.err.println("[AppController] No email for candidate " + app.candidateId() + " — skipping interview confirmation.");
                     return;
