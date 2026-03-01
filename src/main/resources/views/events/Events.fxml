@@ -155,7 +155,40 @@
                                                -fx-font-weight: 700; -fx-font-size: 14px;
                                                -fx-background-radius: 10; -fx-padding: 12 20; -fx-cursor: hand;
                                                -fx-border-color: #FECACA; -fx-border-width: 1; -fx-border-radius: 10;"/>
+                                <Button fx:id="btnAnalyze" text="🤖 Analyser (IA)" onAction="#handleAIAnalysis"
+                                        maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                                        style="-fx-background-color: #8B5CF6; -fx-text-fill: white;
+                                               -fx-font-weight: 700; -fx-font-size: 14px;
+                                               -fx-background-radius: 10; -fx-padding: 12 20; -fx-cursor: hand;"/>
                             </HBox>
+
+                            <!-- AI Analysis Results Container (Initially Hidden) -->
+                            <VBox fx:id="aiAnalysisContainer" spacing="12" managed="false" visible="false"
+                                  style="-fx-background-color: #F5F3FF; -fx-border-color: #EDE9FE; -fx-border-width: 1; 
+                                         -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 16; -fx-margin-top: 10;">
+                                <HBox alignment="CENTER_LEFT" spacing="8">
+                                    <Label text="🤖" style="-fx-font-size: 20px;"/>
+                                    <Label text="Analyse du profil par l'IA" style="-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #6D28D9;"/>
+                                </HBox>
+
+                                <Label fx:id="aiLoadingLabel" text="Génération de l'analyse en cours..." 
+                                       style="-fx-font-size: 13px; -fx-text-fill: #8B5CF6; -fx-font-style: italic;" 
+                                       managed="false" visible="false"/>
+
+                                <VBox fx:id="aiContentBox" spacing="12">
+                                    <!-- Pros Container -->
+                                    <VBox spacing="4" style="-fx-background-color: #ECFCCB; -fx-padding: 12; -fx-background-radius: 8;">
+                                        <Label text="✅ Points Forts (Avantages)" style="-fx-font-size: 13px; -fx-font-weight: 700; -fx-text-fill: #3F6212;"/>
+                                        <Label fx:id="aiProsLabel" wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #4D7C0F; -fx-line-spacing: 4;"/>
+                                    </VBox>
+                                    
+                                    <!-- Cons Container -->
+                                    <VBox spacing="4" style="-fx-background-color: #FEE2E2; -fx-padding: 12; -fx-background-radius: 8;">
+                                        <Label text="⚠️ Points de Vigilance (Inconvénients)" style="-fx-font-size: 13px; -fx-font-weight: 700; -fx-text-fill: #991B1B;"/>
+                                        <Label fx:id="aiConsLabel" wrapText="true" style="-fx-font-size: 13px; -fx-text-fill: #B91C1C; -fx-line-spacing: 4;"/>
+                                    </VBox>
+                                </VBox>
+                            </VBox>
                         </VBox>
                     </ScrollPane>
                 </VBox>

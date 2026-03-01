@@ -39,9 +39,20 @@ public class EventsViewController implements Initializable {
     @FXML private Label lblRegistrationStatus;
     @FXML private Button btnApply;
     @FXML private Button btnCancel;
+    @FXML private Button btnAnalyze;
+    
+    @FXML private VBox aiAnalysisContainer;
+    @FXML private Label aiLoadingLabel;
+    @FXML private VBox aiContentBox;
+    @FXML private Label aiProsLabel;
+    @FXML private Label aiConsLabel;
 
     private final RecruitmentEventService eventService = new RecruitmentEventService();
     private final EventRegistrationService registrationService = new EventRegistrationService();
+    private final Services.events.CandidateService candidateService = new Services.events.CandidateService();
+
+    // Cache pour l'IA
+    private String lastAnalyzedEventId = null;
 
     private List<RecruitmentEvent> allEvents = new ArrayList<>();
     private RecruitmentEvent selectedEvent = null;
@@ -195,6 +206,15 @@ public class EventsViewController implements Initializable {
         detailContent.setVisible(true);
         detailContent.setManaged(true);
 
+        // Reset AI analysis panel
+        if (aiAnalysisContainer != null) {
+            aiAnalysisContainer.setVisible(false);
+            aiAnalysisContainer.setManaged(false);
+            aiProsLabel.setText("");
+            aiConsLabel.setText("");
+            lastAnalyzedEventId = null;
+        }
+
         detailTitle.setText(ev.getTitle());
         detailType.setText(ev.getEventType() != null ? ev.getEventType() : "");
         detailDescription.setText(ev.getDescription() != null ? ev.getDescription() : "");
@@ -216,13 +236,16 @@ public class EventsViewController implements Initializable {
             // Admin: read-only view
             btnApply.setVisible(false); btnApply.setManaged(false);
             btnCancel.setVisible(false); btnCancel.setManaged(false);
+            if(btnAnalyze != null) { btnAnalyze.setVisible(false); btnAnalyze.setManaged(false); }
         } else if (isRecruiter) {
             // Recruiter: also read-only in main shell view
             btnApply.setVisible(false); btnApply.setManaged(false);
             btnCancel.setVisible(false); btnCancel.setManaged(false);
+            if(btnAnalyze != null) { btnAnalyze.setVisible(false); btnAnalyze.setManaged(false); }
         } else {
             // Candidate: check if already registered
             btnApply.setVisible(true); btnApply.setManaged(true);
+            if(btnAnalyze != null) { btnAnalyze.setVisible(true); btnAnalyze.setManaged(true); }
             if (currentCandidateId > 0) {
                 try {
                     boolean already = registrationService.isAlreadyRegistered(ev.getId(), currentCandidateId);
@@ -251,7 +274,27 @@ public class EventsViewController implements Initializable {
         loadEvents();
         detailPlaceholder.setVisible(true); detailPlaceholder.setManaged(true);
         detailContent.setVisible(false); detailContent.setManaged(false);
+        lblRegistrationStatus.setVisible(false);
+        lblRegistrationStatus.setManaged(false);
+
+        // Reset AI
+        if (aiAnalysisContainer != null) {
+            aiAnalysisContainer.setVisible(false);
+            aiAnalysisContainer.setManaged(false);
+            lastAnalyzedEventId = null;
+        }
+
         selectedEvent = null;
+
+        // Reset sidebar selection
+        for (Node n : eventsContainer.getChildren()) {
+            if (n instanceof VBox c) {
+                String style = c.getStyle();
+                style = style.replace("-fx-background-color: #EBF3FF;", "-fx-background-color: white;");
+                style = style.replace("-fx-border-color: #1565C0;", "-fx-border-color: #E4EBF5;");
+                c.setStyle(style);
+            }
+        }
     }
 
     @FXML
@@ -354,6 +397,170 @@ public class EventsViewController implements Initializable {
                     "-fx-font-size:12px; -fx-padding:10 14; -fx-background-radius:8; -fx-border-radius:8;");
             lblRegistrationStatus.setVisible(true); lblRegistrationStatus.setManaged(true);
         }
+    }
+
+    @FXML
+    private void handleAIAnalysis() {
+        if (selectedEvent == null || currentCandidateId < 0) return;
+
+        // Prevent useless repeated calls
+        if (String.valueOf(selectedEvent.getId()).equals(lastAnalyzedEventId)) {
+            aiAnalysisContainer.setVisible(true);
+            aiAnalysisContainer.setManaged(true);
+            return;
+        }
+
+        aiAnalysisContainer.setVisible(true);
+        aiAnalysisContainer.setManaged(true);
+        aiContentBox.setVisible(false);
+        aiContentBox.setManaged(false);
+        aiLoadingLabel.setVisible(true);
+        aiLoadingLabel.setManaged(true);
+        btnAnalyze.setDisable(true);
+
+        // Use a background thread for the API calls
+        new Thread(() -> {
+            try {
+                // Fetch candidate profile
+                Models.events.Candidate candidate = candidateService.getByUserId(currentCandidateId);
+                
+                String prompt = "Tu es un assistant IA expert en conseil de carrière.\n" +
+                        "Un candidat souhaite participer à un événement de recrutement.\n\n" +
+                        "### PROFIL DU CANDIDAT :\n" + candidateProfileSummary(candidate) + "\n\n" +
+                        "### DÉTAILS DE L'ÉVÉNEMENT :\n" +
+                        "Titre : " + selectedEvent.getTitle() + "\n" +
+                        "Type : " + selectedEvent.getEventType() + "\n" +
+                        "Lieu : " + (selectedEvent.getLocation() == null || selectedEvent.getLocation().isBlank() ? "En ligne / À définir" : selectedEvent.getLocation()) + "\n" +
+                        "Description : " + selectedEvent.getDescription() + "\n\n" +
+                        "### TÂCHE :\n" +
+                        "Analyse la pertinence de cet événement pour ce candidat et donne EXACTEMENT :\n" +
+                        "1) 3 points forts (Avantages) courts et percutants.\n" +
+                        "2) 3 points de vigilance (Inconvénients ou défis) courts et objectifs.\n" +
+                        "Sépare les sections par le mot-clé EXACT '###INCONVENIENTS###'.\n" +
+                        "Ta réponse doit être uniquement au format suivant (pas d'intro ni de conclusion) :\n" +
+                        "- [Avantage 1]\n- [Avantage 2]\n- [Avantage 3]\n###INCONVENIENTS###\n- [Inconvénient 1]\n- [Inconvénient 2]\n- [Inconvénient 3]";
+
+                // 1. Try Gemini
+                String aiResponse = null;
+                try {
+                    aiResponse = callGeminiAPI(prompt);
+                } catch (Exception e) {
+                    System.err.println("Gemini Analysis failed: " + e.getMessage());
+                }
+
+                // 2. Try Groq if Gemini failed
+                if (aiResponse == null || aiResponse.isBlank()) {
+                    try {
+                        aiResponse = callGroqAPI(prompt);
+                    } catch (Exception e) {
+                        System.err.println("Groq Analysis failed: " + e.getMessage());
+                    }
+                }
+
+                final String finalRes = aiResponse;
+                
+                javafx.application.Platform.runLater(() -> {
+                    btnAnalyze.setDisable(false);
+                    aiLoadingLabel.setVisible(false);
+                    aiLoadingLabel.setManaged(false);
+                    aiContentBox.setVisible(true);
+                    aiContentBox.setManaged(true);
+
+                    if (finalRes == null || finalRes.isBlank() || !finalRes.contains("###INCONVENIENTS###")) {
+                        aiProsLabel.setText("- Impossible de générer l'analyse pour le moment.");
+                        aiConsLabel.setText("- Service IA temporairement indisponible.");
+                    } else {
+                        String[] parts = finalRes.split("###INCONVENIENTS###");
+                        aiProsLabel.setText(parts[0].trim());
+                        aiConsLabel.setText(parts.length > 1 ? parts[1].trim() : "- Aucun");
+                        lastAnalyzedEventId = String.valueOf(selectedEvent.getId());
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                javafx.application.Platform.runLater(() -> {
+                    btnAnalyze.setDisable(false);
+                    aiLoadingLabel.setVisible(false);
+                    aiLoadingLabel.setManaged(false);
+                    aiContentBox.setVisible(true);
+                    aiContentBox.setManaged(true);
+                    aiProsLabel.setText("- Erreur lors de l'analyse.");
+                    aiConsLabel.setText("- Veuillez réessayer plus tard.");
+                });
+            }
+        }).start();
+    }
+
+    private String candidateProfileSummary(Models.events.Candidate candidate) {
+        if (candidate == null) return "Profil du candidat non renseigné au complet.";
+        return String.format("- Localisation : %s\n- Niveau d'étude : %s\n- Années d'expérience : %d",
+                candidate.getLocation() != null ? candidate.getLocation() : "Non spécifié",
+                candidate.getEducationLevel() != null ? candidate.getEducationLevel() : "Non spécifié",
+                candidate.getExperienceYears());
+    }
+
+    private String callGeminiAPI(String prompt) throws Exception {
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyA40pYJkW9p7QYQerVUv_rmS4pNFo1T46o";
+        java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+        c.setRequestMethod("POST"); c.setRequestProperty("Content-Type", "application/json");
+        c.setDoOutput(true); c.setConnectTimeout(15000); c.setReadTimeout(60000);
+        String body = "{\"contents\":[{\"parts\":[{\"text\":\"" + prompt.replace("\"", "\\\"").replace("\n", "\\n") + "\"}]}]," +
+                "\"generationConfig\":{\"maxOutputTokens\":800,\"temperature\":0.7}}";
+        c.getOutputStream().write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        if (c.getResponseCode() != 200) throw new Exception("Gemini HTTP " + c.getResponseCode());
+        StringBuilder sb = new StringBuilder();
+        try (java.io.BufferedReader br = new java.io.BufferedReader(
+                new java.io.InputStreamReader(c.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+            String line; while ((line = br.readLine()) != null) sb.append(line);
+        }
+        String json = sb.toString();
+        int s = json.indexOf("\"text\":"); if (s < 0) return null;
+        s = json.indexOf("\"", s + 7) + 1; int e = s;
+        for (int i = s; i < json.length(); i++) {
+            char ch = json.charAt(i);
+            if (ch == '\\' && i + 1 < json.length()) { i++; continue; }
+            if (ch == '"') { e = i; break; }
+        }
+        return e > s ? json.substring(s, e).replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\").trim() : null;
+    }
+
+    private String callGroqAPI(String prompt) throws Exception {
+        String[] MODELS = {"llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"};
+        String GROQ_KEY = "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";
+        String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+        for (String model : MODELS) {
+            try {
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(GROQ_URL).openConnection();
+                c.setRequestMethod("POST");
+                c.setRequestProperty("Content-Type", "application/json");
+                c.setRequestProperty("Authorization", "Bearer " + GROQ_KEY);
+                c.setDoOutput(true); c.setConnectTimeout(15000); c.setReadTimeout(30000);
+                String body = "{\"model\":\"" + model + "\",\"messages\":[" +
+                        "{\"role\":\"system\",\"content\":\"You are an expert career advisor.\"}," +
+                        "{\"role\":\"user\",\"content\":\"" + prompt.replace("\"", "\\\"").replace("\n", "\\n") + "\"}]," +
+                        "\"max_tokens\":600,\"temperature\":0.7}";
+                c.getOutputStream().write(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                if (c.getResponseCode() != 200) continue;
+                StringBuilder sb = new StringBuilder();
+                try (java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(c.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                    String line; while ((line = br.readLine()) != null) sb.append(line);
+                }
+                String json = sb.toString();
+                int s = json.indexOf("\"content\":"); if (s < 0) continue;
+                s = json.indexOf("\"", s + 10) + 1;
+                int e = json.indexOf("\"", s);
+                while (e > 0 && json.charAt(e - 1) == '\\') e = json.indexOf("\"", e + 1);
+                if (s > 0 && e > s) {
+                    String content = json.substring(s, e)
+                            .replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\").trim();
+                    if (!content.isBlank()) return content;
+                }
+            } catch (Exception ex) {
+                System.err.println("Groq model " + model + " failed: " + ex.getMessage());
+            }
+        }
+        throw new Exception("All Groq models failed");
     }
 }
 
