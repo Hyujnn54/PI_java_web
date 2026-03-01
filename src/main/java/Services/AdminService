@@ -1,0 +1,36 @@
+package Services;
+
+import Models.Admin;
+import utils.MyDatabase;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public class AdminService {
+    private final Connection cnx = MyDatabase.getInstance().getConnection();
+    private final UserService userService = new UserService();
+
+    public void addAdmin(Admin a) throws SQLException {
+        String sql = "INSERT INTO admin (id, assigned_area) VALUES (?,?)";
+
+        try {
+            cnx.setAutoCommit(false);
+
+            long userId = userService.addUser(a);
+
+            try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+                ps.setLong(1, userId);
+                ps.setString(2, a.getAssignedArea());
+                ps.executeUpdate();
+            }
+
+            cnx.commit();
+        } catch (SQLException e) {
+            cnx.rollback();
+            throw e;
+        } finally {
+            cnx.setAutoCommit(true);
+        }
+    }
+}

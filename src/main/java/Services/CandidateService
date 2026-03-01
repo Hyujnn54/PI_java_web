@@ -1,0 +1,40 @@
+package Services;
+
+import Models.Candidate;
+import utils.MyDatabase;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public class CandidateService {
+    private final Connection cnx = MyDatabase.getInstance().getConnection();
+    private final UserService userService = new UserService();
+
+    public void addCandidate(Candidate c) throws SQLException {
+        String sql = "INSERT INTO candidate (id, location, education_level, experience_years, cv_path) VALUES (?,?,?,?,?)";
+
+        try {
+            cnx.setAutoCommit(false);
+
+            long userId = userService.addUser(c);
+
+            try (PreparedStatement ps = cnx.prepareStatement(sql)) {
+                ps.setLong(1, userId);
+                ps.setString(2, c.getLocation());
+                ps.setString(3, c.getEducationLevel());
+                if (c.getExperienceYears() == null) ps.setNull(4, java.sql.Types.INTEGER);
+                else ps.setInt(4, c.getExperienceYears());
+                ps.setString(5, c.getCvPath());
+                ps.executeUpdate();
+            }
+
+            cnx.commit();
+        } catch (SQLException e) {
+            cnx.rollback();
+            throw e;
+        } finally {
+            cnx.setAutoCommit(true);
+        }
+    }
+}
