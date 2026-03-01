@@ -1,0 +1,80 @@
+package Services;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+public class EscoSkillApiService {
+    private static final String BASE = "https://ec.europa.eu/esco/api";
+    private final HttpClient http = HttpClient.newHttpClient();
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    public List<String> suggestSkills(String query, String language, int limit) throws Exception {
+        if (query == null) return List.of();
+        String q = query.trim();
+        if (q.length() < 2) return List.of();
+
+        String url = BASE + "/suggest2"
+                + "?text=" + URLEncoder.encode(q, StandardCharsets.UTF_8)
+                + "&language=" + URLEncoder.encode(language, StandardCharsets.UTF_8)
+                + "&type=skill"
+                + "&limit=" + limit
+                + "&offset=0"
+                + "&alt=true";
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Accept", "application/json")
+                .GET()
+                .build();
+
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+        if (res.statusCode() >= 400) {
+            throw new RuntimeException("ESCO suggest failed (" + res.statusCode() + "): " + res.body());
+        }
+
+        JsonNode root = mapper.readTree(res.body());
+        List<String> out = new ArrayList<>();
+
+        JsonNode embedded = root.get("_embedded");
+        if (embedded != null) {
+            JsonNode results = embedded.get("results");
+            if (results != null && results.isArray()) extractLabels(results, out, language);
+        }
+
+        // fallback
+        JsonNode results2 = root.get("results");
+        if (results2 != null && results2.isArray()) extractLabels(results2, out, language);
+
+        return out.stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .limit(limit)
+                .toList();
+    }
+
+    private void extractLabels(JsonNode arr, List<String> out, String language) {
+        for (JsonNode node : arr) {
+            JsonNode preferredLabel = node.get("preferredLabel");
+            if (preferredLabel != null && preferredLabel.isObject()) {
+                JsonNode byLang = preferredLabel.get(language);
+                if (byLang != null && byLang.isTextual()) out.add(byLang.asText());
+            }
+
+            JsonNode title = node.get("title");
+            if (title != null && title.isTextual()) out.add(title.asText());
+
+            JsonNode hit = node.get("searchHit");
+            if (hit != null && hit.isTextual()) out.add(hit.asText());
+        }
+    }
+}

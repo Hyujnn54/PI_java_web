@@ -7,7 +7,7 @@ public class Admin extends User {
 
     public Admin(String email, String password, String firstName, String lastName, String phoneNumber,
                  String assignedArea) {
-        super(email, password, Role.ADMIN, firstName, lastName, phoneNumber);
+        super(email, password, firstName, lastName, phoneNumber);
         this.assignedArea = assignedArea;
     }
 

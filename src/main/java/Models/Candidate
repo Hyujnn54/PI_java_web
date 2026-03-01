@@ -10,7 +10,7 @@ public class Candidate extends User {
 
     public Candidate(String email, String password, String firstName, String lastName, String phoneNumber,
                      String location, String educationLevel, Integer experienceYears, String cvPath) {
-        super(email, password, Role.CANDIDATE, firstName, lastName, phoneNumber);
+        super(email, password, firstName, lastName, phoneNumber);
         this.location = location;
         this.educationLevel = educationLevel;
         this.experienceYears = experienceYears;

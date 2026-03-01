@@ -1,0 +1,355 @@
+package Services;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+
+import java.util.ArrayList;
+
+public class LuxandFaceService {
+
+
+
+    private final HttpClient http = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .build();
+    private final ObjectMapper mapper = new ObjectMapper();
+    private static final String APP_COLLECTION = "TalentBridgeApp";
+
+
+    // ---------- PUBLIC API ----------
+
+    public String addPerson(String name, byte[] photoBytes, String fileName) throws Exception {
+        String url = LuxandConfig.BASE + "/v2/person"; // ✅ v2 create person endpoint
+
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("name", name);
+        fields.put("store", "1");
+        fields.put("collections", APP_COLLECTION); // TalentBridgeApp
+
+        // ✅ IMPORTANT: Luxand expects "photos" (plural) when creating person
+        HttpRequest req = multipartRequest(url, fields, "photos", fileName, photoBytes);
+
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+        System.out.println("ADDPERSON status=" + res.statusCode());
+        System.out.println("ADDPERSON body=" + res.body());
+
+        if (res.statusCode() >= 400) {
+            throw new RuntimeException("Luxand addPerson failed: " + res.body());
+        }
+
+        JsonNode root = mapper.readTree(res.body());
+
+        JsonNode uuidNode = root.get("uuid");
+        if (uuidNode == null || uuidNode.isNull()) {
+            throw new RuntimeException("Luxand addPerson: uuid missing. Response=" + res.body());
+        }
+
+        return uuidNode.asText();
+    }
+
+    public void addFace(String personUuid, byte[] photoBytes, String fileName) throws Exception {
+        if (personUuid == null || personUuid.isBlank()) {
+            throw new IllegalArgumentException("personUuid is null/blank");
+        }
+
+        String url = LuxandConfig.BASE + "/person/" + personUuid; // ✅ only this works for you
+
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("store", "1");
+        fields.put("collections", APP_COLLECTION);
+
+        HttpRequest req = multipartRequest(url, fields, "photo", fileName, photoBytes);
+
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+        System.out.println("ADDFACE url=" + url);
+        System.out.println("ADDFACE status=" + res.statusCode());
+        System.out.println("ADDFACE body=" + res.body());
+
+        if (res.statusCode() >= 400) {
+            throw new RuntimeException("Luxand addFace failed: " + res.body());
+        }
+    }
+
+    private int postFace(String url, byte[] photoBytes, String fileName) throws Exception {
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("store", "1");
+        fields.put("collections", APP_COLLECTION);
+
+        HttpRequest req = multipartRequest(url, fields, "photo", fileName, photoBytes);
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+        System.out.println("ADDFACE url=" + url);
+        System.out.println("ADDFACE status=" + res.statusCode());
+        System.out.println("ADDFACE body=" + res.body());
+
+        return res.statusCode();
+    }
+
+    public FaceMatch searchBestMatch(byte[] imageBytes, String fileName) throws Exception {
+        String url = LuxandConfig.BASE + "/photo/search/v2";
+
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("collections", APP_COLLECTION); // ✅ SEARCH inside TalentBridgeApp
+
+        HttpRequest req = multipartRequest(url, fields, "photo", fileName, imageBytes);
+
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+        System.out.println("SEARCH status = " + res.statusCode());
+        System.out.println("SEARCH body = " + res.body());
+
+        if (res.statusCode() >= 400) {
+            throw new RuntimeException("Search failed: " + res.body());
+        }
+
+        JsonNode root = mapper.readTree(res.body());
+
+        if (!root.isArray() || root.isEmpty()) return null;
+
+        JsonNode first = root.get(0);
+        if (!first.has("uuid")) return null;
+
+        FaceMatch match = new FaceMatch();
+        match.uuid = first.get("uuid").asText();
+        match.probability = first.get("probability").asDouble();
+        return match;
+    }
+
+    public static class FaceMatch {
+        public String uuid;
+        public double probability;
+    }
+
+    private HttpRequest multipartRequest(
+            String url,
+            Map<String, String> fields,
+            String fileField,
+            String fileName,
+            byte[] fileBytes
+    ) {
+        String boundary = "----LuxandBoundary" + UUID.randomUUID();
+
+        byte[] body = buildMultipartBody(boundary, fields, fileField, fileName, fileBytes);
+
+        return HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("token", LuxandConfig.API_TOKEN)
+                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build();
+    }
+
+    private byte[] buildMultipartBody(
+            String boundary,
+            Map<String, String> fields,
+            String fileField,
+            String fileName,
+            byte[] fileBytes
+    ) {
+        List<byte[]> parts = new ArrayList<>();
+
+        for (var e : fields.entrySet()) {
+            parts.add(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+            parts.add(("Content-Disposition: form-data; name=\"" + e.getKey() + "\"\r\n\r\n")
+                    .getBytes(StandardCharsets.UTF_8));
+            parts.add((e.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
+        }
+
+        String mime = "application/octet-stream";
+        String lower = fileName.toLowerCase();
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) mime = "image/jpeg";
+        else if (lower.endsWith(".png")) mime = "image/png";
+
+        parts.add(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+        parts.add(("Content-Disposition: form-data; name=\"" + fileField + "\"; filename=\"" + fileName + "\"\r\n")
+                .getBytes(StandardCharsets.UTF_8));
+        parts.add(("Content-Type: " + mime + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+        parts.add(fileBytes);
+        parts.add("\r\n".getBytes(StandardCharsets.UTF_8));
+
+        parts.add(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+
+        int len = parts.stream().mapToInt(p -> p.length).sum();
+        byte[] out = new byte[len];
+        int pos = 0;
+        for (byte[] p : parts) {
+            System.arraycopy(p, 0, out, pos, p.length);
+            pos += p.length;
+        }
+        return out;
+    }
+
+    public void deletePerson(String uuid) throws Exception {
+        // try v2 delete
+        int code1 = deleteByUrl(LuxandConfig.BASE + "/v2/person/" + uuid);
+        if (code1 == 200) return;
+
+        // fallback non-v2 delete
+        deleteByUrl(LuxandConfig.BASE + "/person/" + uuid);
+    }
+
+    private int deleteByUrl(String url) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("token", LuxandConfig.API_TOKEN)
+                .DELETE()
+                .build();
+
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+        System.out.println("DELETE url = " + url);
+        System.out.println("DELETE status = " + res.statusCode());
+        System.out.println("DELETE body = " + res.body());
+        return res.statusCode();
+    }
+    public List<String> listPersonUuids() throws Exception {
+        String url = LuxandConfig.BASE + "/v2/person";
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("token", LuxandConfig.API_TOKEN)
+                .GET()
+                .build();
+
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+        System.out.println("LIST status = " + res.statusCode());
+        System.out.println("LIST body = " + res.body());
+
+        if (res.statusCode() >= 400) {
+            throw new RuntimeException("List persons failed: " + res.body());
+        }
+
+        JsonNode root = mapper.readTree(res.body());
+
+        List<String> uuids = new ArrayList<>();
+
+        // ✅ ROOT IS ARRAY: [ {uuid:...}, ... ]
+        if (root.isArray()) {
+            for (JsonNode p : root) {
+                if (p.has("uuid")) {
+                    uuids.add(p.get("uuid").asText());
+                }
+            }
+            return uuids;
+        }
+
+        // fallback if Luxand changes format later
+        JsonNode persons = root.get("persons");
+        if (persons != null && persons.isArray()) {
+            for (JsonNode p : persons) {
+                if (p.has("uuid")) uuids.add(p.get("uuid").asText());
+            }
+        }
+
+        return uuids;
+    }
+    public LivenessResult isLive(byte[] imageBytes, String fileName) throws Exception {
+        String url = LuxandConfig.BASE + "/photo/liveness";
+
+        Map<String, String> fields = new HashMap<>();
+        HttpRequest request = multipartRequest(url, fields, "photo", fileName, imageBytes);
+
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+        System.out.println("LIVENESS status = " + response.statusCode());
+        System.out.println("LIVENESS body   = " + response.body());
+
+        if (response.statusCode() != 200) throw new RuntimeException("API Error: " + response.body());
+
+        JsonNode root = mapper.readTree(response.body());
+
+        boolean isReal = "real".equalsIgnoreCase(root.path("result").asText());
+        double score = root.path("score").asDouble();
+
+        JsonNode rect = root.path("rectangle");
+        return new LivenessResult(
+                isReal,
+                score,
+                rect.path("left").asInt(),
+                rect.path("top").asInt(),
+                rect.path("right").asInt(),
+                rect.path("bottom").asInt()
+        );
+    }
+
+    private HttpRequest.BodyPublisher ofMimeMultipartData(byte[] imageBytes, String fileName, String boundary) {
+        String mime = "application/octet-stream";
+        String lower = fileName.toLowerCase();
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) mime = "image/jpeg";
+        else if (lower.endsWith(".png")) mime = "image/png";
+
+        List<byte[]> byteArrays = new ArrayList<>();
+
+        // start boundary
+        byteArrays.add(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+
+        // IMPORTANT: name must be photo
+        byteArrays.add(("Content-Disposition: form-data; name=\"photo\"; filename=\"" + fileName + "\"\r\n")
+                .getBytes(StandardCharsets.UTF_8));
+        byteArrays.add(("Content-Type: " + mime + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+
+        // binary data
+        byteArrays.add(imageBytes);
+        byteArrays.add("\r\n".getBytes(StandardCharsets.UTF_8));
+
+        // end boundary (MUST end with \r\n)
+        byteArrays.add(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+
+        return HttpRequest.BodyPublishers.ofByteArrays(byteArrays);
+    }
+    private HttpRequest.BodyPublisher multipartPhoto(byte[] imageBytes, String fileName, String boundary) {
+        var byteArrays = new ArrayList<byte[]>();
+
+        // --- file part (photo) ---
+        byteArrays.add(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+        byteArrays.add(("Content-Disposition: form-data; name=\"photo\"; filename=\"" + fileName + "\"\r\n")
+                .getBytes(StandardCharsets.UTF_8));
+        byteArrays.add(("Content-Type: application/octet-stream\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+        byteArrays.add(imageBytes);
+        byteArrays.add("\r\n".getBytes(StandardCharsets.UTF_8));
+
+        // --- end boundary ---
+        byteArrays.add(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+
+        return HttpRequest.BodyPublishers.ofByteArrays(byteArrays);
+    }
+
+    public static class LivenessResult {
+        public final boolean isReal;
+        public final double score;
+        public final int left, top, right, bottom;
+
+        public LivenessResult(boolean isReal, double score, int left, int top, int right, int bottom) {
+            this.isReal = isReal;
+            this.score = score;
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+        }
+    }
+
+    /**
+     * Enrolls a new person with multiple face photos for better accuracy.
+     */
+    public String registerNewPerson(String name, List<byte[]> photoList) throws Exception {
+        if (photoList == null || photoList.isEmpty()) throw new Exception("No photos captured.");
+
+        // 1. Create the person using the first photo
+        String personUuid = addPerson(name, photoList.get(0), "face_0.jpg");
+
+        // 2. Add the remaining photos to the same person profile
+        for (int i = 1; i < photoList.size(); i++) {
+            addFace(personUuid, photoList.get(i), "face_" + i + ".jpg");
+        }
+
+        return personUuid;
+    }
+}

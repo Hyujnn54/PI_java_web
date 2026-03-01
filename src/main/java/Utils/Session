@@ -1,29 +1,33 @@
 package utils;
 
-import Models.Role;
+import Models.User;
 
 public class Session {
-    private static Long userId;
-    private static Role role;
-    private static String email;
+    private static User currentUser;
 
     private Session() {}
 
-    public static void start(Long id, Role r, String em) {
-        userId = id;
-        role = r;
-        email = em;
+    public static void start(User user) {
+        currentUser = user;
     }
 
     public static void clear() {
-        userId = null;
-        role = null;
-        email = null;
+        currentUser = null;
     }
 
-    public static boolean isLoggedIn() { return userId != null; }
+    public static boolean isLoggedIn() {
+        return currentUser != null;
+    }
 
-    public static Long getUserId() { return userId; }
-    public static Role getRole() { return role; }
-    public static String getEmail() { return email; }
+    public static User getCurrentUser() {
+        return currentUser;
+    }
+
+    public static Long getUserId() {
+        return currentUser == null ? null : currentUser.getId();
+    }
+
+    public static String getEmail() {
+        return currentUser == null ? null : currentUser.getEmail();
+    }
 }

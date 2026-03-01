@@ -1,6 +1,9 @@
 package Controllers;
 
-import Models.Role;
+import Models.Admin;
+import Models.Candidate;
+import Models.Recruiter;
+import Models.User;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -22,31 +25,35 @@ public class MainShellController {
     @FXML private Button btnInterviews;
     @FXML private Button btnApplications;
     @FXML private Button btnJobOffers;
-    @FXML private Button btnDashboard; // only for admin (in your fxml visible=false managed=false)
+    @FXML private Button btnDashboard; // admin only
 
     @FXML
     public void initialize() {
-        Role role = Session.getRole();
+        User u = Session.getCurrentUser();
 
-        // show user info
-        lblUserName.setText(Session.getEmail() != null ? Session.getEmail() : "User");
-        lblUserRole.setText(role != null ? role.name() : "UNKNOWN");
+        lblUserName.setText(u != null && u.getEmail() != null ? u.getEmail() : "User");
+        lblUserRole.setText(getRoleLabel(u));
 
-        // show admin-only button
-        boolean isAdmin = role == Role.ADMIN;
+        boolean isAdmin = (u instanceof Admin);
         btnDashboard.setVisible(isAdmin);
         btnDashboard.setManaged(isAdmin);
 
-        // default page per role
-        if (role == Role.ADMIN) {
+        if (u instanceof Admin) {
             loadContent("/AdminDashboard.fxml");
-        } else if (role == Role.RECRUITER) {
+        } else if (u instanceof Recruiter) {
             loadContent("/RecruiterDashboard.fxml");
-        } else if (role == Role.CANDIDATE) {
+        } else if (u instanceof Candidate) {
             loadContent("/CandidateDashboard.fxml");
         } else {
-            loadContent("/CandidateDashboard.fxml"); // fallback
+            loadContent("/CandidateDashboard.fxml");
         }
+    }
+
+    private String getRoleLabel(User u) {
+        if (u instanceof Admin) return "ADMIN";
+        if (u instanceof Recruiter) return "RECRUITER";
+        if (u instanceof Candidate) return "CANDIDATE";
+        return "USER";
     }
 
     private void loadContent(String fxml) {
@@ -64,41 +71,46 @@ public class MainShellController {
         System.out.println("Notifications clicked");
     }
 
-    @FXML private void handleUserProfile() {
-        System.out.println("Profile clicked");
+    @FXML
+    private void handleUserProfile() {
+        loadContent("/Profile.fxml");
     }
 
-    // your FXML uses handleDisconnect
     @FXML
     private void handleDisconnect() {
         logoutToLogin();
     }
 
     // ===== Sidebar navigation =====
-    @FXML private void handleInterviewsNav() {
-        // You can create Interviews.fxml later
-        // For now route by role
-        Role role = Session.getRole();
-        if (role == Role.RECRUITER) loadContent("/RecruiterInterviews.fxml");
-        else if (role == Role.CANDIDATE) loadContent("/CandidateInterviews.fxml");
-        else loadContent("/AdminDashboard.fxml");
+    @FXML
+    private void handleInterviewsNav() {
+        User u = Session.getCurrentUser();
+        if (u instanceof Recruiter) loadContent("/RecruiterInterviews.fxml");
+        else if (u instanceof Candidate) loadContent("/CandidateInterviews.fxml");
+        else if (u instanceof Admin) loadContent("/AdminDashboard.fxml");
+        else loadContent("/CandidateDashboard.fxml");
     }
 
-    @FXML private void handleApplicationsNav() {
-        Role role = Session.getRole();
-        if (role == Role.RECRUITER) loadContent("/RecruiterApplications.fxml");
-        else if (role == Role.CANDIDATE) loadContent("/CandidateApplications.fxml");
-        else loadContent("/AdminDashboard.fxml");
+    @FXML
+    private void handleApplicationsNav() {
+        User u = Session.getCurrentUser();
+        if (u instanceof Recruiter) loadContent("/RecruiterApplications.fxml");
+        else if (u instanceof Candidate) loadContent("/CandidateApplications.fxml");
+        else if (u instanceof Admin) loadContent("/AdminDashboard.fxml");
+        else loadContent("/CandidateDashboard.fxml");
     }
 
-    @FXML private void handleJobOffersNav() {
-        Role role = Session.getRole();
-        if (role == Role.RECRUITER) loadContent("/RecruiterJobOffers.fxml");
-        else if (role == Role.CANDIDATE) loadContent("/CandidateJobOffers.fxml");
-        else loadContent("/AdminDashboard.fxml");
+    @FXML
+    private void handleJobOffersNav() {
+        User u = Session.getCurrentUser();
+        if (u instanceof Recruiter) loadContent("/RecruiterJobOffers.fxml");
+        else if (u instanceof Candidate) loadContent("/CandidateJobOffers.fxml");
+        else if (u instanceof Admin) loadContent("/AdminDashboard.fxml");
+        else loadContent("/CandidateDashboard.fxml");
     }
 
-    @FXML private void handleDashboardNav() {
+    @FXML
+    private void handleDashboardNav() {
         loadContent("/AdminDashboard.fxml");
     }
 
@@ -112,7 +124,6 @@ public class MainShellController {
         }
     }
 
-    // ===== Logout (bulletproof) =====
     private void logoutToLogin() {
         try {
             Session.clear();

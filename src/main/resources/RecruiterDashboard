@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.RecruiterDashboardController"
+      spacing="16" style="-fx-background-color: #F5F6F8;">
+
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10"/>
+    </padding>
+
+    <Label text="Recruiter Dashboard" style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+    <HBox spacing="12">
+        <VBox spacing="6" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12;" HBox.hgrow="ALWAYS">
+            <Label text="Job Offers" style="-fx-font-weight: bold;"/>
+            <Label fx:id="lblOffers" text="0" style="-fx-font-size: 26px;"/>
+        </VBox>
+
+        <VBox spacing="6" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12;" HBox.hgrow="ALWAYS">
+            <Label text="Applications" style="-fx-font-weight: bold;"/>
+            <Label fx:id="lblApplications" text="0" style="-fx-font-size: 26px;"/>
+        </VBox>
+
+        <VBox spacing="6" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12;" HBox.hgrow="ALWAYS">
+            <Label text="Interviews" style="-fx-font-weight: bold;"/>
+            <Label fx:id="lblInterviews" text="0" style="-fx-font-size: 26px;"/>
+        </VBox>
+    </HBox>
+
+    <Label text="Quick Actions" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+    <HBox spacing="10">
+        <Button text="Create Job Offer" onAction="#handleCreateOffer"/>
+        <Button text="View Applications" onAction="#handleViewApplications"/>
+        <Button text="Schedule Interview" onAction="#handleScheduleInterview"/>
+    </HBox>
+
+    <Label fx:id="statusLabel" text="" style="-fx-text-fill: #28a745;"/>
+</VBox>
