@@ -92,9 +92,33 @@ public class EventsViewController implements Initializable {
         eventsContainer.getChildren().clear();
         lblCount.setText(events.size() + " événement(s)");
 
-        for (int i = 0; i < events.size(); i++) {
-            RecruitmentEvent ev = events.get(i);
-            VBox card = buildEventCard(ev);
+        // 1. Fetch Candidate Preferences for sorting
+        List<String> preferredTypes = new ArrayList<>();
+        if (!isRecruiter && !isAdmin && currentCandidateId > 0) {
+            try {
+                preferredTypes = registrationService.getEventTypesForCandidate(currentCandidateId);
+            } catch (SQLException e) {
+                System.err.println("Error fetching candidate preferences: " + e.getMessage());
+            }
+        }
+
+        // 2. Sort events: Preferred types first
+        final List<String> prefs = preferredTypes;
+        List<RecruitmentEvent> sortedEvents = new ArrayList<>(events);
+        if (!prefs.isEmpty()) {
+            sortedEvents.sort((e1, e2) -> {
+                boolean e1Pref = prefs.contains(e1.getEventType());
+                boolean e2Pref = prefs.contains(e2.getEventType());
+                if (e1Pref && !e2Pref) return -1;
+                if (!e1Pref && e2Pref) return 1;
+                return 0; // maintain relative order if both or neither are preferred
+            });
+        }
+
+        for (int i = 0; i < sortedEvents.size(); i++) {
+            RecruitmentEvent ev = sortedEvents.get(i);
+            boolean isRecommended = prefs.contains(ev.getEventType());
+            VBox card = buildEventCard(ev, isRecommended);
 
             // Stagger animation
             card.setOpacity(0);
@@ -121,7 +145,7 @@ public class EventsViewController implements Initializable {
         }
     }
 
-    private VBox buildEventCard(RecruitmentEvent ev) {
+    private VBox buildEventCard(RecruitmentEvent ev, boolean isRecommended) {
         VBox card = new VBox(10);
         card.setStyle("-fx-background-color: white; -fx-background-radius: 14;" +
                       "-fx-border-color: #E4EBF5; -fx-border-width: 1; -fx-border-radius: 14;" +
@@ -139,10 +163,22 @@ public class EventsViewController implements Initializable {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        HBox rightBadges = new HBox(6);
+        rightBadges.setAlignment(Pos.CENTER_RIGHT);
+
+        if (isRecommended) {
+            Label recBadge = new Label("⭐ Recommandé");
+            recBadge.setStyle("-fx-background-color: #FEF08A; -fx-text-fill: #A16207;" +
+                              "-fx-font-size: 10px; -fx-font-weight: 700;" +
+                              "-fx-padding: 3 8; -fx-background-radius: 6;");
+            rightBadges.getChildren().add(recBadge);
+        }
+
         Label dateLbl = new Label(ev.getEventDate() != null ? ev.getEventDate().format(FMT) : "");
         dateLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #8FA3B8;");
+        rightBadges.getChildren().add(dateLbl);
 
-        topRow.getChildren().addAll(typeBadge, spacer, dateLbl);
+        topRow.getChildren().addAll(typeBadge, spacer, rightBadges);
 
         Label titleLbl = new Label(ev.getTitle());
         titleLbl.setStyle("-fx-font-size: 15px; -fx-font-weight: 700; -fx-text-fill: #1E293B;");
