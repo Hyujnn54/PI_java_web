@@ -64,6 +64,14 @@
             <VBox spacing="2" style="-fx-padding: 14 10 10 10;">
                 <Label text="NAVIGATION" styleClass="sidebar-section-label"/>
 
+                <!-- Dashboard (candidate / recruiter) -->
+                <Button fx:id="btnUserDashboard" onAction="#handleUserDashboardNav"
+                        text="🏠   Dashboard"
+                        styleClass="sidebar-nav-btn" maxWidth="Infinity"
+                        visible="false" managed="false">
+                    <VBox.margin><Insets top="4"/></VBox.margin>
+                </Button>
+
                 <!-- Common -->
                 <Button fx:id="btnApplications"   onAction="#handleApplicationsNav"
                         text="📋   Candidatures"

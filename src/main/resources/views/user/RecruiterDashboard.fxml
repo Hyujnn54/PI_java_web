@@ -3,40 +3,116 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 
-<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="Controllers.user.RecruiterDashboardController"
-      spacing="16" style="-fx-background-color: #F5F6F8;">
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="Controllers.user.RecruiterDashboardController"
+            stylesheets="@../../styles.css"
+            style="-fx-background-color:#EBF0F8;">
 
-    <padding>
-        <Insets top="10" right="10" bottom="10" left="10"/>
-    </padding>
-
-    <Label text="Recruiter Dashboard" style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
-
-    <HBox spacing="12">
-        <VBox spacing="6" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12;" HBox.hgrow="ALWAYS">
-            <Label text="Job Offers" style="-fx-font-weight: bold;"/>
-            <Label fx:id="lblOffers" text="0" style="-fx-font-size: 26px;"/>
+    <top>
+        <VBox style="-fx-background-color:white; -fx-padding:18 28 14 28;
+                     -fx-border-color:#E4EBF5; -fx-border-width:0 0 1 0;
+                     -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.08),10,0,0,2);">
+            <HBox alignment="CENTER_LEFT" spacing="14">
+                <VBox spacing="3" HBox.hgrow="ALWAYS">
+                    <Label text="Recruiter Dashboard"
+                           style="-fx-font-size:22px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
+                    <Label text="Manage your job offers, applications and interviews"
+                           style="-fx-font-size:12px; -fx-text-fill:#64748B;"/>
+                </VBox>
+            </HBox>
         </VBox>
+    </top>
 
-        <VBox spacing="6" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12;" HBox.hgrow="ALWAYS">
-            <Label text="Applications" style="-fx-font-weight: bold;"/>
-            <Label fx:id="lblApplications" text="0" style="-fx-font-size: 26px;"/>
-        </VBox>
+    <center>
+        <ScrollPane fitToWidth="true"
+                    style="-fx-background:transparent; -fx-background-color:transparent; -fx-border-color:transparent;">
+            <VBox spacing="18" style="-fx-padding:24 28; -fx-background-color:#EBF0F8;">
 
-        <VBox spacing="6" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12;" HBox.hgrow="ALWAYS">
-            <Label text="Interviews" style="-fx-font-weight: bold;"/>
-            <Label fx:id="lblInterviews" text="0" style="-fx-font-size: 26px;"/>
-        </VBox>
-    </HBox>
+                <HBox spacing="14">
+                    <VBox spacing="10" HBox.hgrow="ALWAYS"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:20 22;
+                                 -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.10),12,0,0,3);">
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <StackPane>
+                                <Circle radius="20" style="-fx-fill:#EFF6FF;"/>
+                                <Label text="💼" style="-fx-font-size:16px;"/>
+                            </StackPane>
+                            <Label text="Job Offers"
+                                   style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#64748B;"/>
+                        </HBox>
+                        <Label fx:id="lblOffers" text="0"
+                               style="-fx-font-size:34px; -fx-font-weight:800; -fx-text-fill:#5BA3F5;"/>
+                        <Label text="Active postings" style="-fx-font-size:11px; -fx-text-fill:#94A3B8;"/>
+                    </VBox>
 
-    <Label text="Quick Actions" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
-    <HBox spacing="10">
-        <Button text="Create Job Offer" onAction="#handleCreateOffer"/>
-        <Button text="View Applications" onAction="#handleViewApplications"/>
-        <Button text="Schedule Interview" onAction="#handleScheduleInterview"/>
-    </HBox>
+                    <VBox spacing="10" HBox.hgrow="ALWAYS"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:20 22;
+                                 -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.10),12,0,0,3);">
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <StackPane>
+                                <Circle radius="20" style="-fx-fill:#FFFBEB;"/>
+                                <Label text="📄" style="-fx-font-size:16px;"/>
+                            </StackPane>
+                            <Label text="Applications"
+                                   style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#64748B;"/>
+                        </HBox>
+                        <Label fx:id="lblApplications" text="0"
+                               style="-fx-font-size:34px; -fx-font-weight:800; -fx-text-fill:#F59E0B;"/>
+                        <Label text="Received" style="-fx-font-size:11px; -fx-text-fill:#94A3B8;"/>
+                    </VBox>
 
-    <Label fx:id="statusLabel" text="" style="-fx-text-fill: #28a745;"/>
-</VBox>
+                    <VBox spacing="10" HBox.hgrow="ALWAYS"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:20 22;
+                                 -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.10),12,0,0,3);">
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <StackPane>
+                                <Circle radius="20" style="-fx-fill:#F0FDF4;"/>
+                                <Label text="🗓️" style="-fx-font-size:16px;"/>
+                            </StackPane>
+                            <Label text="Interviews"
+                                   style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#64748B;"/>
+                        </HBox>
+                        <Label fx:id="lblInterviews" text="0"
+                               style="-fx-font-size:34px; -fx-font-weight:800; -fx-text-fill:#10B981;"/>
+                        <Label text="Scheduled" style="-fx-font-size:11px; -fx-text-fill:#94A3B8;"/>
+                    </VBox>
+                </HBox>
+
+                <VBox spacing="0"
+                      style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:0;
+                             -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                             -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
+                    <HBox alignment="CENTER_LEFT" spacing="12"
+                          style="-fx-background-color:#F8FAFF; -fx-background-radius:14 14 0 0;
+                                 -fx-padding:14 20; -fx-border-color:#E4EBF5; -fx-border-width:0 0 1 0;">
+                        <Label text="🚀  Quick Actions"
+                               style="-fx-font-size:14px; -fx-font-weight:800; -fx-text-fill:#1E293B;"/>
+                    </HBox>
+                    <HBox spacing="12" style="-fx-padding:20 22;">
+                        <Button text="➕  Create Job Offer" onAction="#handleCreateOffer"
+                                style="-fx-background-color:linear-gradient(to right,#5BA3F5,#4A90E2); -fx-text-fill:white;
+                                       -fx-font-weight:700; -fx-font-size:13px; -fx-background-radius:10; -fx-padding:11 20;
+                                       -fx-cursor:hand; -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.4),10,0,0,3);"/>
+                        <Button text="📋  View Applications" onAction="#handleViewApplications"
+                                style="-fx-background-color:#EFF6FF; -fx-text-fill:#1D4ED8; -fx-font-weight:700;
+                                       -fx-font-size:13px; -fx-background-radius:10; -fx-padding:11 20;
+                                       -fx-border-color:#BFDBFE; -fx-border-width:1.5; -fx-border-radius:10; -fx-cursor:hand;"/>
+                        <Button text="🗓️  Schedule Interview" onAction="#handleScheduleInterview"
+                                style="-fx-background-color:#F0FDF4; -fx-text-fill:#166534; -fx-font-weight:700;
+                                       -fx-font-size:13px; -fx-background-radius:10; -fx-padding:11 20;
+                                       -fx-border-color:#BBF7D0; -fx-border-width:1.5; -fx-border-radius:10; -fx-cursor:hand;"/>
+                    </HBox>
+                </VBox>
+
+                <Label fx:id="statusLabel" text=""
+                       style="-fx-font-size:12px; -fx-text-fill:#10B981; -fx-font-weight:600;"/>
+            </VBox>
+        </ScrollPane>
+    </center>
+</BorderPane>
+

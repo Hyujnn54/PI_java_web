@@ -67,10 +67,16 @@ public class LoginController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/user/SignUp.fxml"));
             Stage stage = (Stage) txtEmail.getScene().getWindow();
-            stage.setScene(new Scene(loader.load()));
+            Scene current = stage.getScene();
+            scene(stage, loader, current.getWidth(), current.getHeight());
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void scene(Stage stage, FXMLLoader loader, double w, double h) throws Exception {
+        Scene s = new Scene(loader.load(), w, h);
+        stage.setScene(s);
     }
 
     private void showAlert(String title, String msg) {
@@ -85,7 +91,7 @@ public class LoginController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/user/ForgotPassword.fxml"));
             Stage stage = (Stage) txtEmail.getScene().getWindow();
-            stage.setScene(new Scene(loader.load()));
+            scene(stage, loader, stage.getScene().getWidth(), stage.getScene().getHeight());
         } catch (Exception e) {
             e.printStackTrace();
         }

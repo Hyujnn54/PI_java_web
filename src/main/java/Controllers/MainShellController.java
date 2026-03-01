@@ -38,6 +38,7 @@ public class MainShellController {
     @FXML private Button btnCalendar;
     @FXML private Button btnStatistics;
     @FXML private Button btnDashboard;
+    @FXML private Button btnUserDashboard;
     @FXML private Button btnAdminStats;
     @FXML private Button btnAdminApplications;
     @FXML private Button btnFullscreenToggle;
@@ -76,7 +77,7 @@ public class MainShellController {
         applyRoleToShell();
 
         // Staggered sidebar animation
-        Button[] navBtns = {btnApplications, btnInterviews, btnJobOffers,
+        Button[] navBtns = {btnUserDashboard, btnApplications, btnInterviews, btnJobOffers,
                 btnEvents, btnPastEvents, btnCalendar, btnStatistics, btnAdminStats,
                 btnAdminApplications, btnFullscreenToggle};
         for (int i = 0; i < navBtns.length; i++) {
@@ -97,7 +98,7 @@ public class MainShellController {
         if (u instanceof Admin) {
             handleAdminStatsNav();
         } else {
-            handleApplicationsNav();
+            handleUserDashboardNav();
         }
     }
 
@@ -114,6 +115,14 @@ public class MainShellController {
         activePage = "/views/application/Applications.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnApplications);
+    }
+
+    @FXML private void handleUserDashboardNav() {
+        User u = Session.getCurrentUser();
+        if (u instanceof Recruiter) activePage = "/views/user/RecruiterDashboard.fxml";
+        else                        activePage = "/views/user/CandidateDashboard.fxml";
+        loadContentView(activePage);
+        highlightActiveButton(btnUserDashboard);
     }
 
     @FXML private void handleInterviewsNav() {
@@ -399,8 +408,19 @@ public class MainShellController {
             style = style.replaceAll("(?i)-fx-text-fill:\\s*#6c757d\\b",            "-fx-text-fill:#5A7090");
             style = style.replaceAll("(?i)-fx-text-fill:\\s*#8FA3B8\\b",            "-fx-text-fill:#5A7090");
             style = style.replaceAll("(?i)-fx-border-color:\\s*#E8EEF8\\b",         "-fx-border-color:#243044");
-            style = style.replaceAll("(?i)-fx-border-color:\\s*#E4EBF5\\b",         "-fx-border-color:#243044");
-            style = style.replaceAll("(?i)-fx-border-color:\\s*#dee2e6\\b",         "-fx-border-color:#243044");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#fafbfe\\b",     "-fx-background-color:#0F1923");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f8faff\\b",     "-fx-background-color:#151F2E");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#fffbeb\\b",     "-fx-background-color:#1A1500");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#f0fdf4\\b",     "-fx-background-color:#0A1A0D");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#eff6ff\\b",     "-fx-background-color:#0A0F1A");
+            style = style.replaceAll("(?i)-fx-background-color:\\s*#fff1f2\\b",     "-fx-background-color:#1A0A0D");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#374151\\b",            "-fx-text-fill:#C8D8E8");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#1e293b\\b",            "-fx-text-fill:#E8EEF5");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#64748b\\b",            "-fx-text-fill:#5A7090");
+            style = style.replaceAll("(?i)-fx-text-fill:\\s*#94a3b8\\b",            "-fx-text-fill:#3D5270");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#bfdbfe\\b",         "-fx-border-color:#1B3C60");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#bbf7d0\\b",         "-fx-border-color:#0A2A14");
+            style = style.replaceAll("(?i)-fx-border-color:\\s*#fecdd3\\b",         "-fx-border-color:#3A0A14");
             node.setStyle(style);
         }
         if (node instanceof javafx.scene.Parent p) {
@@ -424,7 +444,7 @@ public class MainShellController {
 
     private void resetButtonStyles() {
         Button[] navButtons = {btnInterviews, btnApplications, btnJobOffers, btnEvents,
-                btnPastEvents, btnCalendar, btnStatistics,
+                btnPastEvents, btnCalendar, btnStatistics, btnUserDashboard,
                 btnDashboard, btnAdminStats, btnAdminApplications, btnFullscreenToggle};
         for (Button btn : navButtons) {
             if (btn == null) continue;
@@ -443,6 +463,7 @@ public class MainShellController {
 
         if (lblUserRole != null) lblUserRole.setText(getRoleLabel(u));
 
+        show(btnUserDashboard,       !isAdmin);
         show(btnInterviews,         !isAdmin);
         show(btnApplications,       !isAdmin);
         show(btnJobOffers,          true);

@@ -4,13 +4,215 @@
 <?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.layout.Region?>
+<?import javafx.scene.shape.*?>
 
-<ScrollPane xmlns="http://javafx.com/javafx/17"
+<BorderPane xmlns="http://javafx.com/javafx/17"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="Controllers.user.AdminDashboardController"
-            fitToWidth="true"
-            style="-fx-background-color: #f8f9fa;">
+            stylesheets="@../../styles.css"
+            style="-fx-background-color:#EBF0F8;">
+
+    <!-- TOP BAR -->
+    <top>
+        <VBox style="-fx-background-color:white; -fx-padding:18 28 14 28;
+                     -fx-border-color:#E4EBF5; -fx-border-width:0 0 1 0;
+                     -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.08),10,0,0,2);">
+            <HBox alignment="CENTER_LEFT" spacing="14">
+                <VBox spacing="3" HBox.hgrow="ALWAYS">
+                    <Label text="Admin Dashboard"
+                           style="-fx-font-size:22px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
+                    <Label text="Manage users, roles, and system statistics"
+                           style="-fx-font-size:12px; -fx-text-fill:#64748B;"/>
+                </VBox>
+                <Button fx:id="btnAddUser" text="➕  Add Admin" onAction="#handleAddUser"
+                        style="-fx-background-color:linear-gradient(to right,#5BA3F5,#4A90E2);
+                               -fx-text-fill:white; -fx-font-weight:700; -fx-font-size:13px;
+                               -fx-background-radius:10; -fx-padding:10 20; -fx-cursor:hand;
+                               -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.4),10,0,0,3);"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <center>
+        <ScrollPane fitToWidth="true"
+                    style="-fx-background:transparent; -fx-background-color:transparent; -fx-border-color:transparent;">
+            <VBox spacing="18" style="-fx-padding:24 28; -fx-background-color:#EBF0F8;">
+
+                <!-- Stats Row -->
+                <HBox spacing="14">
+                    <VBox spacing="10" HBox.hgrow="ALWAYS"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:20 22;
+                                 -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.10),12,0,0,3);">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <StackPane><Circle radius="18" style="-fx-fill:#EFF6FF;"/>
+                                <Label text="👥" style="-fx-font-size:13px;"/></StackPane>
+                            <Label text="Total Users" style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#64748B;"/>
+                        </HBox>
+                        <Label fx:id="lblTotalUsers" text="0"
+                               style="-fx-font-size:32px; -fx-font-weight:800; -fx-text-fill:#5BA3F5;"/>
+                        <Label text="All registered users" style="-fx-font-size:11px; -fx-text-fill:#94A3B8;"/>
+                    </VBox>
+                    <VBox spacing="10" HBox.hgrow="ALWAYS"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:20 22;
+                                 -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.10),12,0,0,3);">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <StackPane><Circle radius="18" style="-fx-fill:#EFF6FF;"/>
+                                <Label text="🏢" style="-fx-font-size:13px;"/></StackPane>
+                            <Label text="Recruiters" style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#64748B;"/>
+                        </HBox>
+                        <Label fx:id="lblRecruiters" text="0"
+                               style="-fx-font-size:32px; -fx-font-weight:800; -fx-text-fill:#0EA5E9;"/>
+                        <Label text="Company recruiters" style="-fx-font-size:11px; -fx-text-fill:#94A3B8;"/>
+                    </VBox>
+                    <VBox spacing="10" HBox.hgrow="ALWAYS"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:20 22;
+                                 -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.10),12,0,0,3);">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <StackPane><Circle radius="18" style="-fx-fill:#F0FDF4;"/>
+                                <Label text="👤" style="-fx-font-size:13px;"/></StackPane>
+                            <Label text="Candidates" style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#64748B;"/>
+                        </HBox>
+                        <Label fx:id="lblCandidates" text="0"
+                               style="-fx-font-size:32px; -fx-font-weight:800; -fx-text-fill:#10B981;"/>
+                        <Label text="Job seekers" style="-fx-font-size:11px; -fx-text-fill:#94A3B8;"/>
+                    </VBox>
+                    <VBox spacing="10" HBox.hgrow="ALWAYS"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:20 22;
+                                 -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.10),12,0,0,3);">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <StackPane><Circle radius="18" style="-fx-fill:#FFFBEB;"/>
+                                <Label text="🛡️" style="-fx-font-size:13px;"/></StackPane>
+                            <Label text="Admins" style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#64748B;"/>
+                        </HBox>
+                        <Label fx:id="lblAdmins" text="0"
+                               style="-fx-font-size:32px; -fx-font-weight:800; -fx-text-fill:#F59E0B;"/>
+                        <Label text="Administrators" style="-fx-font-size:11px; -fx-text-fill:#94A3B8;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Charts Row -->
+                <HBox spacing="14">
+                    <VBox spacing="12" HBox.hgrow="ALWAYS"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:20 22;
+                                 -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
+                        <Label text="User Distribution by Role"
+                               style="-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
+                        <PieChart fx:id="pieChart" prefHeight="220" animated="true"
+                                  style="-fx-font-size:11px;" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                    <VBox spacing="12" HBox.hgrow="ALWAYS"
+                          style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:20 22;
+                                 -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                                 -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
+                        <Label text="Active vs Inactive Users"
+                               style="-fx-font-size:14px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
+                        <BarChart fx:id="barChart" prefHeight="220" animated="true"
+                                  style="-fx-font-size:11px;" VBox.vgrow="ALWAYS">
+                            <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
+                            <yAxis><NumberAxis side="LEFT" autoRanging="true"/></yAxis>
+                        </BarChart>
+                    </VBox>
+                </HBox>
+
+                <!-- User Management Card -->
+                <VBox spacing="0"
+                      style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:0;
+                             -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                             -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
+
+                    <!-- Card header -->
+                    <HBox alignment="CENTER_LEFT" spacing="14"
+                          style="-fx-background-color:#F8FAFF; -fx-background-radius:14 14 0 0;
+                                 -fx-padding:14 20; -fx-border-color:#E4EBF5; -fx-border-width:0 0 1 0;">
+                        <VBox spacing="2" HBox.hgrow="ALWAYS">
+                            <Label text="User Management"
+                                   style="-fx-font-size:14px; -fx-font-weight:800; -fx-text-fill:#1E293B;"/>
+                            <Label fx:id="lblRecordCount" text="Records: 0"
+                                   style="-fx-font-size:11px; -fx-text-fill:#64748B;"/>
+                        </VBox>
+                        <Label fx:id="statusLabel" text=""
+                               style="-fx-font-size:12px; -fx-text-fill:#10B981; -fx-font-weight:600;"/>
+                    </HBox>
+
+                    <VBox spacing="12" style="-fx-padding:16 20 20 20;">
+
+                        <!-- Search & Filter -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <TextField fx:id="searchField" promptText="🔍  Search by name or email..."
+                                       HBox.hgrow="ALWAYS"
+                                       style="-fx-font-size:13px; -fx-padding:10 14; -fx-background-radius:10;
+                                              -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                              -fx-background-color:#FAFBFE;"/>
+                            <ComboBox fx:id="roleFilter" promptText="Filter by role" prefWidth="160"
+                                      style="-fx-font-size:13px; -fx-background-radius:10; -fx-border-radius:10;
+                                             -fx-border-color:#E4EBF5; -fx-border-width:1.5;"/>
+                            <Button fx:id="btnSearch" text="Search" onAction="#handleSearch"
+                                    style="-fx-background-color:#EFF6FF; -fx-text-fill:#1D4ED8; -fx-font-weight:700;
+                                           -fx-font-size:12px; -fx-background-radius:10; -fx-padding:10 16;
+                                           -fx-border-color:#BFDBFE; -fx-border-width:1.5; -fx-border-radius:10; -fx-cursor:hand;"/>
+                            <Button fx:id="btnRefresh" text="↻  Refresh" onAction="#handleRefresh"
+                                    style="-fx-background-color:#F8FAFF; -fx-text-fill:#5BA3F5; -fx-font-weight:700;
+                                           -fx-font-size:12px; -fx-background-radius:10; -fx-padding:10 16;
+                                           -fx-border-color:#E4EBF5; -fx-border-width:1.5; -fx-border-radius:10; -fx-cursor:hand;"/>
+                        </HBox>
+
+                        <!-- Filter Tabs -->
+                        <HBox spacing="8">
+                            <Button fx:id="btnAllUsers" text="All Users" onAction="#handleShowAll"
+                                    style="-fx-background-color:#EFF6FF; -fx-text-fill:#1D4ED8; -fx-font-weight:600;
+                                           -fx-font-size:12px; -fx-background-radius:8; -fx-padding:8 14;
+                                           -fx-border-color:#BFDBFE; -fx-border-width:1.5; -fx-border-radius:8; -fx-cursor:hand;"/>
+                            <Button fx:id="btnRecruiters" text="Recruiters" onAction="#handleShowRecruiters"
+                                    style="-fx-background-color:#F8FAFF; -fx-text-fill:#64748B; -fx-font-weight:600;
+                                           -fx-font-size:12px; -fx-background-radius:8; -fx-padding:8 14;
+                                           -fx-border-color:#E4EBF5; -fx-border-width:1.5; -fx-border-radius:8; -fx-cursor:hand;"/>
+                            <Button fx:id="btnCandidates" text="Candidates" onAction="#handleShowCandidates"
+                                    style="-fx-background-color:#F8FAFF; -fx-text-fill:#64748B; -fx-font-weight:600;
+                                           -fx-font-size:12px; -fx-background-radius:8; -fx-padding:8 14;
+                                           -fx-border-color:#E4EBF5; -fx-border-width:1.5; -fx-border-radius:8; -fx-cursor:hand;"/>
+                            <Button fx:id="btnAdmins" text="Admins" onAction="#handleShowAdmins"
+                                    style="-fx-background-color:#F8FAFF; -fx-text-fill:#64748B; -fx-font-weight:600;
+                                           -fx-font-size:12px; -fx-background-radius:8; -fx-padding:8 14;
+                                           -fx-border-color:#E4EBF5; -fx-border-width:1.5; -fx-border-radius:8; -fx-cursor:hand;"/>
+                        </HBox>
+
+                        <!-- Table -->
+                        <TableView fx:id="userTable" prefHeight="320" VBox.vgrow="ALWAYS"
+                                   style="-fx-font-size:12px; -fx-background-radius:10; -fx-border-radius:10;
+                                          -fx-border-color:#E4EBF5;">
+                            <columns>
+                                <TableColumn fx:id="colName" text="Name" prefWidth="180"/>
+                                <TableColumn fx:id="colEmail" text="Email" prefWidth="200"/>
+                                <TableColumn fx:id="colRole" text="Role" prefWidth="120"/>
+                                <TableColumn fx:id="colPhone" text="Phone" prefWidth="140"/>
+                                <TableColumn fx:id="colActive" text="Status" prefWidth="100"/>
+                            </columns>
+                        </TableView>
+
+                        <!-- Action buttons -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Button fx:id="btnEdit" text="✏️  Edit User" disable="true" onAction="#handleEdit"
+                                    style="-fx-background-color:#EFF6FF; -fx-text-fill:#1D4ED8; -fx-font-weight:700;
+                                           -fx-font-size:12px; -fx-background-radius:10; -fx-padding:10 18;
+                                           -fx-border-color:#BFDBFE; -fx-border-width:1.5; -fx-border-radius:10; -fx-cursor:hand;"/>
+                            <Button fx:id="btnDelete" text="🗑️  Delete" disable="true" onAction="#handleDelete"
+                                    style="-fx-background-color:#FFF1F2; -fx-text-fill:#9F1239; -fx-font-weight:700;
+                                           -fx-font-size:12px; -fx-background-radius:10; -fx-padding:10 18;
+                                           -fx-border-color:#FECDD3; -fx-border-width:1.5; -fx-border-radius:10; -fx-cursor:hand;"/>
+                        </HBox>
+                    </VBox>
+                </VBox>
+
+                <Region minHeight="10"/>
+            </VBox>
+        </ScrollPane>
+    </center>
+</BorderPane>
 
     <VBox spacing="20"
           styleClass="page"

@@ -4,83 +4,168 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.image.*?>
+<?import javafx.scene.shape.*?>
 
-<StackPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="Controllers.user.LoginController"
-           style="-fx-background-color: linear-gradient(to bottom right, #5BA3F5, #4A90E2);"
-           stylesheets="@../../styles.css">
+<HBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.user.LoginController"
+      stylesheets="@../../styles.css"
+      style="-fx-background-color: #EBF0F8;">
 
-    <!-- Login Card -->
-    <VBox alignment="CENTER" spacing="0" maxWidth="450" maxHeight="600"
-          style="-fx-background-color: white; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 30, 0, 0, 10);">
+    <!-- ══ LEFT PANEL — Branding ══ -->
+    <VBox alignment="CENTER" spacing="28" prefWidth="420" minWidth="380"
+          style="-fx-background-color: linear-gradient(to bottom right, #1E293B, #334155);
+                 -fx-padding: 60 48;">
 
-        <padding>
-            <Insets top="50" right="50" bottom="50" left="50"/>
-        </padding>
-
-        <!-- Logo and Title -->
-        <VBox alignment="CENTER" spacing="15">
-            <ImageView fitHeight="80" fitWidth="80" preserveRatio="true">
-                <image>
-                    <Image url="@images/logo.jpg"/>
-                </image>
+        <!-- Logo circle -->
+        <StackPane alignment="CENTER">
+            <Circle radius="54" style="-fx-fill: rgba(91,163,245,0.18);"/>
+            <Circle radius="42" style="-fx-fill: rgba(91,163,245,0.28);"/>
+            <ImageView fitHeight="64" fitWidth="64" preserveRatio="true">
+                <image><Image url="@../../images/logo.jpg"/></image>
             </ImageView>
+        </StackPane>
 
-            <Label text="Talent Bridge" style="-fx-font-size: 32px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;"/>
-            <Label text="Welcome back! Please login to your account."
-                   style="-fx-font-size: 14px; -fx-text-fill: #6c757d; -fx-text-alignment: center;"
-                   wrapText="true"/>
+        <VBox alignment="CENTER" spacing="10">
+            <Label text="Talent Bridge"
+                   style="-fx-font-size:32px; -fx-font-weight:800; -fx-text-fill:white;"/>
+            <Label text="Your Career Starts Here"
+                   style="-fx-font-size:14px; -fx-text-fill:rgba(255,255,255,0.65); -fx-font-weight:400;"/>
         </VBox>
 
-        <Region VBox.vgrow="SOMETIMES" minHeight="30"/>
+        <!-- Decorative dots -->
+        <HBox alignment="CENTER" spacing="6">
+            <Circle radius="3" style="-fx-fill:rgba(91,163,245,0.5);"/>
+            <Circle radius="5" style="-fx-fill:#5BA3F5;"/>
+            <Circle radius="3" style="-fx-fill:rgba(91,163,245,0.5);"/>
+        </HBox>
 
-        <!-- Login Form -->
-        <VBox spacing="20" style="-fx-padding: 0;">
-
-            <!-- Email Field -->
-            <VBox spacing="8">
-                <Label text="Email" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                <TextField fx:id="txtEmail" promptText="Enter your email"
-                           style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
-            </VBox>
-
-            <!-- Password Field -->
-            <VBox spacing="8">
-                <Label text="Password" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                <PasswordField fx:id="txtPassword" promptText="Enter your password"
-                               style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
-            </VBox>
-
-            <!-- Remember Me & Forgot Password -->
-            <HBox alignment="CENTER_LEFT" spacing="10">
-                <CheckBox fx:id="cbRememberMe" text="Remember me"
-                          style="-fx-text-fill: #6c757d; -fx-font-size: 13px;"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Hyperlink text="Forgot password?" onAction="#handleForgotPassword" style="-fx-text-fill: #5BA3F5; -fx-font-size: 13px;"/>
+        <VBox spacing="18" style="-fx-padding:10 0 0 0;">
+            <HBox spacing="14" alignment="CENTER_LEFT">
+                <StackPane>
+                    <Circle radius="16" style="-fx-fill:rgba(91,163,245,0.2);"/>
+                    <Label text="✓" style="-fx-text-fill:#5BA3F5; -fx-font-weight:800; -fx-font-size:13px;"/>
+                </StackPane>
+                <Label text="Connect with top companies and recruiters"
+                       style="-fx-text-fill:rgba(255,255,255,0.75); -fx-font-size:13px;" wrapText="true"/>
             </HBox>
-
-            <!-- Login Button -->
-            <Button fx:id="btnLogin" text="Login" onAction="#handleLogin" maxWidth="Infinity"
-                    style="-fx-background-color: #5BA3F5; -fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: 700; -fx-padding: 14; -fx-background-radius: 8; -fx-cursor: hand;">
-                <VBox.margin>
-                    <Insets top="10"/>
-                </VBox.margin>
-            </Button>
-
-            <Button text="Login with Face" onAction="#handleLoginWithFace" maxWidth="Infinity"
-                    style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: 700; -fx-padding: 14; -fx-background-radius: 8; -fx-cursor: hand;"/>
-
-
-            <Button text="Login with Camera" onAction="#handleLoginWithCamera"/>
-            <!-- Sign Up Link -->
-            <HBox alignment="CENTER" spacing="5" style="-fx-padding: 10 0 0 0;">
-                <Label text="Don't have an account?" style="-fx-text-fill: #6c757d; -fx-font-size: 13px;"/>
-                <Hyperlink fx:id="linkSignUp" text="Sign Up" onAction="#handleShowSignUp"
-                           style="-fx-text-fill: #5BA3F5; -fx-font-size: 13px; -fx-font-weight: 600;"/>
+            <HBox spacing="14" alignment="CENTER_LEFT">
+                <StackPane>
+                    <Circle radius="16" style="-fx-fill:rgba(91,163,245,0.2);"/>
+                    <Label text="✓" style="-fx-text-fill:#5BA3F5; -fx-font-weight:800; -fx-font-size:13px;"/>
+                </StackPane>
+                <Label text="Manage job applications and interviews easily"
+                       style="-fx-text-fill:rgba(255,255,255,0.75); -fx-font-size:13px;" wrapText="true"/>
+            </HBox>
+            <HBox spacing="14" alignment="CENTER_LEFT">
+                <StackPane>
+                    <Circle radius="16" style="-fx-fill:rgba(91,163,245,0.2);"/>
+                    <Label text="✓" style="-fx-text-fill:#5BA3F5; -fx-font-weight:800; -fx-font-size:13px;"/>
+                </StackPane>
+                <Label text="Discover events and grow your network"
+                       style="-fx-text-fill:rgba(255,255,255,0.75); -fx-font-size:13px;" wrapText="true"/>
             </HBox>
         </VBox>
 
+        <Region VBox.vgrow="ALWAYS"/>
+
+        <Label text="© 2026 Talent Bridge · All rights reserved."
+               style="-fx-text-fill:rgba(255,255,255,0.30); -fx-font-size:11px;"/>
     </VBox>
 
-</StackPane>
+    <!-- ══ RIGHT PANEL — Login Form ══ -->
+    <VBox alignment="CENTER" HBox.hgrow="ALWAYS"
+          style="-fx-background-color: #EBF0F8; -fx-padding: 60 80;">
 
+        <VBox spacing="32" maxWidth="420">
+
+            <!-- Header -->
+            <VBox spacing="6">
+                <Label text="Welcome back"
+                       style="-fx-font-size:28px; -fx-font-weight:800; -fx-text-fill:#1E293B;"/>
+                <Label text="Sign in to your account to continue"
+                       style="-fx-font-size:14px; -fx-text-fill:#64748B;"/>
+            </VBox>
+
+            <!-- Form Card -->
+            <VBox spacing="20"
+                  style="-fx-background-color:white; -fx-background-radius:16; -fx-padding:32 32 28 32;
+                         -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:16;
+                         -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.12),18,0,0,4);">
+
+                <!-- Email -->
+                <VBox spacing="6">
+                    <Label text="Email address"
+                           style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                    <TextField fx:id="txtEmail" promptText="you@example.com"
+                               style="-fx-font-size:13px; -fx-padding:11 14; -fx-background-radius:10;
+                                      -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                      -fx-background-color:#FAFBFE;"/>
+                </VBox>
+
+                <!-- Password -->
+                <VBox spacing="6">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="Password"
+                               style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"
+                               HBox.hgrow="ALWAYS"/>
+                        <Hyperlink text="Forgot password?" onAction="#handleForgotPassword"
+                                   style="-fx-text-fill:#5BA3F5; -fx-font-size:12px; -fx-font-weight:600;
+                                          -fx-border-color:transparent;"/>
+                    </HBox>
+                    <PasswordField fx:id="txtPassword" promptText="••••••••"
+                                   style="-fx-font-size:13px; -fx-padding:11 14; -fx-background-radius:10;
+                                          -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                          -fx-background-color:#FAFBFE;"/>
+                </VBox>
+
+                <!-- Remember Me -->
+                <CheckBox fx:id="cbRememberMe" text="Remember me on this device"
+                          style="-fx-text-fill:#64748B; -fx-font-size:12px;"/>
+
+                <!-- Login Button -->
+                <Button fx:id="btnLogin" text="Sign In →" onAction="#handleLogin" maxWidth="Infinity"
+                        style="-fx-background-color:linear-gradient(to right,#5BA3F5,#4A90E2);
+                               -fx-text-fill:white; -fx-font-size:14px; -fx-font-weight:700;
+                               -fx-padding:13; -fx-background-radius:10; -fx-cursor:hand;
+                               -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.45),14,0,0,3);">
+                    <VBox.margin><Insets top="4"/></VBox.margin>
+                </Button>
+
+                <!-- Divider -->
+                <HBox alignment="CENTER" spacing="12">
+                    <Separator HBox.hgrow="ALWAYS"/>
+                    <Label text="or continue with"
+                           style="-fx-text-fill:#94A3B8; -fx-font-size:11px;"/>
+                    <Separator HBox.hgrow="ALWAYS"/>
+                </HBox>
+
+                <!-- Face / Camera Login -->
+                <HBox spacing="10">
+                    <Button text="🪪  Face Login" onAction="#handleLoginWithFace" HBox.hgrow="ALWAYS"
+                            maxWidth="Infinity"
+                            style="-fx-background-color:#F0FDF4; -fx-text-fill:#166534; -fx-font-weight:700;
+                                   -fx-font-size:12px; -fx-padding:11; -fx-background-radius:10;
+                                   -fx-border-color:#BBF7D0; -fx-border-width:1.5; -fx-border-radius:10;
+                                   -fx-cursor:hand;"/>
+                    <Button text="📷  Camera" onAction="#handleLoginWithCamera" HBox.hgrow="ALWAYS"
+                            maxWidth="Infinity"
+                            style="-fx-background-color:#EFF6FF; -fx-text-fill:#1D4ED8; -fx-font-weight:700;
+                                   -fx-font-size:12px; -fx-padding:11; -fx-background-radius:10;
+                                   -fx-border-color:#BFDBFE; -fx-border-width:1.5; -fx-border-radius:10;
+                                   -fx-cursor:hand;"/>
+                </HBox>
+            </VBox>
+
+            <!-- Sign up link -->
+            <HBox alignment="CENTER" spacing="6">
+                <Label text="New to Talent Bridge?"
+                       style="-fx-text-fill:#64748B; -fx-font-size:13px;"/>
+                <Hyperlink fx:id="linkSignUp" text="Create an account" onAction="#handleShowSignUp"
+                           style="-fx-text-fill:#5BA3F5; -fx-font-size:13px; -fx-font-weight:700;
+                                  -fx-border-color:transparent;"/>
+            </HBox>
+
+        </VBox>
+    </VBox>
+
+</HBox>

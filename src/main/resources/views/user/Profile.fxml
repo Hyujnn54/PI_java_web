@@ -3,171 +3,230 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 
-<VBox xmlns="http://javafx.com/javafx/17"
-      xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="Controllers.user.ProfileController"
-      spacing="16"
-      stylesheets="@../../styles.css"
-      style="-fx-background-color: #f3f6fb;">
+<BorderPane xmlns="http://javafx.com/javafx/17"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="Controllers.user.ProfileController"
+            stylesheets="@../../styles.css"
+            style="-fx-background-color: #EBF0F8;">
 
-    <padding>
-        <Insets top="24" right="24" bottom="24" left="24"/>
-    </padding>
-
-    <!-- Header -->
-    <VBox spacing="4"
-          style="-fx-padding: 18; -fx-background-color: white; -fx-background-radius: 16;
-                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 18, 0, 0, 6);">
-        <Label text="My Profile"
-               style="-fx-font-size: 24px; -fx-font-weight: 800; -fx-text-fill: #1f2a37;"/>
-        <Label text="Update your personal info and security settings"
-               style="-fx-font-size: 13px; -fx-text-fill: #6b7280;"/>
-    </VBox>
-
-    <!-- Main card -->
-    <VBox spacing="16"
-          style="-fx-padding: 18; -fx-background-color: white; -fx-background-radius: 16;
-                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 16, 0, 0, 6);">
-
-        <!-- Personal Information -->
-        <VBox spacing="10">
-            <Label text="Personal Information"
-                   style="-fx-font-size: 15px; -fx-font-weight: 800; -fx-text-fill: #111827;"/>
-
-            <GridPane hgap="14" vgap="12">
-                <columnConstraints>
-                    <ColumnConstraints minWidth="140" prefWidth="160" />
-                    <ColumnConstraints hgrow="ALWAYS" />
-                </columnConstraints>
-
-                <Label text="First name" GridPane.rowIndex="0" GridPane.columnIndex="0"
-                       style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-                <TextField fx:id="tfFirstName" GridPane.rowIndex="0" GridPane.columnIndex="1"
-                           promptText="Your first name"
-                           style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;"/>
-
-                <Label text="Email" GridPane.rowIndex="1" GridPane.columnIndex="0"
-                       style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-                <TextField fx:id="tfEmail" editable="false" GridPane.rowIndex="1" GridPane.columnIndex="1"
-                           style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;
-                                  -fx-opacity: 0.85;"/>
-
-                <Label text="Phone" GridPane.rowIndex="2" GridPane.columnIndex="0"
-                       style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-                <TextField fx:id="tfPhone" GridPane.rowIndex="2" GridPane.columnIndex="1"
-                           promptText="Example: 22123456"
-                           style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;"/>
-            </GridPane>
-        </VBox>
-
-        <Separator />
-
-        <!-- Security -->
-        <VBox spacing="10">
-            <Label text="Security"
-                   style="-fx-font-size: 15px; -fx-font-weight: 800; -fx-text-fill: #111827;"/>
-
-            <GridPane hgap="14" vgap="12">
-                <columnConstraints>
-                    <ColumnConstraints minWidth="140" prefWidth="160" />
-                    <ColumnConstraints hgrow="ALWAYS" />
-                </columnConstraints>
-
-                <Label text="New password" GridPane.rowIndex="0" GridPane.columnIndex="0"
-                       style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-                <PasswordField fx:id="pfPassword"
-                               promptText="Leave empty to keep current password"
-                               GridPane.rowIndex="0" GridPane.columnIndex="1"
-                               style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;"/>
-            </GridPane>
-
-            <HBox spacing="10">
-                <Button fx:id="btnEnableFace" text="Enable Face Login" onAction="#handleEnableFaceLogin"
-                        style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: 800;
-                               -fx-background-radius: 10; -fx-padding: 10 14; -fx-cursor: hand;"/>
-                <Button fx:id="btnDisableFace" text="Disable Face Login" onAction="#handleDisableFaceLogin"
-                        style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: 800;
-                               -fx-background-radius: 10; -fx-padding: 10 14; -fx-cursor: hand;"/>
+    <!-- TOP BAR -->
+    <top>
+        <VBox style="-fx-background-color:white; -fx-padding:18 28 14 28;
+                     -fx-border-color:#E4EBF5; -fx-border-width:0 0 1 0;
+                     -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.08),10,0,0,2);">
+            <HBox alignment="CENTER_LEFT" spacing="14">
+                <VBox spacing="3" HBox.hgrow="ALWAYS">
+                    <Label text="My Profile"
+                           style="-fx-font-size:22px; -fx-font-weight:700; -fx-text-fill:#1E293B;"/>
+                    <Label text="Manage your personal information and account security"
+                           style="-fx-font-size:12px; -fx-text-fill:#64748B;"/>
+                </VBox>
+                <HBox spacing="10" alignment="CENTER_RIGHT">
+                    <Label fx:id="lblStatus" text=""
+                           style="-fx-font-size:12px; -fx-text-fill:#10B981; -fx-font-weight:600;"/>
+                    <Button text="💾  Save Changes" onAction="#handleSave"
+                            style="-fx-background-color:linear-gradient(to right,#5BA3F5,#4A90E2);
+                                   -fx-text-fill:white; -fx-font-weight:700; -fx-font-size:13px;
+                                   -fx-background-radius:10; -fx-padding:10 20; -fx-cursor:hand;
+                                   -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.4),10,0,0,3);"/>
+                </HBox>
             </HBox>
         </VBox>
-    </VBox>
+    </top>
 
-    <!-- Recruiter block -->
-    <VBox fx:id="recruiterBlock" spacing="10" visible="false" managed="false"
-          style="-fx-padding: 16; -fx-background-color: white; -fx-background-radius: 16;
-                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 16, 0, 0, 6);">
-        <Label text="Recruiter Info"
-               style="-fx-font-size: 15px; -fx-font-weight: 800; -fx-text-fill: #111827;"/>
+    <!-- MAIN CONTENT -->
+    <center>
+        <ScrollPane fitToWidth="true"
+                    style="-fx-background:transparent; -fx-background-color:transparent; -fx-border-color:transparent;">
+            <VBox spacing="16" style="-fx-padding:24 28; -fx-background-color:#EBF0F8;">
 
-        <GridPane hgap="14" vgap="12">
-            <columnConstraints>
-                <ColumnConstraints minWidth="140" prefWidth="160" />
-                <ColumnConstraints hgrow="ALWAYS" />
-            </columnConstraints>
+                <!-- ── Personal Info Card ── -->
+                <VBox spacing="0"
+                      style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:0;
+                             -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                             -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
 
-            <Label text="Company name" GridPane.rowIndex="0" GridPane.columnIndex="0"
-                   style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-            <TextField fx:id="tfCompanyName" GridPane.rowIndex="0" GridPane.columnIndex="1"
-                       promptText="Company name"
-                       style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;"/>
+                    <!-- Card Header -->
+                    <HBox alignment="CENTER_LEFT" spacing="12"
+                          style="-fx-background-color:#F8FAFF; -fx-background-radius:14 14 0 0;
+                                 -fx-padding:16 20; -fx-border-color:#E4EBF5; -fx-border-width:0 0 1 0;">
+                        <StackPane>
+                            <Circle radius="16" style="-fx-fill:#EFF6FF;"/>
+                            <Label text="👤" style="-fx-font-size:14px;"/>
+                        </StackPane>
+                        <Label text="Personal Information"
+                               style="-fx-font-size:14px; -fx-font-weight:800; -fx-text-fill:#1E293B;"/>
+                    </HBox>
 
-            <Label text="Company location" GridPane.rowIndex="1" GridPane.columnIndex="0"
-                   style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-            <TextField fx:id="tfCompanyLocation" GridPane.rowIndex="1" GridPane.columnIndex="1"
-                       promptText="Company location"
-                       style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;"/>
-        </GridPane>
-    </VBox>
+                    <!-- Card Body -->
+                    <VBox spacing="16" style="-fx-padding:20 24 24 24;">
+                        <HBox spacing="20">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="First Name"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="tfFirstName" promptText="Your first name"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Email Address"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="tfEmail" editable="false"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                                  -fx-background-color:#F1F5F9; -fx-text-fill:#94A3B8;"/>
+                            </VBox>
+                        </HBox>
+                        <VBox spacing="6" maxWidth="300">
+                            <Label text="Phone Number"
+                                   style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                            <TextField fx:id="tfPhone" promptText="e.g. 22 123 456"
+                                       style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                              -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                              -fx-background-color:#FAFBFE;"/>
+                        </VBox>
+                    </VBox>
+                </VBox>
 
-    <!-- Candidate block -->
-    <VBox fx:id="candidateBlock" spacing="10" visible="false" managed="false"
-          style="-fx-padding: 16; -fx-background-color: white; -fx-background-radius: 16;
-                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 16, 0, 0, 6);">
-        <Label text="Candidate Info"
-               style="-fx-font-size: 15px; -fx-font-weight: 800; -fx-text-fill: #111827;"/>
+                <!-- ── Security Card ── -->
+                <VBox spacing="0"
+                      style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:0;
+                             -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:14;
+                             -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
+                    <HBox alignment="CENTER_LEFT" spacing="12"
+                          style="-fx-background-color:#F8FAFF; -fx-background-radius:14 14 0 0;
+                                 -fx-padding:16 20; -fx-border-color:#E4EBF5; -fx-border-width:0 0 1 0;">
+                        <StackPane>
+                            <Circle radius="16" style="-fx-fill:#EFF6FF;"/>
+                            <Label text="🔒" style="-fx-font-size:14px;"/>
+                        </StackPane>
+                        <Label text="Security"
+                               style="-fx-font-size:14px; -fx-font-weight:800; -fx-text-fill:#1E293B;"/>
+                    </HBox>
+                    <VBox spacing="16" style="-fx-padding:20 24 24 24;">
+                        <VBox spacing="6" maxWidth="340">
+                            <Label text="New Password"
+                                   style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                            <PasswordField fx:id="pfPassword" promptText="Leave empty to keep current password"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                        </VBox>
+                        <HBox spacing="12">
+                            <Button fx:id="btnEnableFace" text="🪪  Enable Face Login" onAction="#handleEnableFaceLogin"
+                                    style="-fx-background-color:#F0FDF4; -fx-text-fill:#166534; -fx-font-weight:700;
+                                           -fx-font-size:12px; -fx-background-radius:10; -fx-padding:10 16;
+                                           -fx-border-color:#BBF7D0; -fx-border-width:1.5; -fx-border-radius:10;
+                                           -fx-cursor:hand;"/>
+                            <Button fx:id="btnDisableFace" text="🚫  Disable Face Login" onAction="#handleDisableFaceLogin"
+                                    style="-fx-background-color:#FFF1F2; -fx-text-fill:#9F1239; -fx-font-weight:700;
+                                           -fx-font-size:12px; -fx-background-radius:10; -fx-padding:10 16;
+                                           -fx-border-color:#FECDD3; -fx-border-width:1.5; -fx-border-radius:10;
+                                           -fx-cursor:hand;"/>
+                        </HBox>
+                    </VBox>
+                </VBox>
 
-        <GridPane hgap="14" vgap="12">
-            <columnConstraints>
-                <ColumnConstraints minWidth="140" prefWidth="160" />
-                <ColumnConstraints hgrow="ALWAYS" />
-            </columnConstraints>
+                <!-- ── Recruiter Info Card ── -->
+                <VBox fx:id="recruiterBlock" spacing="0" visible="false" managed="false"
+                      style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:0;
+                             -fx-border-color:#BFDBFE; -fx-border-width:1.5; -fx-border-radius:14;
+                             -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
+                    <HBox alignment="CENTER_LEFT" spacing="12"
+                          style="-fx-background-color:#EFF6FF; -fx-background-radius:14 14 0 0;
+                                 -fx-padding:16 20; -fx-border-color:#BFDBFE; -fx-border-width:0 0 1.5 0;">
+                        <StackPane>
+                            <Circle radius="16" style="-fx-fill:#DBEAFE;"/>
+                            <Label text="🏢" style="-fx-font-size:14px;"/>
+                        </StackPane>
+                        <Label text="Recruiter Information"
+                               style="-fx-font-size:14px; -fx-font-weight:800; -fx-text-fill:#1D4ED8;"/>
+                    </HBox>
+                    <VBox spacing="16" style="-fx-padding:20 24 24 24;">
+                        <HBox spacing="20">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Company Name"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="tfCompanyName" promptText="Your company"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BFDBFE; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Company Location"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="tfCompanyLocation" promptText="City, Country"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BFDBFE; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+                </VBox>
 
-            <Label text="Location" GridPane.rowIndex="0" GridPane.columnIndex="0"
-                   style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-            <TextField fx:id="tfCandidateLocation" GridPane.rowIndex="0" GridPane.columnIndex="1"
-                       promptText="Location"
-                       style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;"/>
+                <!-- ── Candidate Info Card ── -->
+                <VBox fx:id="candidateBlock" spacing="0" visible="false" managed="false"
+                      style="-fx-background-color:white; -fx-background-radius:14; -fx-padding:0;
+                             -fx-border-color:#BBF7D0; -fx-border-width:1.5; -fx-border-radius:14;
+                             -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.09),12,0,0,3);">
+                    <HBox alignment="CENTER_LEFT" spacing="12"
+                          style="-fx-background-color:#F0FDF4; -fx-background-radius:14 14 0 0;
+                                 -fx-padding:16 20; -fx-border-color:#BBF7D0; -fx-border-width:0 0 1.5 0;">
+                        <StackPane>
+                            <Circle radius="16" style="-fx-fill:#D1FAE5;"/>
+                            <Label text="💼" style="-fx-font-size:14px;"/>
+                        </StackPane>
+                        <Label text="Candidate Information"
+                               style="-fx-font-size:14px; -fx-font-weight:800; -fx-text-fill:#166534;"/>
+                    </HBox>
+                    <VBox spacing="16" style="-fx-padding:20 24 24 24;">
+                        <HBox spacing="20">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Location"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="tfCandidateLocation" promptText="Your city"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BBF7D0; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Education Level"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="tfEducationLevel" promptText="Bachelor's, Master's..."
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BBF7D0; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                        </HBox>
+                        <HBox spacing="20">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Experience (years)"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="tfExperienceYears" promptText="e.g. 3"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BBF7D0; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="CV Path (optional)"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="tfCvPath" promptText="C:\...\cv.pdf"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BBF7D0; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+                </VBox>
 
-            <Label text="Education level" GridPane.rowIndex="1" GridPane.columnIndex="0"
-                   style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-            <TextField fx:id="tfEducationLevel" GridPane.rowIndex="1" GridPane.columnIndex="1"
-                       promptText="Education level"
-                       style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;"/>
+                <!-- Bottom spacer -->
+                <Region minHeight="20"/>
+            </VBox>
+        </ScrollPane>
+    </center>
 
-            <Label text="Experience years" GridPane.rowIndex="2" GridPane.columnIndex="0"
-                   style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-            <TextField fx:id="tfExperienceYears" GridPane.rowIndex="2" GridPane.columnIndex="1"
-                       promptText="Example: 2"
-                       style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;"/>
+</BorderPane>
 
-            <Label text="CV path" GridPane.rowIndex="3" GridPane.columnIndex="0"
-                   style="-fx-text-fill: #374151; -fx-font-weight: 700;"/>
-            <TextField fx:id="tfCvPath" GridPane.rowIndex="3" GridPane.columnIndex="1"
-                       promptText="C:\...\cv.pdf"
-                       style="-fx-padding: 10; -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #e5e7eb;"/>
-        </GridPane>
-    </VBox>
-
-    <!-- Save bar -->
-    <HBox spacing="12" alignment="CENTER_LEFT"
-          style="-fx-padding: 14 18; -fx-background-color: white; -fx-background-radius: 16;
-                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 16, 0, 0, 6);">
-        <Button text="Save Changes" onAction="#handleSave"
-                style="-fx-background-color:#2d8cff; -fx-text-fill:white; -fx-font-weight: 900;
-                       -fx-background-radius: 10; -fx-padding: 10 16; -fx-cursor: hand;"/>
-        <Label fx:id="lblStatus" text=""
-               style="-fx-text-fill: #6b7280; -fx-font-weight: 700;"/>
-    </HBox>
-
-</VBox>

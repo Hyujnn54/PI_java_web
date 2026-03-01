@@ -4,133 +4,263 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.image.*?>
+<?import javafx.scene.shape.*?>
 
-<StackPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="Controllers.user.SignUpController"
-           style="-fx-background-color: linear-gradient(to bottom right, #5BA3F5, #4A90E2);"
-           stylesheets="@../../styles.css">
+<HBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.user.SignUpController"
+      stylesheets="@../../styles.css"
+      style="-fx-background-color: #EBF0F8;">
 
-    <!-- Sign Up Card -->
-    <VBox alignment="CENTER" spacing="0" maxWidth="500" maxHeight="700"
-          style="-fx-background-color: white; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 30, 0, 0, 10);">
+    <!-- ══ LEFT PANEL — Branding ══ -->
+    <VBox alignment="CENTER" spacing="24" prefWidth="380" minWidth="340"
+          style="-fx-background-color: linear-gradient(to bottom right, #1E293B, #334155);
+                 -fx-padding: 50 40;">
 
-        <padding>
-            <Insets top="40" right="50" bottom="40" left="50"/>
-        </padding>
-
-        <!-- Logo and Title -->
-        <VBox alignment="CENTER" spacing="10">
-            <ImageView fitHeight="70" fitWidth="70" preserveRatio="true">
-                <image>
-                    <Image url="@images/logo.jpg"/>
-                </image>
+        <StackPane alignment="CENTER">
+            <Circle radius="50" style="-fx-fill: rgba(91,163,245,0.18);"/>
+            <Circle radius="38" style="-fx-fill: rgba(91,163,245,0.28);"/>
+            <ImageView fitHeight="56" fitWidth="56" preserveRatio="true">
+                <image><Image url="@../../images/logo.jpg"/></image>
             </ImageView>
+        </StackPane>
 
-            <Label text="Create Account" style="-fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #2c3e50;"/>
-            <Label text="Join Talent Bridge today!"
-                   style="-fx-font-size: 14px; -fx-text-fill: #6c757d;"/>
+        <VBox alignment="CENTER" spacing="8">
+            <Label text="Talent Bridge"
+                   style="-fx-font-size:28px; -fx-font-weight:800; -fx-text-fill:white;"/>
+            <Label text="Join our professional network"
+                   style="-fx-font-size:13px; -fx-text-fill:rgba(255,255,255,0.65);"/>
         </VBox>
 
-        <Region VBox.vgrow="SOMETIMES" minHeight="20"/>
+        <HBox alignment="CENTER" spacing="6">
+            <Circle radius="3" style="-fx-fill:rgba(91,163,245,0.5);"/>
+            <Circle radius="5" style="-fx-fill:#5BA3F5;"/>
+            <Circle radius="3" style="-fx-fill:rgba(91,163,245,0.5);"/>
+        </HBox>
 
-        <!-- ScrollPane for Form -->
-        <ScrollPane fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;"
-                    VBox.vgrow="ALWAYS">
-            <VBox spacing="18" style="-fx-padding: 10 5 10 0;">
+        <VBox spacing="14" style="-fx-padding:8 0 0 0;">
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <StackPane>
+                    <Circle radius="14" style="-fx-fill:rgba(91,163,245,0.2);"/>
+                    <Label text="1" style="-fx-text-fill:#5BA3F5; -fx-font-weight:800; -fx-font-size:12px;"/>
+                </StackPane>
+                <Label text="Fill in your personal details"
+                       style="-fx-text-fill:rgba(255,255,255,0.75); -fx-font-size:13px;" wrapText="true"/>
+            </HBox>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <StackPane>
+                    <Circle radius="14" style="-fx-fill:rgba(91,163,245,0.2);"/>
+                    <Label text="2" style="-fx-text-fill:#5BA3F5; -fx-font-weight:800; -fx-font-size:12px;"/>
+                </StackPane>
+                <Label text="Choose your role (Candidate or Recruiter)"
+                       style="-fx-text-fill:rgba(255,255,255,0.75); -fx-font-size:13px;" wrapText="true"/>
+            </HBox>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <StackPane>
+                    <Circle radius="14" style="-fx-fill:rgba(91,163,245,0.2);"/>
+                    <Label text="3" style="-fx-text-fill:#5BA3F5; -fx-font-weight:800; -fx-font-size:12px;"/>
+                </StackPane>
+                <Label text="Start using Talent Bridge immediately"
+                       style="-fx-text-fill:rgba(255,255,255,0.75); -fx-font-size:13px;" wrapText="true"/>
+            </HBox>
+        </VBox>
 
-                <!-- First Name -->
-                <VBox spacing="8">
-                    <Label text="First Name *" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                    <TextField fx:id="txtFirstName" promptText="Enter your first name"
-                               style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
-                </VBox>
-
-                <!-- Last Name -->
-                <VBox spacing="8">
-                    <Label text="Last Name *" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                    <TextField fx:id="txtLastName" promptText="Enter your last name"
-                               style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
-                </VBox>
-
-                <!-- Email -->
-                <VBox spacing="8">
-                    <Label text="Email *" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                    <TextField fx:id="txtEmail" promptText="Enter your email"
-                               style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
-                </VBox>
-
-                <!-- Phone -->
-                <VBox spacing="8">
-                    <Label text="Phone Number" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                    <TextField fx:id="txtPhone" promptText="Enter your phone number"
-                               style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
-                </VBox>
-
-                <!-- Password -->
-                <VBox spacing="8">
-                    <Label text="Password *" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                    <PasswordField fx:id="txtPassword" promptText="Create a password"
-                                   style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
-                </VBox>
-
-                <!-- Confirm Password -->
-                <VBox spacing="8">
-                    <Label text="Confirm Password *" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                    <PasswordField fx:id="txtConfirmPassword" promptText="Confirm your password"
-                                   style="-fx-font-size: 14px; -fx-padding: 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e9ecef;"/>
-                </VBox>
-
-                <!-- Role Selection -->
-                <VBox spacing="8">
-                    <Label text="I am a *" style="-fx-font-weight: 600; -fx-text-fill: #2c3e50; -fx-font-size: 13px;"/>
-                    <ComboBox fx:id="cbRole" promptText="Select your role" maxWidth="Infinity"
-                              style="-fx-font-size: 14px; -fx-background-radius: 8;"/>
-                </VBox>
-
-                <!-- Terms & Conditions -->
-                <CheckBox fx:id="cbTerms" text="I agree to the Terms and Conditions"
-                          style="-fx-text-fill: #6c757d; -fx-font-size: 13px;" wrapText="true"/>
-
-                <VBox fx:id="recruiterBlock" spacing="10" visible="false" managed="false">
-                    <Label text="Recruiter Information"/>
-                    <TextField fx:id="txtCompanyName" promptText="Company Name"/>
-                    <Label text="Company location:"/>
-                    <TextField fx:id="txtCompanyLocation" promptText="Type a city/address..."/>
-
-                    <ListView fx:id="lvLocationSuggestions" visible="false" managed="false" maxHeight="120"/>
-
-                    <Button text="📍 Pick" onAction="#handlePickRecruiterLocation"
-                            style="-fx-background-color:#2d8cff; -fx-text-fill:white; -fx-font-weight:bold;"/>
-                </VBox>
-
-                <VBox fx:id="candidateBlock" spacing="10" visible="false" managed="false">
-                    <Label text="Candidate Information"/>
-                    <TextField fx:id="txtCandidateLocation" promptText="Location"/>
-                    <TextField fx:id="txtEducationLevel" promptText="Education Level"/>
-                    <TextField fx:id="txtExperienceYears" promptText="Experience Years (number)"/>
-                    <TextField fx:id="txtCvPath" promptText="CV Path (optional)"/>
-                </VBox>
-
-
-                <!-- Sign Up Button -->
-                <Button fx:id="btnSignUp" text="Sign Up" onAction="#handleSignUp" maxWidth="Infinity"
-                        style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: 700; -fx-padding: 14; -fx-background-radius: 8; -fx-cursor: hand;">
-                    <VBox.margin>
-                        <Insets top="10"/>
-                    </VBox.margin>
-                </Button>
-
-                <!-- Login Link -->
-                <HBox alignment="CENTER" spacing="5" style="-fx-padding: 5 0 0 0;">
-                    <Label text="Already have an account?" style="-fx-text-fill: #6c757d; -fx-font-size: 13px;"/>
-                    <Hyperlink fx:id="linkLogin" text="Login" onAction="#handleShowLogin"
-                               style="-fx-text-fill: #5BA3F5; -fx-font-size: 13px; -fx-font-weight: 600;"/>
-                </HBox>
-
-            </VBox>
-        </ScrollPane>
-
+        <Region VBox.vgrow="ALWAYS"/>
+        <Label text="© 2026 Talent Bridge · All rights reserved."
+               style="-fx-text-fill:rgba(255,255,255,0.30); -fx-font-size:11px;"/>
     </VBox>
 
-</StackPane>
+    <!-- ══ RIGHT PANEL — Sign Up Form ══ -->
+    <VBox alignment="CENTER" HBox.hgrow="ALWAYS"
+          style="-fx-background-color: #EBF0F8; -fx-padding: 40 60;">
 
+        <VBox spacing="24" maxWidth="460">
+
+            <!-- Header -->
+            <VBox spacing="5">
+                <Label text="Create your account"
+                       style="-fx-font-size:26px; -fx-font-weight:800; -fx-text-fill:#1E293B;"/>
+                <HBox spacing="4" alignment="CENTER_LEFT">
+                    <Label text="Already have an account?"
+                           style="-fx-font-size:13px; -fx-text-fill:#64748B;"/>
+                    <Hyperlink fx:id="linkLogin" text="Sign in here" onAction="#handleShowLogin"
+                               style="-fx-text-fill:#5BA3F5; -fx-font-size:13px; -fx-font-weight:700;
+                                      -fx-border-color:transparent;"/>
+                </HBox>
+            </VBox>
+
+            <!-- Form Card -->
+            <VBox spacing="0"
+                  style="-fx-background-color:white; -fx-background-radius:16; -fx-padding:0;
+                         -fx-border-color:#E4EBF5; -fx-border-width:1; -fx-border-radius:16;
+                         -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.12),18,0,0,4);">
+
+                <ScrollPane fitToWidth="true" prefHeight="460"
+                            style="-fx-background:transparent; -fx-background-color:transparent;
+                                   -fx-border-color:transparent; -fx-background-radius:16;">
+                    <VBox spacing="18" style="-fx-padding:28 28 20 28; -fx-background-color:transparent;">
+
+                        <!-- Name Row -->
+                        <HBox spacing="14">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="First Name *"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="txtFirstName" promptText="First name"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Last Name *"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="txtLastName" promptText="Last name"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                                  -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- Email -->
+                        <VBox spacing="6">
+                            <Label text="Email address *"
+                                   style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                            <TextField fx:id="txtEmail" promptText="you@example.com"
+                                       style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                              -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                              -fx-background-color:#FAFBFE;"/>
+                        </VBox>
+
+                        <!-- Phone -->
+                        <VBox spacing="6">
+                            <Label text="Phone Number"
+                                   style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                            <TextField fx:id="txtPhone" promptText="+216 XX XXX XXX"
+                                       style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                              -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                              -fx-background-color:#FAFBFE;"/>
+                        </VBox>
+
+                        <!-- Password Row -->
+                        <HBox spacing="14">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Password *"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <PasswordField fx:id="txtPassword" promptText="Min. 8 characters"
+                                               style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                      -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                                      -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Confirm Password *"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <PasswordField fx:id="txtConfirmPassword" promptText="Repeat password"
+                                               style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                      -fx-border-radius:10; -fx-border-color:#E4EBF5; -fx-border-width:1.5;
+                                                      -fx-background-color:#FAFBFE;"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- Role Selection -->
+                        <VBox spacing="6">
+                            <Label text="I am a *"
+                                   style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                            <ComboBox fx:id="cbRole" promptText="Select your role" maxWidth="Infinity"
+                                      style="-fx-font-size:13px; -fx-background-radius:10; -fx-border-radius:10;
+                                             -fx-border-color:#E4EBF5; -fx-border-width:1.5; -fx-background-color:#FAFBFE;"/>
+                        </VBox>
+
+                        <!-- Recruiter Block -->
+                        <VBox fx:id="recruiterBlock" spacing="12" visible="false" managed="false"
+                              style="-fx-background-color:#EFF6FF; -fx-background-radius:12; -fx-padding:16;
+                                     -fx-border-color:#BFDBFE; -fx-border-width:1.5; -fx-border-radius:12;">
+                            <Label text="🏢  Recruiter Information"
+                                   style="-fx-font-size:13px; -fx-font-weight:800; -fx-text-fill:#1D4ED8;"/>
+                            <VBox spacing="6">
+                                <Label text="Company Name"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="txtCompanyName" promptText="Your company name"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BFDBFE; -fx-border-width:1.5;
+                                                  -fx-background-color:white;"/>
+                            </VBox>
+                            <VBox spacing="6">
+                                <Label text="Company Location"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="txtCompanyLocation" promptText="City, Country"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BFDBFE; -fx-border-width:1.5;
+                                                  -fx-background-color:white;"/>
+                                <ListView fx:id="lvLocationSuggestions" visible="false" managed="false"
+                                          maxHeight="120"
+                                          style="-fx-background-radius:10; -fx-border-radius:10;
+                                                 -fx-border-color:#BFDBFE;"/>
+                                <Button text="📍  Pick on Map" onAction="#handlePickRecruiterLocation"
+                                        style="-fx-background-color:#1D4ED8; -fx-text-fill:white; -fx-font-weight:700;
+                                               -fx-background-radius:8; -fx-padding:8 14; -fx-cursor:hand; -fx-font-size:12px;"/>
+                            </VBox>
+                        </VBox>
+
+                        <!-- Candidate Block -->
+                        <VBox fx:id="candidateBlock" spacing="12" visible="false" managed="false"
+                              style="-fx-background-color:#F0FDF4; -fx-background-radius:12; -fx-padding:16;
+                                     -fx-border-color:#BBF7D0; -fx-border-width:1.5; -fx-border-radius:12;">
+                            <Label text="👤  Candidate Information"
+                                   style="-fx-font-size:13px; -fx-font-weight:800; -fx-text-fill:#166534;"/>
+                            <HBox spacing="12">
+                                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                    <Label text="Location"
+                                           style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                    <TextField fx:id="txtCandidateLocation" promptText="Your city"
+                                               style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                      -fx-border-radius:10; -fx-border-color:#BBF7D0; -fx-border-width:1.5;
+                                                      -fx-background-color:white;"/>
+                                </VBox>
+                                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                    <Label text="Experience (years)"
+                                           style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                    <TextField fx:id="txtExperienceYears" promptText="e.g. 3"
+                                               style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                      -fx-border-radius:10; -fx-border-color:#BBF7D0; -fx-border-width:1.5;
+                                                      -fx-background-color:white;"/>
+                                </VBox>
+                            </HBox>
+                            <VBox spacing="6">
+                                <Label text="Education Level"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="txtEducationLevel" promptText="Bachelor's, Master's, etc."
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BBF7D0; -fx-border-width:1.5;
+                                                  -fx-background-color:white;"/>
+                            </VBox>
+                            <VBox spacing="6">
+                                <Label text="CV Path (optional)"
+                                       style="-fx-font-size:12px; -fx-font-weight:700; -fx-text-fill:#374151;"/>
+                                <TextField fx:id="txtCvPath" promptText="C:\...\cv.pdf"
+                                           style="-fx-font-size:13px; -fx-padding:10 12; -fx-background-radius:10;
+                                                  -fx-border-radius:10; -fx-border-color:#BBF7D0; -fx-border-width:1.5;
+                                                  -fx-background-color:white;"/>
+                            </VBox>
+                        </VBox>
+
+                        <!-- Terms -->
+                        <CheckBox fx:id="cbTerms" text="I agree to the Terms and Conditions"
+                                  wrapText="true"
+                                  style="-fx-text-fill:#64748B; -fx-font-size:12px;"/>
+
+                        <!-- Sign Up Button -->
+                        <Button fx:id="btnSignUp" text="Create Account →" onAction="#handleSignUp"
+                                maxWidth="Infinity"
+                                style="-fx-background-color:linear-gradient(to right,#5BA3F5,#4A90E2);
+                                       -fx-text-fill:white; -fx-font-size:14px; -fx-font-weight:700;
+                                       -fx-padding:13; -fx-background-radius:10; -fx-cursor:hand;
+                                       -fx-effect:dropshadow(gaussian,rgba(91,163,245,0.45),14,0,0,3);">
+                            <VBox.margin><Insets top="4"/></VBox.margin>
+                        </Button>
+
+                    </VBox>
+                </ScrollPane>
+            </VBox>
+
+        </VBox>
+    </VBox>
+
+</HBox>

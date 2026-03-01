@@ -436,3 +436,93 @@
     -fx-border-color: #1F2A3A;
     -fx-opacity: 0.78;
 }
+
+/* ── Profile / Dashboard card-based layouts ─────────────────── */
+/* Target BorderPane used for profile, dashboards, etc. loaded in the shell */
+.dark BorderPane {
+    -fx-background-color: #0F1923;
+}
+.dark BorderPane > .top > VBox,
+.dark BorderPane > .top > HBox {
+    -fx-background-color: #1A2535;
+    -fx-border-color: transparent transparent #243044 transparent;
+}
+/* White stat cards and form cards */
+.dark VBox,
+.dark HBox {
+    /* Do NOT override here — too broad. Use patchNodeDark */
+}
+/* Stat number labels */
+.dark .stat-number { -fx-text-fill: #7EC8FF; }
+/* Page header labels within top-bar VBox */
+.dark BorderPane > .top Label {
+    -fx-text-fill: #E8EEF5;
+}
+/* Table within admin dashboard */
+.dark TableView {
+    -fx-background-color: #1A2535;
+    -fx-border-color: #243044;
+}
+.dark TableView .column-header-background {
+    -fx-background-color: #151F2E;
+}
+.dark TableView .column-header .label {
+    -fx-text-fill: #5A7090;
+}
+.dark TableView .table-row-cell {
+    -fx-background-color: #1A2535;
+    -fx-border-color: transparent transparent #1F2D40 transparent;
+}
+.dark TableView .table-row-cell:odd { -fx-background-color: #172030; }
+.dark TableView .table-row-cell:hover { -fx-background-color: #1F3048; }
+.dark TableView .table-row-cell:selected { -fx-background-color: #1B3C60; }
+/* BarChart & PieChart in dark */
+.dark BarChart, .dark PieChart {
+    -fx-background-color: transparent;
+}
+.dark BarChart .chart-plot-background,
+.dark PieChart .chart-plot-background {
+    -fx-background-color: #1A2535;
+}
+/* Hyperlinks in cards */
+.dark Hyperlink {
+    -fx-text-fill: #5BA3F5;
+    -fx-border-color: transparent;
+}
+/* CheckBox */
+.dark CheckBox {
+    -fx-text-fill: #C8D8E8;
+}
+.dark CheckBox .box {
+    -fx-background-color: #0F1923;
+    -fx-border-color: #3D5270;
+    -fx-border-width: 2;
+}
+.dark CheckBox:selected .box { -fx-background-color: #2279C2; -fx-border-color: #2279C2; }
+/* ── Stat cards and profile info cards ─────────────────────── */
+.dark .stat-card {
+    -fx-background-color: #1A2535;
+    -fx-border-color: #243044;
+}
+.dark .stat-card:hover {
+    -fx-border-color: #2C5080;
+    -fx-effect: dropshadow(gaussian, rgba(126,200,255,0.20), 18, 0, 0, 5);
+}
+.dark .info-section-card {
+    -fx-background-color: #1A2535;
+    -fx-border-color: #243044;
+}
+.dark .info-section-header {
+    -fx-background-color: #151F2E;
+    -fx-border-color: #243044;
+}
+
+/* Auth fields keep their appearance (they're on the login screen, not inside dark shell) */
+
+/* ── PasswordField dark ─────────────────────────────────────── */
+.dark PasswordField {
+    -fx-background-color: #0F1923;
+    -fx-border-color: #243044;
+    -fx-text-fill: #C8D8E8;
+}
+
