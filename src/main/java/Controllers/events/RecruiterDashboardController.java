@@ -656,15 +656,24 @@ public class RecruiterDashboardController implements Initializable {
             if (selected.getEmail() != null && !selected.getEmail().isBlank()) {
                 String email = selected.getEmail();
                 String name = selected.getCandidateName() != null ? selected.getCandidateName() : "Candidat";
-                String eventTitle = selectedEvent != null ? selectedEvent.getTitle() : "";
-                String eventDate = selectedEvent != null && selectedEvent.getEventDate() != null
-                        ? selectedEvent.getEventDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "";
-                String eventLocation = selectedEvent != null && selectedEvent.getLocation() != null
-                        ? selectedEvent.getLocation() : "";
-                String eventType = selectedEvent != null && selectedEvent.getEventType() != null
-                        ? selectedEvent.getEventType() : "";
-                String meetLink = selectedEvent != null && selectedEvent.getMeetLink() != null
-                        ? selectedEvent.getMeetLink() : "";
+                
+                // Always look up the real event to ensure we have data, even if selectedEvent is null
+                RecruitmentEvent realEvent = null;
+                try {
+                    realEvent = eventService.getById(selected.getEventId());
+                } catch (SQLException ignored) {}
+                
+                final RecruitmentEvent evToUse = realEvent != null ? realEvent : selectedEvent;
+
+                String eventTitle = evToUse != null ? evToUse.getTitle() : "";
+                String eventDate = evToUse != null && evToUse.getEventDate() != null
+                        ? evToUse.getEventDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "";
+                String eventLocation = evToUse != null && evToUse.getLocation() != null
+                        ? evToUse.getLocation() : "";
+                String eventType = evToUse != null && evToUse.getEventType() != null
+                        ? evToUse.getEventType() : "";
+                String meetLink = evToUse != null && evToUse.getMeetLink() != null
+                        ? evToUse.getMeetLink() : "";
                 new Thread(() -> Services.EmailService.sendEventStatusNotification(
                         email, name, eventTitle, eventDate, eventLocation, newStatus.name(), null, eventType, meetLink),
                         "event-status-email").start();

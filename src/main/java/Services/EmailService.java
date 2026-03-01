@@ -682,93 +682,112 @@ public class EmailService {
         String statusColor = newStatus.equals("CONFIRMED") ? "#16A34A" :
                              newStatus.equals("CANCELLED") ? "#DC2626" : "#1565C0";
 
-        // Build the extra section for CONFIRMED status
-        String confirmExtra = "";
-        if ("CONFIRMED".equals(newStatus)) {
-            if ("WEBINAIRE".equals(eventType) && meetLink != null && !meetLink.isBlank()) {
-                // Include meet link button for WEBINAIRE
-                confirmExtra = "<div style='text-align:center;margin:24px 0;'>"
-                    + "<p style='color:#1565C0;font-weight:700;font-size:14px;margin-bottom:12px'>🔗 Lien de la réunion en ligne :</p>"
-                    + "<a href='" + escapeHtml(meetLink) + "' style='display:inline-block;background:linear-gradient(135deg,#1565C0,#1E88E5);color:#fff;"
-                    + "text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:50px;'>Rejoindre le Webinaire</a>"
-                    + "<p style='color:#64748B;font-size:12px;margin-top:10px'>" + escapeHtml(meetLink) + "</p>"
-                    + "</div>";
+        boolean isWebinaire = "WEBINAIRE".equals(eventType);
+        boolean isConfirmed = "CONFIRMED".equals(newStatus);
+        
+        String safeTitle = escapeHtml(eventTitle != null && !eventTitle.isBlank() ? eventTitle : "l'événement");
+        String safeDate = escapeHtml(eventDate != null && !eventDate.isBlank() ? eventDate : "À confirmer");
+        String safeLoc = escapeHtml(eventLocation != null && !eventLocation.isBlank() ? eventLocation : "À confirmer");
+        String safeType = escapeHtml(eventType != null && !eventType.isBlank() ? eventType : "Événement");
+        String safeName = escapeHtml(candidateName);
+
+        String html = "";
+        
+        if (isConfirmed && isWebinaire) {
+            // WEBINAIRE CONFIRMED TEMPLATE (Purple theme)
+            subject = "Inscription confirmée : Webinaire " + safeTitle + " | Talent Bridge";
+            html = "<div style='font-family:Inter,Arial,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)'>"
+                 + "<div style='background:linear-gradient(135deg,#7C3AED,#4F46E5);padding:40px 36px 36px;text-align:center;'>"
+                 + "<div style='font-size:48px;margin-bottom:12px'>🖥️</div>"
+                 + "<div style='color:rgba(255,255,255,.9);font-size:12px;font-weight:700;letter-spacing:2px;margin-bottom:8px'>TALENT BRIDGE</div>"
+                 + "<h1 style='color:#fff;margin:0;font-size:28px;font-weight:800'>Inscription Confirmée !</h1>"
+                 + "<p style='color:rgba(255,255,255,.85);margin:8px 0 0;font-size:15px'>Webinaire en ligne</p></div>"
+                 + "<div style='padding:40px 36px'>"
+                 + "<p style='font-size:16px;color:#1E293B;margin:0 0 16px'>Bonjour <strong>" + safeName + "</strong>,</p>"
+                 + "<p style='color:#475569;font-size:15px;line-height:1.6;margin:0 0 32px'>Votre inscription au webinaire <strong>" + safeTitle + "</strong> est <span style='color:#16A34A;font-weight:700'>confirmée</span> !</p>"
+                 + "<div style='background:#F8FAFF;border:1px solid #E0E7FF;border-radius:12px;padding:20px 24px;margin-bottom:32px'>"
+                 + "<p style='margin:0 0 8px;color:#334155;font-size:14px'>📅 <strong>Date :</strong> " + safeDate + "</p>"
+                 + "<p style='margin:0;color:#334155;font-size:14px'>💻 <strong>Format :</strong> Webinaire en ligne</p></div>"
+                 + "<div style='text-align:center;margin:32px 0'>";
+                 
+            if (meetLink != null && !meetLink.isBlank()) {
+                html += "<a href='" + escapeHtml(meetLink) + "' style='display:inline-block;background:#7C3AED;color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 48px;border-radius:50px;box-shadow:0 4px 12px rgba(124,58,237,.3);'>🔗 Rejoindre le Webinaire</a>"
+                      + "</div>"
+                      + "<p style='color:#64748B;font-size:13px;text-align:center;margin-bottom:8px'>Si le bouton ne fonctionne pas, copiez ce lien :</p>"
+                      + "<p style='color:#7C3AED;font-size:13px;text-align:center;margin:0;word-break:break-all'><a href='" + escapeHtml(meetLink) + "' style='color:#7C3AED;'>" + escapeHtml(meetLink) + "</a></p>";
             } else {
-                // Generate QR code for Job_Faire / Interview day
-                String qrData = "Talent Bridge - " + eventTitle + "\nDate: " + eventDate + "\nLieu: " + eventLocation;
-                String qrImgTag = generateQrCodeImgTag(qrData, 200);
-                confirmExtra = "<div style='text-align:center;margin:24px 0;'>"
-                    + "<p style='color:#1565C0;font-weight:700;font-size:14px;margin-bottom:12px'>📱 Votre QR Code d'accès :</p>"
-                    + qrImgTag
-                    + "<p style='color:#64748B;font-size:12px;margin-top:10px'>Présentez ce QR code à l'entrée de l'événement</p>"
-                    + "</div>";
+                html += "<p style='color:#DC2626;font-size:14px;font-weight:600'>Le lien de la réunion n'a pas encore été fourni.</p></div>";
             }
+                 
+            html += (recruiterMessage != null && !recruiterMessage.isBlank()
+                     ? "<div style='background:#FFF7ED;border-left:4px solid #F59E0B;border-radius:8px;padding:14px 18px;margin-top:32px'><p style='color:#92400E;margin:0;font-size:13px'><strong>Message du recruteur :</strong> " + escapeHtml(recruiterMessage) + "</p></div>" : "")
+                 + "<p style='color:#94A3B8;font-size:11px;margin-top:40px;border-top:1px solid #E4EBF5;padding-top:20px'>Cet email a été envoyé automatiquement par Talent Bridge.</p>"
+                 + "</div><div style='background:#F8FAFC;padding:16px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #E2E8F0'>Talent Bridge — Plateforme RH</div></div>";
+                 
+        } else if (isConfirmed && !isWebinaire) {
+            // JOB FAIRE / INTERVIEW DAY CONFIRMED TEMPLATE (Green/Blue theme)
+            subject = "Accès confirmé : " + safeTitle + " | Talent Bridge";
+            String qrData = "Talent Bridge - " + eventTitle + "\nDate: " + eventDate + "\nLieu: " + eventLocation;
+            String qrImgTag = generateQrCodeImgTag(qrData, 180);
+            
+            html = "<div style='font-family:Inter,Arial,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)'>"
+                 + "<div style='background:linear-gradient(135deg,#0284C7,#22C55E);padding:40px 36px 36px;text-align:center;'>"
+                 + "<div style='background:rgba(255,255,255,.2);display:inline-block;padding:8px 16px;border-radius:8px;font-size:24px;margin-bottom:16px'>🎫</div>"
+                 + "<div style='color:rgba(255,255,255,.9);font-size:12px;font-weight:700;letter-spacing:2px;margin-bottom:8px'>TALENT BRIDGE</div>"
+                 + "<h1 style='color:#fff;margin:0;font-size:28px;font-weight:800'>Accès Confirmé !</h1>"
+                 + "<p style='color:rgba(255,255,255,.85);margin:8px 0 0;font-size:15px'>" + safeType + "</p></div>"
+                 + "<div style='padding:40px 36px'>"
+                 + "<p style='font-size:16px;color:#1E293B;margin:0 0 16px'>Bonjour <strong>" + safeName + "</strong>,</p>"
+                 + "<p style='color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px'>Félicitations ! Votre participation à <strong>" + safeTitle + "</strong> est <span style='color:#16A34A;font-weight:700'>confirmée</span>. Présentez le QR code ci-dessous à l'entrée.</p>"
+                 + "<div style='background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:20px 24px;margin-bottom:32px'>"
+                 + "<p style='margin:0 0 8px;color:#166534;font-size:14px'>📅 <strong>Date :</strong> " + safeDate + "</p>"
+                 + "<p style='margin:0 0 8px;color:#166534;font-size:14px'>📍 <strong>Lieu :</strong> " + safeLoc + "</p>"
+                 + "<p style='margin:0;color:#166534;font-size:14px'>🏷️ <strong>Type :</strong> " + safeType + "</p></div>"
+                 + "<div style='border:2px dashed #CBD5E1;border-radius:16px;padding:32px 24px;text-align:center;margin-bottom:24px'>"
+                 + "<div style='color:#475569;font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:16px'>🎟️ VOTRE BILLET D'ACCÈS</div>"
+                 + qrImgTag
+                 + "<p style='color:#64748B;font-size:11px;margin:16px 0 0'>Présentez ce QR code à l'entrée de l'événement</p></div>"
+                 + "<div style='background:#ECFCCB;border:1px solid #D9F99D;border-radius:8px;padding:16px 20px;display:flex;align-items:flex-start;gap:12px;margin-bottom:32px'>"
+                 + "<div style='font-size:20px'>💡</div>"
+                 + "<p style='color:#3F6212;margin:0;font-size:13px;line-height:1.5'><strong>Conseil :</strong> Enregistrez cet email ou faites une capture d'écran du QR code avant l'événement.</p></div>"
+                 + (recruiterMessage != null && !recruiterMessage.isBlank()
+                     ? "<div style='background:#FFF7ED;border-left:4px solid #F59E0B;border-radius:8px;padding:14px 18px;margin-bottom:32px'><p style='color:#92400E;margin:0;font-size:13px'><strong>Message du recruteur :</strong> " + escapeHtml(recruiterMessage) + "</p></div>" : "")
+                 + "<p style='color:#94A3B8;font-size:11px;margin-top:20px;border-top:1px solid #E4EBF5;padding-top:20px'>Cet email a été envoyé automatiquement par Talent Bridge.</p>"
+                 + "</div><div style='background:#F8FAFC;padding:16px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #E2E8F0'>Talent Bridge — Plateforme RH</div></div>";
+                 
+        } else {
+            // FALLBACK / GENERIC TEMPLATE for Cancelled, Pending, etc.
+            html = "<div style='font-family:Inter,Arial,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)'>"
+                 + "<div style='background:linear-gradient(135deg,#1565C0,#1E88E5);padding:36px 36px 28px;'>"
+                 + "<h1 style='color:#fff;margin:0;font-size:22px;font-weight:800'>📋 Mise à jour d'inscription</h1>"
+                 + "<p style='color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px'>Talent Bridge — Événements de Recrutement</p></div>"
+                 + "<div style='padding:32px 36px'>"
+                 + "<p style='font-size:16px;color:#1E293B;margin:0 0 16px'>Bonjour <strong>" + safeName + "</strong>,</p>"
+                 + "<p style='color:#475569;font-size:14px;line-height:1.6;margin:0 0 20px'>Votre statut pour l'événement ci-dessous a été mis à jour :</p>"
+                 + "<div style='text-align:center;margin:20px 0'>"
+                 + "<span style='background:" + statusColor + ";color:#fff;font-weight:700;font-size:16px;padding:10px 32px;border-radius:24px;display:inline-block'>"
+                 + escapeHtml(newStatus) + "</span></div>"
+                 + "<div style='background:#F7FAFF;border:1px solid #DCEEFB;border-radius:12px;overflow:hidden;margin:24px 0'>"
+                 + "<div style='background:linear-gradient(to right,#1565C0,#1E88E5);padding:14px 20px'>"
+                 + "<span style='color:white;font-size:13px;font-weight:700;letter-spacing:1px'>DÉTAILS DE L'ÉVÉNEMENT</span></div>"
+                 + "<div style='padding:16px 20px;border-bottom:1px solid #EBF3FF'>"
+                 + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>Titre</div>"
+                 + "<div style='font-size:15px;color:#1E293B;font-weight:700'>" + safeTitle + "</div></div>"
+                 + "<div style='padding:12px 20px;border-bottom:1px solid #EBF3FF'>"
+                 + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>📅 Date et heure</div>"
+                 + "<div style='font-size:14px;color:#1E293B;font-weight:600'>" + safeDate + "</div></div>"
+                 + "<div style='padding:12px 20px'>"
+                 + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>📍 Lieu</div>"
+                 + "<div style='font-size:14px;color:#1E293B;font-weight:600'>" + safeLoc + "</div></div>"
+                 + "</div>"
+                 + (recruiterMessage != null && !recruiterMessage.isBlank()
+                     ? "<div style='background:#FFF7ED;border-left:4px solid #F59E0B;border-radius:8px;padding:14px 18px;margin-top:16px'>"
+                       + "<p style='color:#92400E;margin:0;font-size:13px'><strong>Message du recruteur :</strong> " + escapeHtml(recruiterMessage) + "</p></div>" : "")
+                 + "<p style='color:#94A3B8;font-size:11px;margin-top:20px;border-top:1px solid #E4EBF5;padding-top:16px'>Cet email a été envoyé automatiquement par Talent Bridge.</p>"
+                 + "</div><div style='background:#F8FAFC;padding:16px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #E2E8F0'>Talent Bridge — Plateforme RH</div></div>";
         }
 
-        String text = "Bonjour " + candidateName + ",\n\nVotre statut pour l'événement \"" + eventTitle
-                + "\" a été mis à jour : " + newStatus
-                + "\n\nDétails de l'événement :"
-                + "\n  Titre    : " + eventTitle
-                + "\n  Type     : " + (eventType != null ? eventType : "N/A")
-                + "\n  Date     : " + (eventDate != null && !eventDate.isBlank() ? eventDate : "N/A")
-                + "\n  Lieu     : " + (eventLocation != null && !eventLocation.isBlank() ? eventLocation : "N/A")
-                + ("CONFIRMED".equals(newStatus) && "WEBINAIRE".equals(eventType) && meetLink != null && !meetLink.isBlank()
-                    ? "\n\nLien du webinaire : " + meetLink : "")
-                + (recruiterMessage != null && !recruiterMessage.isBlank() ? "\n\nMessage du recruteur : " + recruiterMessage : "")
-                + "\n\nCordialement,\nL'équipe Talent Bridge";
-
-        // Build event type badge color
-        String typeBadgeColor = "WEBINAIRE".equals(eventType) ? "#1565C0" :
-                                "Job_Faire".equals(eventType) ? "#C2410C" : "#15803D";
-
-        String html = "<div style='font-family:Inter,Arial,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)'>"
-                // Header
-                + "<div style='background:linear-gradient(135deg,#1565C0,#1E88E5);padding:36px 36px 28px;'>"
-                + "<h1 style='color:#fff;margin:0;font-size:22px;font-weight:800'>📋 Mise à jour d'inscription</h1>"
-                + "<p style='color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px'>Talent Bridge — Événements de Recrutement</p></div>"
-                // Body
-                + "<div style='padding:32px 36px'>"
-                + "<p style='font-size:16px;color:#1E293B;margin:0 0 16px'>Bonjour <strong>" + escapeHtml(candidateName) + "</strong>,</p>"
-                + "<p style='color:#475569;font-size:14px;line-height:1.6;margin:0 0 20px'>Votre statut pour l'événement ci-dessous a été mis à jour :</p>"
-                // Status badge
-                + "<div style='text-align:center;margin:20px 0'>"
-                + "<span style='background:" + statusColor + ";color:#fff;font-weight:700;font-size:16px;padding:10px 32px;border-radius:24px;display:inline-block'>"
-                + escapeHtml(newStatus) + "</span></div>"
-                // Event details card
-                + "<div style='background:#F7FAFF;border:1px solid #DCEEFB;border-radius:12px;overflow:hidden;margin:24px 0'>"
-                + "<div style='background:linear-gradient(to right,#1565C0,#1E88E5);padding:14px 20px'>"
-                + "<span style='color:white;font-size:13px;font-weight:700;letter-spacing:1px'>DÉTAILS DE L'ÉVÉNEMENT</span></div>"
-                // Title row
-                + "<div style='padding:16px 20px;border-bottom:1px solid #EBF3FF'>"
-                + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>Titre</div>"
-                + "<div style='font-size:15px;color:#1E293B;font-weight:700'>" + escapeHtml(eventTitle) + "</div></div>"
-                // Type row
-                + "<div style='padding:12px 20px;border-bottom:1px solid #EBF3FF'>"
-                + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>Type d'événement</div>"
-                + "<span style='background:" + typeBadgeColor + ";color:#fff;font-size:12px;font-weight:600;padding:3px 12px;border-radius:12px'>"
-                + escapeHtml(eventType != null ? eventType : "N/A") + "</span></div>"
-                // Date row
-                + "<div style='padding:12px 20px;border-bottom:1px solid #EBF3FF'>"
-                + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>📅 Date et heure</div>"
-                + "<div style='font-size:14px;color:#1E293B;font-weight:600'>"
-                + escapeHtml(eventDate != null && !eventDate.isBlank() ? eventDate : "À confirmer") + "</div></div>"
-                // Location row
-                + "<div style='padding:12px 20px'>"
-                + "<div style='font-size:11px;color:#8FA3B8;font-weight:600;margin-bottom:4px'>📍 Lieu</div>"
-                + "<div style='font-size:14px;color:#1E293B;font-weight:600'>"
-                + escapeHtml(eventLocation != null && !eventLocation.isBlank() ? eventLocation : "À confirmer") + "</div></div>"
-                + "</div>"
-                // Confirmation extras (meet link or QR code)
-                + confirmExtra
-                // Recruiter message
-                + (recruiterMessage != null && !recruiterMessage.isBlank()
-                    ? "<div style='background:#FFF7ED;border-left:4px solid #F59E0B;border-radius:8px;padding:14px 18px;margin-top:16px'>"
-                      + "<p style='color:#92400E;margin:0;font-size:13px'><strong>Message du recruteur :</strong> " + escapeHtml(recruiterMessage) + "</p></div>"
-                    : "")
-                // Footer
-                + "<p style='color:#475569;font-size:13px;margin-top:28px'>Bonne chance !<br><strong>L'équipe Talent Bridge</strong></p>"
-                + "<p style='color:#94A3B8;font-size:11px;margin-top:20px;border-top:1px solid #E4EBF5;padding-top:16px'>Cet email a été envoyé automatiquement par Talent Bridge. Merci de ne pas y répondre directement.</p>"
-                + "</div></div>";
+        String text = "Talent Bridge - Notification d'événement\nBonjour " + candidateName + ", le statut de votre inscription pour " + eventTitle + " est maintenant " + newStatus + ".";
 
         // Send via tunisiatour SMTP (using EmailServiceApplication's SMTP setup)
         try {
