@@ -101,15 +101,22 @@ public class AuthService {
     }
 
     public Models.user.User loginWithFacePersonId(String personId) throws SQLException {
-        String sql = """
-                SELECT id, email, password, first_name, last_name, phone
-                FROM users
-                WHERE face_person_id=? AND is_active=1
-            """;
-        try (PreparedStatement ps = cnx().prepareStatement(sql)) {
+        // Always get a fresh connection — this may be called from a background thread
+        // after the main connection has been recycled
+        Connection c = MyDatabase.getInstance().getConnection();
+
+        String sql = "SELECT id, email, password, first_name, last_name, phone " +
+                     "FROM users WHERE face_person_id=? AND is_active=1";
+
+        System.out.println("[AuthService] loginWithFacePersonId uuid=" + personId);
+
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, personId.trim());
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) return null;
+                if (!rs.next()) {
+                    System.out.println("[AuthService] No user found for uuid=" + personId);
+                    return null;
+                }
                 long   id         = rs.getLong("id");
                 String storedHash = rs.getString("password");
                 String firstName  = rs.getString("first_name");
@@ -117,15 +124,18 @@ public class AuthService {
                 String phone      = rs.getString("phone");
                 String email      = rs.getString("email");
 
+                System.out.println("[AuthService] Found user id=" + id + " email=" + email);
+
                 Models.user.Admin a = findAdmin(id, email, storedHash, firstName, lastName, phone);
-                if (a != null) return a;
+                if (a != null) { System.out.println("[AuthService] Role=ADMIN"); return a; }
                 Models.user.Recruiter r = findRecruiter(id, email, storedHash, firstName, lastName, phone);
-                if (r != null) return r;
-                Models.user.Candidate c = findCandidate(id, email, storedHash, firstName, lastName, phone);
-                if (c != null) return c;
+                if (r != null) { System.out.println("[AuthService] Role=RECRUITER"); return r; }
+                Models.user.Candidate cc = findCandidate(id, email, storedHash, firstName, lastName, phone);
+                if (cc != null) { System.out.println("[AuthService] Role=CANDIDATE"); return cc; }
 
                 Models.user.User u = new Models.user.User(email, storedHash, firstName, lastName, phone);
                 u.setId(id);
+                System.out.println("[AuthService] Role=USER (fallback)");
                 return u;
             }
         }

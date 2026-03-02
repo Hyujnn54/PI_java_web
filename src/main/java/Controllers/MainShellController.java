@@ -78,8 +78,8 @@ public class MainShellController {
 
         // Staggered sidebar animation
         Button[] navBtns = {btnUserDashboard, btnApplications, btnInterviews, btnJobOffers,
-                btnEvents, btnPastEvents, btnCalendar, btnStatistics, btnAdminStats,
-                btnAdminApplications, btnFullscreenToggle};
+                btnEvents, btnPastEvents, btnCalendar, btnStatistics, btnDashboard,
+                btnAdminStats, btnAdminApplications, btnFullscreenToggle};
         for (int i = 0; i < navBtns.length; i++) {
             Button btn = navBtns[i];
             if (btn == null || !btn.isManaged()) continue;
@@ -96,7 +96,7 @@ public class MainShellController {
         }
 
         if (u instanceof Admin) {
-            handleAdminStatsNav();
+            handleDashboardNav();
         } else {
             handleUserDashboardNav();
         }
@@ -165,7 +165,7 @@ public class MainShellController {
     }
 
     @FXML private void handleDashboardNav() {
-        activePage = "/views/application/AdminApplicationStatistics.fxml";
+        activePage = "/views/user/AdminDashboard.fxml";
         loadContentView(activePage);
         highlightActiveButton(btnDashboard);
     }
@@ -471,7 +471,7 @@ public class MainShellController {
         show(btnPastEvents,         isCandidate);
         show(btnCalendar,           !isAdmin);
         show(btnStatistics,         !isCandidate);
-        show(btnDashboard,          false);
+        show(btnDashboard,          isAdmin);
         show(btnAdminStats,         isAdmin);
         show(btnAdminApplications,  isAdmin);
 

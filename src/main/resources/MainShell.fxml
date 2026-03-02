@@ -112,7 +112,7 @@
                         styleClass="sidebar-nav-btn" maxWidth="Infinity"
                         visible="false" managed="false"/>
                 <Button fx:id="btnDashboard"          onAction="#handleDashboardNav"
-                        text="🛡   Dashboard Admin"
+                        text="👥   Gestion Utilisateurs"
                         styleClass="sidebar-nav-btn" maxWidth="Infinity"
                         visible="false" managed="false"/>
             </VBox>

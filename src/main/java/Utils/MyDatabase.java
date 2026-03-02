@@ -31,7 +31,7 @@ public class MyDatabase {
     }
 
     /** Always returns a live connection, reconnecting if needed. */
-    public Connection getConnection() {
+    public synchronized Connection getConnection() {
         try {
             if (connection == null || connection.isClosed() || !connection.isValid(2)) {
                 System.out.println("Connection is closed or invalid, reconnecting...");

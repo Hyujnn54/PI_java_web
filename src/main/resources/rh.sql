@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 01, 2026 at 10:28 PM
+-- Generation Time: Mar 02, 2026 at 01:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -166,15 +166,15 @@ INSERT INTO `event_registration` (`id`, `event_id`, `candidate_id`, `registered_
 (16, 2, 4, '2026-02-19 13:03:30', 'PENDING'),
 (17, 1, 4, '2026-02-19 13:15:23', 'CONFIRMED'),
 (18, 4, 4, '2026-03-01 14:01:54', 'CONFIRMED'),
-(19, 1, 8, '2026-03-01 18:22:35', 'PENDING'),
-(20, 2, 8, '2026-03-01 18:22:40', 'PENDING'),
-(21, 4, 8, '2026-03-01 18:22:41', 'PENDING'),
-(22, 7, 8, '2026-03-01 18:25:39', 'PENDING'),
-(23, 9, 8, '2026-03-01 18:25:42', 'PENDING'),
-(24, 11, 8, '2026-03-01 18:25:43', 'REJECTED'),
-(25, 6, 8, '2026-03-01 18:25:44', 'PENDING'),
-(26, 8, 8, '2026-03-01 18:25:45', 'PENDING'),
-(27, 10, 8, '2026-03-01 18:25:46', 'PENDING');
+(19, 1, 8, '2026-03-01 18:22:35', 'CANCELLED'),
+(20, 2, 8, '2026-03-01 18:22:40', 'CANCELLED'),
+(21, 4, 8, '2026-03-01 23:40:01', 'PENDING'),
+(22, 7, 8, '2026-03-01 18:25:39', 'CANCELLED'),
+(23, 9, 8, '2026-03-01 18:25:42', 'CANCELLED'),
+(24, 11, 8, '2026-03-01 18:25:43', 'CONFIRMED'),
+(25, 6, 8, '2026-03-01 18:25:44', 'CANCELLED'),
+(26, 8, 8, '2026-03-01 18:25:45', 'CANCELLED'),
+(27, 10, 8, '2026-03-01 18:25:46', 'CANCELLED');
 
 -- --------------------------------------------------------
 
@@ -357,7 +357,8 @@ CREATE TABLE `job_offer_warning` (
 INSERT INTO `job_offer_warning` (`id`, `job_offer_id`, `recruiter_id`, `admin_id`, `reason`, `message`, `status`, `created_at`, `seen_at`, `resolved_at`) VALUES
 (1, 5, 2, 1, 'Offre en double', 'Nous avons détecté une offre d\'emploi en double sur notre plateforme, intitulée \"cloud security\", qui semble être une répétition d\'une offre précédente. Nous vous informons de ce problème pour que vous puissiez prendre les mesures nécessaires pour le corriger. \n\nPour résoudre ce problème, nous vous recommandons de supprimer la version dupliquée de l\'offre et de vous assurer que toutes les informations sont à jour et exactes. Il est essentiel de garantir que les candidats reçoivent des informations précises et cohérentes lors de leur recherche d\'emploi.\n\nSi cette offre en double n\'est pas corrigée, cela pourrait entraîner une confusion parmi les candidats et nuire à la réputation de votre entreprise. De plus, cela pourrait également entraîner une perte de temps et de ressources pour les candidats qui postulent à la même offre plusieurs fois. Nous sommes à votre disposition pour vous aider à résoudre ce problème et à améliorer la qualité de vos offres d\'emploi. Nous vous encourageons à prendre des mesures pour éviter les offres en double à l\'avenir.', 'RESOLVED', '2026-02-28 15:15:24', '2026-02-28 15:15:37', NULL),
 (2, 6, 2, 1, 'Information incomplète', 'Nous avons examiné votre offre d\'emploi pour le poste de web dev et avons constaté que certaines informations essentielles sont manquantes. Plus précisément, la description du poste ne fournit pas de détails sur les exigences spécifiques en matière de compétences, d\'expérience et de qualifications requises pour le candidat idéal. De plus, les responsabilités du poste ne sont pas entièrement détaillées, ce qui pourrait entraîner des malentendus ou des attentes non claires pour les candidats.\n\nIl est important de corriger ces points pour garantir que les candidats soient pleinement informés et puissent évaluer leur adéquation au poste de manière efficace. Si ces informations ne sont pas fournies, cela pourrait entraîner un faible taux de réponse ou des candidatures non pertinentes, ce qui pourrait prolonger le processus de recrutement et potentiellement entraîner des coûts supplémentaires.\n\nNous vous recommandons de compléter la description du poste en incluant des détails tels que les compétences techniques requises, les expériences professionnelles souhaitées et les qualifications académiques nécessaires. Cela non seulement améliorera la qualité des candidatures, mais également renforcera la crédibilité de votre entreprise en tant qu\'employeur attractif et transparent. Nous sommes à votre disposition pour vous aider à optimiser votre offre d\'emploi et vous assurer que vous attirez les meilleurs talents pour ce poste.', 'RESOLVED', '2026-02-28 17:51:12', '2026-02-28 17:51:27', NULL),
-(3, 7, 2, 1, 'Contenu potentiellement non conforme', 'L\'offre semble contenir du contenu offensant.\nToxicité: 0.77, Insulte: 0.75, Menaces: 0.01, Haine: 0.02\nMerci de corriger la description sinon elle sera supprimée.', 'RESOLVED', '2026-02-28 22:13:59', '2026-02-28 22:14:29', NULL);
+(3, 7, 2, 1, 'Contenu potentiellement non conforme', 'L\'offre semble contenir du contenu offensant.\nToxicité: 0.77, Insulte: 0.75, Menaces: 0.01, Haine: 0.02\nMerci de corriger la description sinon elle sera supprimée.', 'RESOLVED', '2026-02-28 22:13:59', '2026-02-28 22:14:29', NULL),
+(4, 8, 7, 10, 'Contenu inapproprié', 'Nous avons détecté un contenu inapproprié dans votre offre d\'emploi intitulée \"devopss\". Le problème concerne la description de l\'offre, qui contient des fautes d\'orthographe et de grammaire, notamment dans les mots \"develo\" et \"develoment\". Il est essentiel de corriger ces erreurs pour garantir une image professionnelle et attirer les candidats les plus qualifiés.\n\nLes points spécifiques à corriger incluent la correction des fautes d\'orthographe et de grammaire, ainsi que la reformulation de certaines phrases pour améliorer la clarté et la cohérence de l\'offre. Si ces erreurs ne sont pas corrigées, elles pourraient donner une impression négative de votre entreprise et décourager les candidats potentiels de postuler.\n\nNous vous recommandons vivement de réviser et de corriger votre offre d\'emploi pour garantir qu\'elle reflète les standards professionnels attendus. Nous sommes à votre disposition pour vous aider à améliorer votre offre et attirer les meilleurs talents. Nous vous remercions de votre attention à cette affaire et nous sommes convaincus que vous prendrez les mesures nécessaires pour résoudre ce problème.', 'RESOLVED', '2026-03-01 22:07:31', '2026-03-01 22:07:51', NULL);
 
 -- --------------------------------------------------------
 
@@ -439,7 +440,7 @@ INSERT INTO `recruiter` (`id`, `user_id`, `company_name`, `company_location`, `c
 (2, 2, 'TechCorp', 'Tunis', NULL),
 (3, 3, 'InnovateX', 'Sfax', NULL),
 (7, 7, 'ACTIA', 'Ghazela centre, نهج الأنصار, المدينة الفاضلة, معتمدية رواد, ولاية أريانة, 2083, تونس', NULL),
-(9, NULL, 'actia', 'Ghazela centre, نهج الأنصار, المدينة الفاضلة, معتمدية رواد, ولاية أريانة, 2083, تونس', NULL);
+(9, 9, 'actia', 'Ghazela centre, نهج الأنصار, المدينة الفاضلة, معتمدية رواد, ولاية أريانة, 2083, تونس', NULL);
 
 -- --------------------------------------------------------
 
@@ -473,7 +474,8 @@ INSERT INTO `recruitment_event` (`id`, `recruiter_id`, `title`, `description`, `
 (8, 2, 'LJHUIYGTF', 'Rejoignez-nous à San Michele di Ganzaria, en Italie, pour une expérience unique et enrichissante qui vous permettra de découvrir de nouvelles opportunités de carrière et de rencontrer des professionnels passionnés. Vous aurez l\'occasion de présenter vos compétences et vos expériences, et de discuter avec nos équipes pour trouver le poste qui vous convient le mieux. Nous vous offrons un environnement accueillant et dynamique où vous pourrez vous exprimer et vous développer, avec des possibilités de croissance et d\'évolution de carrière exceptionnelles. Cette rencontre est l\'occasion idéale de faire partie d\'une équipe innovante et de contribuer à la réussite de notre entreprise.', 'Interview day', 'San Michele di Ganzaria, إيطاليا', '2026-03-18 00:00:00', 12, '', '2026-03-01 12:57:59'),
 (9, 2, 'cloud job fair', 'Rejoignez-nous pour une journée de découverte et d\'opportunités professionnelles dans le domaine du cloud computing à Gèsigu/Gesico, en Italie. Vous aurez l\'occasion de rencontrer des entreprises leaders dans leur domaine et de discuter des postes vacants qui correspondent à vos compétences et à vos aspirations. Les professionnels du secteur seront également présents pour partager leurs expériences et offrir des conseils précieux pour une carrière réussie dans le cloud. Cette foire de l\'emploi est l\'endroit idéal pour établir des connections, apprendre les dernières tendances et trouver le poste de vos rêves.', 'Job_Faire', 'Gèsigu/Gesico, إيطاليا', '2026-03-12 00:00:00', 12, '', '2026-03-01 12:59:01'),
 (10, 2, 'QSDQDQD', 'Rejoignez-nous pour une expérience unique et enrichissante à Saint-Amand-Montrond, en France, où vous découvrirez des opportunités de carrière exceptionnelles et rencontrerez des professionnels passionnés. Ce webinaire est l\'occasion idéale de vous informer sur les dernières tendances et innovations dans le domaine, tout en établissant des connections précieuses avec des experts et des futurs collègues. Vous aurez l\'opportunité de présenter vos compétences, vos passions et vos aspirations, et de découvrir comment vous pouvez contribuer à notre équipe dynamique et motivée. Nous vous offrons un espace de dialogue ouvert et convivial pour explorer vos objectifs de carrière et trouver le poste qui vous correspond parfaitement.', 'WEBINAIRE', 'Saint-Amand-Montrond, فرنسا', '2026-03-05 00:00:00', 123, 'youtube.com', '2026-03-01 12:59:40'),
-(11, 7, 'qsqsd', 'Rejoignez-nous à Tunis pour un événement incontournable de recrutement où vous pourrez découvrir des opportunités de carrière variées et rencontrer des employeurs de premier plan. Vous aurez l\'occasion de présenter votre candidature, de discuter avec des professionnels du secteur et de vous informer sur les dernières tendances du marché du travail. Les visiteurs pourront également participer à des ateliers de développement de carrière et des séances de conseil en recherche d\'emploi pour améliorer leurs compétences et augmenter leurs chances de réussite. C\'est l\'endroit idéal pour établir des contacts, apprendre et grandir professionnellement.', 'Job_Faire', 'tunis', '2026-02-27 00:00:00', 12, '', '2026-03-01 18:59:30');
+(11, 7, 'qsqsd', 'Rejoignez-nous à Tunis pour un événement incontournable de recrutement où vous pourrez découvrir des opportunités de carrière variées et rencontrer des employeurs de premier plan. Vous aurez l\'occasion de présenter votre candidature, de discuter avec des professionnels du secteur et de vous informer sur les dernières tendances du marché du travail. Les visiteurs pourront également participer à des ateliers de développement de carrière et des séances de conseil en recherche d\'emploi pour améliorer leurs compétences et augmenter leurs chances de réussite. C\'est l\'endroit idéal pour établir des contacts, apprendre et grandir professionnellement.', 'Job_Faire', 'tunis', '2026-03-01 23:00:00', 12, '', '2026-03-01 18:59:30'),
+(12, 7, 'qsdqsdqs', 'Rejoignez-nous à شاوش, تونس pour un événement de recrutement exceptionnel qui vous offrira l\'opportunité de rencontrer nos équipes et de découvrir nos postes vacants. Vous pourrez présenter votre candidature, discuter de vos aspirations professionnelles et en apprendre davantage sur notre culture d\'entreprise. C\'est l\'occasion idéale de faire partie d\'une équipe dynamique et de lancer ou de booster votre carrière dans un environnement stimulant et plein de défis. Nous sommes impatients de vous rencontrer et de vous faire découvrir nos opportunités de carrière.', 'WEBINAIRE', 'شاوش, تونس', '2026-03-17 23:00:00', 12, NULL, '2026-03-01 23:38:52');
 
 -- --------------------------------------------------------
 
@@ -507,9 +509,9 @@ INSERT INTO `users` (`id`, `email`, `password`, `first_name`, `last_name`, `phon
 (4, 'mlkjhgf@gmail.com', 'cand123', 'Ahmed', 'Ben Ali', '93346608', 1, '2026-02-12 08:30:10', NULL, NULL, NULL, 0),
 (5, 'zex54lol@gmail.com', 'cand123', 'Sara', 'Trabelsi', '93346608', 1, '2026-02-12 08:30:10', NULL, NULL, NULL, 0),
 (6, 'candidate3@gmail.com', 'cand123', 'Youssef', 'Haddad', '93346608', 1, '2026-02-12 08:30:10', NULL, NULL, NULL, 0),
-(7, 'faresmanai05@gmail.com', '$2a$12$ZMggIVVde2KpURkYtLV/8.ehHWUJf11pouYWLt1VHqzQlSMvyDhFW', 'hyujnn', 'hyujnn', '53757969', 1, '2026-03-01 16:57:17', NULL, NULL, NULL, 0),
-(8, 'Hamadi@gmail.com', '$2a$12$wKGaGTbfzZ5YYgHnA2kmqO/jDALHJBkQLx2x8aV2.vp6uLuvZ/LIm', 'Hamadi', 'Hamadi', '53757969', 1, '2026-03-01 18:10:25', NULL, NULL, NULL, 0),
-(9, 'shaco54lol@gmail.com', '$2a$12$nInDLm0e4mLukCUs9T18OeYIFbb.eHt/v0o5931jsB2zsRWLvHeZG', 'mohamed', 'ben moussa', '53757969', 1, '2026-03-01 22:04:37', '445292', '2026-03-01 21:18:05', NULL, 0),
+(7, 'faresmanai05@gmail.com', '$2a$12$9UitVey8Oql7.G5sa2ydiujxglBqwFQ9kmqKfcsCKec4RGx7hmsHe', 'hyujnn', 'hyujnn', '53757969', 1, '2026-03-01 16:57:17', NULL, NULL, NULL, 0),
+(8, 'Hamadi@gmail.com', '$2a$12$wKGaGTbfzZ5YYgHnA2kmqO/jDALHJBkQLx2x8aV2.vp6uLuvZ/LIm', 'Hamadi', 'Hamadi', '53757969', 1, '2026-03-01 18:10:25', NULL, NULL, '', 0),
+(9, 'shaco54lol@gmail.com', '$2a$12$4foo6AfEH7WzfKlnpGzSAeJYBhjr0sp8NicBkeybDsgpgVILBFad.', 'mohamed', 'ben moussa', '53757969', 1, '2026-03-01 22:04:37', '601101', '2026-03-01 23:51:41', NULL, 0),
 (10, 'superadmin@rh.com', '$2a$12$wlTJMvbbsiwyoquTSeumfugPrzNGvezC90kl0NDItmeT4cMfsZkUK', 'Super', 'Admin', '00000000', 1, '2026-03-01 22:26:29', NULL, NULL, NULL, 0);
 
 -- --------------------------------------------------------
@@ -541,7 +543,8 @@ CREATE TABLE `warning_correction` (
 INSERT INTO `warning_correction` (`id`, `warning_id`, `job_offer_id`, `recruiter_id`, `correction_note`, `old_title`, `new_title`, `old_description`, `new_description`, `status`, `submitted_at`, `reviewed_at`, `admin_note`) VALUES
 (1, 1, 5, 2, 'Nous avons procede aux corrections necessaires suite au signalement (Offre en double). L\'offre a ete revue et mise a jour pour repondre aux exigences de la plateforme.', NULL, 'cloud security', NULL, 'Nous recherchons un(e) cloud security motive(e) pour rejoindre notre equipe. Vous contribuerez au developpement et aux projets strategiques de l\'entreprise.', 'APPROVED', '2026-02-28 15:15:50', '2026-02-28 15:16:25', 'Correction approuvée'),
 (2, 2, 6, 2, 'Nous avons procede aux corrections necessaires suite au signalement (Information incomplète). L\'offre a ete revue et mise a jour pour repondre aux exigences de la plateforme.', NULL, 'web dev', NULL, 'Nous recherchons un developpeur web pour concevoir et developper des applications web modernes et responsives. Vous serez responsable du developpement front-end de nos plateformes en utilisant les dernieres technologies web. Vous travaillerez en collaboration etroite avec les equipes design et produit pour créer des experiences utilisateur exceptionnelles. Vous participerez aux revues de code et aux choix d\'architecture technique pour assurer la qualité et la performance de nos applications. Vous developerez également des solutions pour améliorer l\'accessibilité et la sécurité de nos sites web.', 'APPROVED', '2026-02-28 17:51:34', '2026-02-28 17:51:50', 'Correction approuvée'),
-(3, 3, 7, 2, 'Nous avons procede aux corrections necessaires suite au signalement (Contenu potentiellement non conforme). L\'offre a ete revue et mise a jour pour repondre aux exigences de la plateforme.', NULL, 'mobile dev', NULL, 'un idiotun idiotun idiotun idiotun idiotun idiot un idiot', 'APPROVED', '2026-02-28 22:14:36', '2026-02-28 22:15:38', 'Correction approuvée');
+(3, 3, 7, 2, 'Nous avons procede aux corrections necessaires suite au signalement (Contenu potentiellement non conforme). L\'offre a ete revue et mise a jour pour repondre aux exigences de la plateforme.', NULL, 'mobile dev', NULL, 'un idiotun idiotun idiotun idiotun idiotun idiot un idiot', 'APPROVED', '2026-02-28 22:14:36', '2026-02-28 22:15:38', 'Correction approuvée'),
+(4, 4, 8, 7, 'Nous avons procede aux corrections necessaires suite au signalement (Contenu inapproprié). L\'offre a ete revue et mise a jour pour repondre aux exigences de la plateforme.', NULL, 'devopss', NULL, 'Nous recherchons un expert DevOps pour optimiser et automatiser nos processus de developpement et de deployment. Vous serez responsable de la mise en place et de la gestion de nos outils de continuous integration et continuous deployment. Vous travaillerez en collaboration avec les equipes de developpement pour identifier les besoins et mettre en place des solutions pour améliorer la qualité et la rapidité de nos deliveries. Vous participerez également à la supervision et à l\'optimisation de nos infrastructures cloud. Vous serez chargé de garantir la sécurité et la conformité de nos environnements de production.', 'APPROVED', '2026-03-01 22:07:56', '2026-03-01 22:08:23', 'Correction approuvée');
 
 --
 -- Indexes for dumped tables
@@ -721,7 +724,7 @@ ALTER TABLE `job_offer`
 -- AUTO_INCREMENT for table `job_offer_warning`
 --
 ALTER TABLE `job_offer_warning`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `offer_skill`
@@ -733,7 +736,7 @@ ALTER TABLE `offer_skill`
 -- AUTO_INCREMENT for table `recruitment_event`
 --
 ALTER TABLE `recruitment_event`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -745,7 +748,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `warning_correction`
 --
 ALTER TABLE `warning_correction`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables
