@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.control.Separator?>
+<?import org.controlsfx.control.Rating?>
+
+<VBox prefWidth="500.0" spacing="20.0" styleClass="card" stylesheets="@../style/modern.css" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.EventDetailsModalController">
+   <padding>
+      <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+   </padding>
+   <children>
+      <VBox spacing="5.0">
+         <children>
+            <Label fx:id="modalTitleLabel" styleClass="page-title" text="Détails de l'événement" wrapText="true" maxWidth="Infinity" />
+            <Label fx:id="modalTypeLabel" styleClass="event-card-type" text="Type" />
+         </children>
+      </VBox>
+      
+      <ScrollPane fitToWidth="true" styleClass="modern-scroll-pane" prefHeight="350.0" VBox.vgrow="ALWAYS">
+         <content>
+            <VBox spacing="20.0">
+               <children>
+                  <VBox spacing="10.0">
+                     <children>
+                        <Label text="Description" styleClass="label-header" />
+                        <Label fx:id="modalDescriptionLabel" text="Full description goes here..." wrapText="true" style="-fx-text-fill: #546e7a; -fx-font-size: 14px; -fx-line-spacing: 5;" />
+                     </children>
+                  </VBox>
+                  
+                  <GridPane hgap="20.0" vgap="10.0" style="-fx-background-color: #f8fafc; -fx-background-radius: 10; -fx-padding: 15;">
+                     <columnConstraints>
+                       <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="120.0" />
+                       <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" />
+                     </columnConstraints>
+                     <children>
+                        <Label text="📍 Lieu :" styleClass="label-header" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label fx:id="modalLocationLabel" text="Location" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        
+                        <Label text="📅 Date :" styleClass="label-header" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <Label fx:id="modalDateLabel" text="Date" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        
+                        <Label text="👥 Capacité :" styleClass="label-header" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <Label fx:id="modalCapacityLabel" text="0 places" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                     </children>
+                  </GridPane>
+                  
+                  <VBox spacing="10.0" style="-fx-background-color: #f0fdf4; -fx-background-radius: 10; -fx-padding: 15; -fx-border-color: #bbf7d0; -fx-border-radius: 10;">
+                     <children>
+                        <HBox alignment="CENTER_LEFT" spacing="10.0">
+                           <children>
+                              <Label text="Insight Carrière IA" styleClass="label-header" style="-fx-text-fill: #166534;" />
+                              <Pane HBox.hgrow="ALWAYS" />
+                              <Button fx:id="aiInsightBtn" text="✨ Analyse IA" onAction="#handleGenerateInsight" styleClass="btn-secondary" style="-fx-font-size: 10px; -fx-padding: 3 8;" />
+                           </children>
+                        </HBox>
+                        <Label fx:id="aiInsightLabel" text="Cliquez sur 'Analyse IA' pour voir comment cet événement correspond à votre profil." wrapText="true" style="-fx-text-fill: #166534; -fx-font-size: 13px; -fx-font-style: italic;" />
+                     </children>
+                  </VBox>
+                  
+                  <!-- Ratings Summary Dashboard -->
+                  <VBox fx:id="ratingsSummaryBox" spacing="15.0" style="-fx-background-color: #ffffff; -fx-padding: 5;">
+                     <children>
+                        <HBox alignment="CENTER_LEFT">
+                           <children>
+                              <Label text="Ratings and reviews" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #1e293b;" />
+                              <Pane HBox.hgrow="ALWAYS" />
+                              <Label text="ⓘ" style="-fx-text-fill: #64748b; -fx-font-size: 16px;" />
+                           </children>
+                        </HBox>
+                        
+                        <HBox spacing="30.0" alignment="CENTER_LEFT">
+                           <children>
+                              <!-- Left side: Average -->
+                              <VBox alignment="CENTER" spacing="5.0">
+                                 <children>
+                                    <Label fx:id="avgRatingLabel" text="0.0" styleClass="rating-big-label" />
+                                     <Rating fx:id="summaryRatingStars" max="5" style="-fx-opacity: 0.8;" />
+                                    <Label fx:id="totalReviewsLabel" text="0 reviews" style="-fx-text-fill: #64748b; -fx-font-size: 12px;" />
+                                 </children>
+                              </VBox>
+                              
+                              <!-- Right side: Bars -->
+                              <VBox HBox.hgrow="ALWAYS" spacing="4.0">
+                                 <children>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                       <children>
+                                          <Label text="5" style="-fx-text-fill: #1e293b; -fx-font-weight: bold; -fx-pref-width: 15;" />
+                                          <ProgressBar fx:id="bar5" progress="0.0" styleClass="rating-bar" maxWidth="Infinity" HBox.hgrow="ALWAYS" />
+                                       </children>
+                                    </HBox>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                       <children>
+                                          <Label text="4" style="-fx-text-fill: #1e293b; -fx-font-weight: bold; -fx-pref-width: 15;" />
+                                          <ProgressBar fx:id="bar4" progress="0.0" styleClass="rating-bar" maxWidth="Infinity" HBox.hgrow="ALWAYS" />
+                                       </children>
+                                    </HBox>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                       <children>
+                                          <Label text="3" style="-fx-text-fill: #1e293b; -fx-font-weight: bold; -fx-pref-width: 15;" />
+                                          <ProgressBar fx:id="bar3" progress="0.0" styleClass="rating-bar" maxWidth="Infinity" HBox.hgrow="ALWAYS" />
+                                       </children>
+                                    </HBox>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                       <children>
+                                          <Label text="2" style="-fx-text-fill: #1e293b; -fx-font-weight: bold; -fx-pref-width: 15;" />
+                                          <ProgressBar fx:id="bar2" progress="0.0" styleClass="rating-bar" maxWidth="Infinity" HBox.hgrow="ALWAYS" />
+                                       </children>
+                                    </HBox>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                       <children>
+                                          <Label text="1" style="-fx-text-fill: #1e293b; -fx-font-weight: bold; -fx-pref-width: 15;" />
+                                          <ProgressBar fx:id="bar1" progress="0.0" styleClass="rating-bar" maxWidth="Infinity" HBox.hgrow="ALWAYS" />
+                                       </children>
+                                    </HBox>
+                                 </children>
+                              </VBox>
+                           </children>
+                        </HBox>
+                     </children>
+                  </VBox>
+                  
+                  <Separator style="-fx-opacity: 0.2;" />
+                  
+                  <VBox spacing="10.0">
+                     <children>
+                        <Label text="Commentaires" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1e293b;" />
+                        <VBox fx:id="reviewsListContainer" spacing="12.0" />
+                     </children>
+                  </VBox>
+                  
+                  <!-- Review Section -->
+                  <VBox fx:id="reviewInputSection" spacing="15.0" style="-fx-background-color: #f8fafc; -fx-background-radius: 10; -fx-padding: 15; -fx-border-color: #e2e8f0; -fx-border-radius: 10;" managed="false" visible="false">
+                     <children>
+                        <Label text="Laissez-nous un avis !" styleClass="label-header" />
+                        <HBox alignment="CENTER_LEFT" spacing="10.0">
+                           <children>
+                              <Label text="Note :" style="-fx-font-weight: bold;" />
+                              <Rating fx:id="eventRating" max="5" prefWidth="240.0" prefHeight="45.0" />
+                           </children>
+                        </HBox>
+                        <TextArea fx:id="reviewCommentField" prefHeight="80.0" promptText="Votre commentaire..." styleClass="modern-text-area" wrapText="true" />
+                        <Button fx:id="submitReviewBtn" onAction="#handleSubmitReview" styleClass="btn-primary" text="Soumettre l'avis" maxWidth="Infinity" />
+                     </children>
+                  </VBox>
+                  
+                  <!-- Note for non-eligible candidates -->
+                  <VBox fx:id="notEligibleBox" spacing="10.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 10; -fx-padding: 15; -fx-border-color: #cbd5e1; -fx-border-radius: 10;" managed="false" visible="false">
+                     <children>
+                        <Label fx:id="eligibilityMsgLabel" text="Vous pourrez noter cet événement une fois qu'il sera terminé et que votre présence sera confirmée." wrapText="true" style="-fx-text-fill: #475569; -fx-font-size: 13px; -fx-font-style: italic;" />
+                     </children>
+                  </VBox>
+                  
+                  <VBox fx:id="reviewSuccessBox" alignment="CENTER" spacing="10.0" style="-fx-background-color: #ecfdf5; -fx-background-radius: 10; -fx-padding: 15; -fx-border-color: #10b981; -fx-border-radius: 10;" managed="false" visible="false">
+                     <children>
+                        <Label text="✅ Merci pour votre avis !" style="-fx-text-fill: #065f46; -fx-font-weight: bold;" />
+                     </children>
+                  </VBox>
+               </children>
+               <padding>
+                  <Insets right="10.0" />
+               </padding>
+            </VBox>
+         </content>
+      </ScrollPane>
+      
+      <HBox alignment="CENTER_RIGHT" spacing="15.0">
+         <children>
+            <Button mnemonicParsing="false" onAction="#handleClose" styleClass="btn-secondary" text="Fermer" />
+            <Button mnemonicParsing="false" onAction="#handleApplyFromDetails" styleClass="btn-primary" text="S'inscrire à l'événement" />
+         </children>
+      </HBox>
+   </children>
+</VBox>
